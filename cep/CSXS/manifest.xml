@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  KVFX Tools — CEP extension manifest.
+
+  Targets CEP 11+ so the panel loads in After Effects 22.0 and newer; the
+  product's development target is AE 26.x (CEP 12, Chromium 99 / Node 17.7.1).
+  AE 22.0 is the floor because `Layer.id` and `Project.layerByID()` arrived
+  there, and ADR-0004 makes them the basis of every object reference.
+
+  Node is deliberately NOT enabled. Heavy work runs in the out-of-process
+  sidecar (ADR-0005), so the panel needs no filesystem or native-module access
+  and we keep its attack surface and startup cost minimal. Revisit only with a
+  concrete requirement.
+-->
+<ExtensionManifest
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  Version="11.0"
+  ExtensionBundleId="com.kvfx.tools"
+  ExtensionBundleVersion="0.1.0"
+  ExtensionBundleName="KVFX Tools">
+
+  <ExtensionList>
+    <Extension Id="com.kvfx.tools.panel" Version="0.1.0" />
+  </ExtensionList>
+
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="AEFT" Version="[22.0,99.9]" />
+    </HostList>
+    <LocaleList>
+      <Locale Code="All" />
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="11.0" />
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+
+  <DispatchInfoList>
+    <Extension Id="com.kvfx.tools.panel">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./index.html</MainPath>
+          <!-- Loaded into the ExtendScript engine when the panel opens; this is
+               what installs $.global.__kvfxHost. -->
+          <ScriptPath>./host/kvfx-host.jsx</ScriptPath>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>KVFX Tools</Menu>
+          <Geometry>
+            <Size>
+              <Height>420</Height>
+              <Width>320</Width>
+            </Size>
+            <MinSize>
+              <Height>200</Height>
+              <Width>260</Width>
+            </MinSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
+</ExtensionManifest>

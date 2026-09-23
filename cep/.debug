@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Enables Chromium remote debugging for the panel during development.
+
+  With this file present in the extension bundle, open http://localhost:8099 in
+  a Chromium browser while the panel is running to get real dev tools. This is
+  the only usable debugger in the stack — ExtendScript has none — so the host
+  bundle is kept deliberately thin (ADR-0006).
+
+  Packaging strips this file from release builds; see scripts/assemble-extension.mjs.
+-->
+<ExtensionList>
+  <Extension Id="com.kvfx.tools.panel">
+    <HostList>
+      <Host Name="AEFT" Port="8099" />
+    </HostList>
+  </Extension>
+</ExtensionList>

@@ -1,11 +1,9 @@
 # KVFX Tools — Local Development
 
-> **Status: planned workflow. Nothing in this document is executable yet.**
-> The toolchain described here is the Phase 2 deliverable. It is written down now
-> so the architecture can be reviewed against a concrete build and test story
-> rather than an assumption. No `package.json`, build script or CI config exists
-> in this repository at the time of writing — deliberately, because Phase 1 is
-> architecture only.
+**Status: working.** `npm install && npm run verify` runs the whole pipeline.
+Build mechanics live in [`BUILD.md`](BUILD.md); installing the panel into
+After Effects is [`INSTALL.md`](INSTALL.md). This document covers how to work in
+the codebase.
 
 ## 1. Prerequisites
 
@@ -47,19 +45,16 @@ Chromium dev tools are opened from a browser at the port it declares. This is ho
 the UI is debugged — ExtendScript itself has no comparable debugger, which is a
 large part of why so little logic lives there (ADR-0006).
 
-## 3. Planned commands
+## 3. Commands
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Watch-build `ui` + `host`, output to the dev extension folder |
-| `npm run dev:link` | Symlink the dev build into the CEP extensions folder |
-| `npm run build` | Production build of all packages |
-| `npm run test` | Unit tests (`core`, `bridge`) — no After Effects required |
-| `npm run test:host` | Host operation tests against the mock-AE environment |
-| `npm run test:bench` | Performance budgets from ARCHITECTURE §13 |
-| `npm run lint` | ESLint + the Chromium-99 CSS feature guard |
-| `npm run typecheck` | Strict TypeScript across the workspace |
-| `npm run package` | Signed `.zxp` (Phase 14) |
+See [`BUILD.md`](BUILD.md) for the full table. The short version:
+
+```bash
+npm run verify    # typecheck + lint + test + build + guards — run before pushing
+npm run test      # unit tests, no After Effects required
+npm run dev       # watch build, re-assembles the extension on change
+npm run dev:link  # link the build into After Effects (Windows/macOS)
+```
 
 ## 4. Testing strategy
 
@@ -76,13 +71,14 @@ fuzzy search ranking, command registry integrity, project-scan rule evaluation.
 Command tests assert on the **emitted `OperationPlan`** — the command's output is
 data, so no After Effects instance is needed to prove it does the right thing.
 
-**Tier 2 — mock After Effects.** A TypeScript model of the AE DOM subset we use
-(items, layers, properties, keyframes, effects, undo groups), driving the same
+**Tier 2 — mock After Effects.** `packages/host/tests/mock-ae.ts` models the AE
+surface the runtime touches and records undo-group activity, driving the same
 operation table the real host runs. This catches ordering, id-resolution and
-undo-grouping bugs without launching AE. Its fidelity is bounded and known — it
-proves our logic, not Adobe's behaviour.
+undo-grouping bugs without launching AE — including the one that matters most,
+that a thrown operation still closes its undo group. Its fidelity is bounded and
+known: it proves our logic, not Adobe's behaviour.
 
-**Tier 3 — real After Effects, fixture projects.** A small set of `.aep` fixtures
+**Tier 3 — real After Effects, fixture projects.** *(Phase 13.)* A small set of `.aep` fixtures
 (empty, typical 200-layer, pathological 5 000-layer, deep nesting, missing
 footage, broken expressions) driven through the real bridge. This tier validates
 what the mock cannot: actual AE semantics and the performance budgets. It runs on
@@ -98,12 +94,17 @@ See [`docs/FOLDER-STRUCTURE.md`](docs/FOLDER-STRUCTURE.md).
 
 ## 6. Conventions
 
-* TypeScript `strict`, no implicit `any`, no `as any` without a comment.
+* TypeScript `strict` plus `noUncheckedIndexedAccess` and
+  `exactOptionalPropertyTypes`; no implicit `any`, no `as any` without a comment.
 * `packages/core` must not import from `ui`, `host`, `bridge` or `sidecar`. A
   dependency-boundary lint rule enforces this.
-* The host bundle compiles to ES3; a lint rule blocks ES5+ syntax there.
+* The host bundle compiles to ES5 and must stay ES3-compatible;
+  `npm run guard:es3` checks the built artefact, not the source.
 * No magic numbers — AE ranges (ease influence bounds, frame maths) live in named
   constants in `core/src/types`.
 * Every mutating operation names its undo group; the wrapper asserts one exists.
 * Every user-facing string goes through the message catalogue; raw exception text
   is never rendered.
+* `@kvfx/host` imports nothing at runtime. Values it must share with the other
+  packages (protocol version, error codes) are duplicated there deliberately and
+  pinned by `packages/host/tests/contract.test.ts`.

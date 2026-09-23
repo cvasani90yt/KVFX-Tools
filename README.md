@@ -10,12 +10,17 @@ Keyboard-first. Minimal, dense, fast UI. Non-destructive. Undo-safe.
 
 ---
 
-## Project status — Phase 1 of 15
+## Project status — Phase 2 of 15 complete
 
-**Architecture only. There is no implementation code in this repository yet, by
-design.** This phase exists to verify what After Effects can and cannot actually
-do before a line of product code is written, so the design is built on checked
-facts rather than assumptions.
+The architecture is settled and the project skeleton builds, tests and packages
+end to end. What exists today is the spine, not the features: a working
+panel → After Effects bridge with undo discipline, host-version gating, budget
+enforcement and structured errors, plus the guards that keep the two hostile
+runtime baselines honest. The command engine lands in Phase 3.
+
+```bash
+npm install && npm run verify   # typecheck + lint + 85 tests + build + guards
+```
 
 | Document | What it is |
 |---|---|
@@ -24,7 +29,10 @@ facts rather than assumptions.
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases, MVP scope, deferred features, risk register |
 | [`docs/adr/`](docs/adr/) | Architecture decision records |
 | [`docs/FOLDER-STRUCTURE.md`](docs/FOLDER-STRUCTURE.md) | Repository layout and dependency rules |
-| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Local build and test workflow (planned; lands in Phase 2) |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Working in the codebase |
+| [`BUILD.md`](BUILD.md) | Build pipeline, guards, toolchain limitations |
+| [`INSTALL.md`](INSTALL.md) | Installing the panel into After Effects |
+| [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | Symptoms, causes, fixes |
 
 ## Stack, in one line each
 

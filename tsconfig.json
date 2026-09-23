@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/bridge" },
+    { "path": "./packages/host" },
+    { "path": "./packages/ui" }
+  ]
+}

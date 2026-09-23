@@ -1,0 +1,18 @@
+{
+  // Test sources are type-checked but never emitted. Kept separate from the
+  // package tsconfig so tests cannot leak into a shipped build.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2021",
+    "lib": ["ES2021"],
+    "types": [],
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "noUnusedLocals": false
+  },
+  // Sources are pulled in automatically through the tests' imports; listing
+  // them here as well would make this the governing project for src files too.
+  "include": ["./**/*.ts"]
+}

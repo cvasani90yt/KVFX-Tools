@@ -1,0 +1,49 @@
+{
+  "name": "kvfx-tools",
+  "version": "0.1.0-dev",
+  "private": true,
+  "description": "KVFX Tools — workflow accelerator for Adobe After Effects",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/bridge",
+    "packages/host",
+    "packages/ui"
+  ],
+  "scripts": {
+    "build": "npm run build:core && npm run build:bridge && npm run build:host && npm run build:ui && npm run build:cep",
+    "build:core": "npm run build -w @kvfx/core",
+    "build:bridge": "npm run build -w @kvfx/bridge",
+    "build:host": "npm run build -w @kvfx/host",
+    "build:ui": "npm run build -w @kvfx/ui",
+    "build:cep": "node scripts/assemble-extension.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:link": "node scripts/dev-link.mjs",
+    "typecheck": "tsc --build --force",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "guard": "npm run guard:es3 && npm run guard:css && npm run guard:boundaries && npm run guard:paths",
+    "guard:es3": "node tools/es3-guard.mjs",
+    "guard:css": "node tools/css-baseline-guard.mjs",
+    "guard:boundaries": "node tools/check-boundaries.mjs",
+    "guard:paths": "node tools/check-hardcoded-paths.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run guard",
+    "clean": "node scripts/clean.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.13.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "rollup": "^4.63.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
+  }
+}

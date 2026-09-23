@@ -1,0 +1,14 @@
+{
+  "name": "@kvfx/ui",
+  "version": "0.1.0-dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
+    "dev": "vite build --watch"
+  },
+  "dependencies": {
+    "@kvfx/bridge": "*",
+    "@kvfx/core": "*"
+  }
+}

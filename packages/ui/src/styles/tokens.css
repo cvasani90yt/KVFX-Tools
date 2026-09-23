@@ -1,0 +1,53 @@
+/*
+ * KVFX Tools — design tokens.
+ *
+ * Authored against the Chromium 99 baseline the CEP 12 engine provides (F3).
+ * Deliberately absent, because they do not exist in that engine:
+ *   :has()  ·  container queries  ·  color-mix()  ·  oklch()
+ *   CSS nesting  ·  subgrid
+ * `tools/css-baseline-guard.mjs` fails the build if any of them appear.
+ */
+
+:root {
+  /* Surfaces — a dark stack that reads as depth without borders everywhere. */
+  --kvfx-surface-base: #0e0f12;
+  --kvfx-surface-raised: #16181d;
+  --kvfx-surface-overlay: #1d2026;
+  --kvfx-surface-hover: #23262e;
+
+  /* Text */
+  --kvfx-text-primary: #e8eaed;
+  --kvfx-text-secondary: #9aa0ab;
+  --kvfx-text-muted: #6b7280;
+
+  /* Accent */
+  --kvfx-accent: #5b8def;
+  --kvfx-accent-hover: #6f9bf2;
+
+  /* Status */
+  --kvfx-ok: #3fb950;
+  --kvfx-warn: #d29922;
+  --kvfx-error: #f05c5c;
+
+  /* Lines */
+  --kvfx-border: #2a2e37;
+
+  /* Spacing — a 4px rhythm; no ad-hoc pixel values in component styles. */
+  --kvfx-space-1: 4px;
+  --kvfx-space-2: 8px;
+  --kvfx-space-3: 12px;
+  --kvfx-space-4: 16px;
+  --kvfx-space-5: 24px;
+
+  --kvfx-radius-sm: 4px;
+  --kvfx-radius-md: 6px;
+
+  /* Type — compact by default; density is a feature of this product. */
+  --kvfx-font-ui:
+    "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --kvfx-font-mono: "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --kvfx-text-xs: 11px;
+  --kvfx-text-sm: 12px;
+  --kvfx-text-md: 13px;
+  --kvfx-text-lg: 15px;
+}

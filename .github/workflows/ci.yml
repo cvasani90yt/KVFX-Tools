@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows and macOS are the shipping platforms and must both stay green.
+        # Linux is not a supported host for After Effects, but the build and the
+        # unit tests are host-independent by design, so it is the cheapest place
+        # to catch a break early.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # The guards check the finished artefacts, so they run after the build.
+      # The ES3 guard in particular is the only thing standing between a bad
+      # host bundle and a panel that fails to load in After Effects.
+      - name: Guards
+        run: npm run guard
+
+      - name: Upload extension
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kvfx-tools-extension
+          path: build/extension/
+          retention-days: 14

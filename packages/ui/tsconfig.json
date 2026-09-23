@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Chromium 99 is the CEP 12 engine (F3). Targeting anything newer produces
+    // syntax the panel cannot parse. Vite enforces the same target on output.
+    "target": "ES2021",
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "types": [],
+    "outDir": "./dist-types",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "../core" }, { "path": "../bridge" }]
+}

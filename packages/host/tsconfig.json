@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // ES5 output is what ExtendScript can read (F10). tsc performs the
+    // downlevelling; rollup only concatenates. See BUILD.md.
+    "target": "ES5",
+    "ignoreDeprecations": "6.0",
+    "lib": ["ES5"],
+    // No ambient type packages: this bundle runs in ExtendScript, which has
+    // neither Node nor the DOM. AE globals are declared in src/runtime/ae.d.ts.
+    "types": [],
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"]
+}
