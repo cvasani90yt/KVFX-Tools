@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+build/
+dist/
+out/
+*.zxp
+*.tsbuildinfo
+
+# Native build artefacts
+packages/native/**/build/
+*.o
+*.obj
+*.aex
+*.plugin
+
+# Test + coverage
+coverage/
+.nyc_output/
+test-results/
+
+# Local environment — never commit credentials
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+*.cer
+signing/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Runtime
+logs/
+*.log
+.cache/
