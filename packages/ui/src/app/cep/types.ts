@@ -16,11 +16,40 @@ export interface AdobeCepHost {
   getHostEnvironment(): string;
   /** Extension id of this panel. */
   getExtensionId(): string;
+  /**
+   * Returns a `file://` URL for a well-known location. `"userData"` is the
+   * platform application-data root, which is where our settings live
+   * (ARCHITECTURE §10).
+   */
+  getSystemPath(pathType: string): string;
 }
+
+/**
+ * CEP's built-in filesystem bridge, available without Node being enabled.
+ *
+ * Synchronous, but it runs in the panel's own process, so a settings write does
+ * not freeze After Effects the way a host round-trip would.
+ */
+export interface AdobeCepFs {
+  readFile(path: string): { data?: string; err: number };
+  writeFile(path: string, data: string): { err: number };
+  makedir(path: string): { err: number };
+}
+
+export interface AdobeCepUtil {
+  registerExtensionUnloadCallback(callback: () => void): { err: number };
+}
+
+/** `cep.fs` returns 0 for success. We deliberately depend on nothing else. */
+export const CEP_FS_NO_ERROR = 0;
+
+/** The system path type for the platform application-data root. */
+export const SYSTEM_PATH_USER_DATA = "userData";
 
 declare global {
   interface Window {
     __adobe_cep__?: AdobeCepHost;
+    cep?: { fs?: AdobeCepFs; util?: AdobeCepUtil };
   }
 }
 

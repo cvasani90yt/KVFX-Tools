@@ -10,12 +10,16 @@ Keyboard-first. Minimal, dense, fast UI. Non-destructive. Undo-safe.
 
 ---
 
-## Project status — Phase 3 of 15 complete
+## Project status — Phase 4 of 15 complete
 
-The command engine works end to end. Thirteen layer commands run from the panel,
-each as a single undo step: solo, shy, visibility, 3D, guide and adjustment
-toggles, lock and unlock-all, layer reordering, and null and adjustment layer
-creation.
+The palette works. Type to search thirteen layer commands by name, keyword or
+acronym — `mtt` finds Move to Top, `eye` finds Toggle Visibility — navigate with
+the arrow keys, run with Enter. Favourites, recents and usage ranking persist
+between sessions. Every command runs as a single undo step.
+
+`Mod+Space` focuses the search field **while the panel has keyboard focus**;
+After Effects does not allow a global shortcut from a script or CEP panel
+([ADR-0003](docs/adr/0003-command-palette-shortcut.md)).
 
 Scope was reduced by [ADR-0007](docs/adr/0007-scope-reduction.md) — the AI,
 caption, media-download, reference-board, native-helper, licensing-activation
@@ -24,7 +28,7 @@ product is three moving parts: a CEP panel, an ExtendScript host bundle, and
 JSON files on disk. It opens no sockets and launches no second process.
 
 ```bash
-npm install && npm run verify   # typecheck + lint + 154 tests + build + guards
+npm install && npm run verify   # typecheck + lint + 250 tests + build + guards
 ```
 
 | Document | What it is |

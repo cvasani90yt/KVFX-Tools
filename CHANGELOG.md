@@ -80,3 +80,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in Phase 5 rather than an approximation here.
 - The panel has still not been loaded in a real After Effects from this
   environment.
+
+### Added — Phase 4: command palette
+- Fuzzy matcher with tiered ranking: exact, prefix, word prefix, acronym,
+  substring, then scattered subsequence. Tier gaps are wide enough that personal
+  weighting can never cross them
+- Palette ranking over name, keywords, category and description, weighted by
+  favourites, frequency and recency
+- Match highlighting — the palette shows *why* a result matched
+- Search field with keyboard navigation: `Mod+Space` to focus, ↑↓ to move,
+  ↵ to run, Esc to clear
+- Portable `Mod` modifier — Command on macOS, Control elsewhere — parsed,
+  matched and formatted per platform
+- Favourites (per-row star), recents and usage counts, persisted
+- Versioned settings at `%APPDATA%\KVFXTools` / `~/Library/Application Support/KVFXTools`
+  via CEP's `cep.fs` bridge, so a save does not freeze After Effects
+- Settings migration that validates each field independently, prunes references
+  to commands that no longer exist, and refuses to overwrite a file written by a
+  newer build
+
+### Notes
+- 250 tests. The palette bundle is 28 KB of JavaScript and 7 KB of CSS.
+- `Mod+Space` only works while the KVFX panel has keyboard focus. After Effects
+  does not let a script or CEP panel register a global shortcut (F6, ADR-0003);
+  this is the documented limit, not an implementation gap.
+- The palette is a search field above a list rather than a modal overlay: in a
+  docked panel an overlay would hide the panel's own contents to show a list
+  that *is* the panel's contents.

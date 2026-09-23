@@ -13,3 +13,6 @@ export * from "./types/errors.js";
 export * from "./types/json.js";
 export * from "./util/version.js";
 export * from "./commands/index.js";
+export * from "./search/index.js";
+export * from "./storage/index.js";
+export * from "./input/index.js";

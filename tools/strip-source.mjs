@@ -81,3 +81,67 @@ export function findLines(source, pattern) {
   }
   return hits;
 }
+
+/**
+ * Removes comments while leaving string literals intact, preserving line
+ * structure.
+ *
+ * The hard-coded-path guard needs this distinction: a path inside a string is a
+ * real defect, whereas a path in a comment explaining platform behaviour is
+ * documentation. String state is still tracked, so a `//` inside a string is
+ * not mistaken for the start of a comment.
+ */
+export function stripComments(source) {
+  let out = "";
+  let i = 0;
+  const n = source.length;
+
+  while (i < n) {
+    const ch = source[i];
+    const next = source[i + 1];
+
+    if (ch === "/" && next === "/") {
+      while (i < n && source[i] !== "\n") i += 1;
+      continue;
+    }
+
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < n && !(source[i] === "*" && source[i + 1] === "/")) {
+        if (source[i] === "\n") out += "\n";
+        i += 1;
+      }
+      i += 2;
+      continue;
+    }
+
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const quote = ch;
+      out += ch;
+      i += 1;
+      while (i < n && source[i] !== quote) {
+        if (source[i] === "\\") {
+          out += source[i];
+          i += 1;
+          if (i < n) {
+            out += source[i];
+            i += 1;
+          }
+          continue;
+        }
+        out += source[i];
+        i += 1;
+      }
+      if (i < n) {
+        out += source[i];
+        i += 1;
+      }
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+
+  return out;
+}

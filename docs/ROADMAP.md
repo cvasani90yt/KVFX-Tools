@@ -65,8 +65,8 @@ carry the most risk, deliberately last.
 | **1** ✅ | Research + architecture | Findings verified, constraints written down, spikes identified |
 | **2** ✅ | Project skeleton: workspace, toolchain, TS config, build, CEP manifest, dev install, CI, guards, test harness | Build, tests and guards green; panel assembles and reports its After Effects connection |
 | **3** ✅ | Core command engine: registry, plans, bridge, host op table, undo wrapper, selection snapshot, errors, logging | One real command executes end to end, undoes cleanly, and is fully unit-tested |
-| **4** ◀ | UI: command palette, fuzzy search, recents/favourites, settings | Palette meets the < 16 ms keystroke budget on a 3 000-entry index |
-| **5** | Layer tools (align, anchor, layer ops, parenting) | All commands undo as one step; mock-AE tests green |
+| **4** ✅ | UI: command palette, fuzzy search, recents/favourites, settings | Palette meets the < 16 ms keystroke budget on a 3 000-entry index |
+| **5** ◀ | Layer tools (align, anchor, parenting) | All commands undo as one step; mock-AE tests green |
 | **6** | Keyframe engine (timing algebra, sequencing, spatial distribution) | Interpolation and expressions preserved; property-based tests green |
 | **7** | Graph / easing engine (curve editor, curve library, import/export) | Round-trip AE ↔ KVFX curve fidelity proven; unrepresentable curves reported |
 | **8** | Text, colour and FX systems (incl. FX manager + Performance Mode) | Restore path proven safe against concurrent user edits |

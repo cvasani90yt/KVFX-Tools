@@ -9,19 +9,28 @@ import {
   type CommandContext,
   EMPTY_SNAPSHOT,
   type KvfxError,
+  type KvfxSettings,
+  type PaletteEntry,
   type SelectionSnapshot,
+  buildPalette,
   createProductionCommandRegistry,
   decodeSnapshot,
+  migrateSettings,
+  pruneUnknownCommands,
+  recordUsage,
+  toggleFavourite,
 } from "@kvfx/core";
-import { createCepTransport, isRunningInCep } from "./cep/index.js";
+import { createCepTransport, isRunningInCep } from "./cep/cep-transport.js";
+import { type SettingsStore, createMemoryStore, createSettingsStore } from "./cep/settings-store.js";
 
 /**
- * Owns the connection to After Effects and everything derived from it.
+ * Owns the connection to After Effects, the user's settings, and the palette
+ * state derived from both.
  *
  * The panel never assumes it knows the selection: it refreshes on focus, after
- * every command, and on explicit request, because After Effects emits no events
- * (ADR-0002). Commands themselves target the live selection, so a slightly
- * stale display can never cause the wrong layers to be modified.
+ * every command, and on request, because After Effects emits no events
+ * (ADR-0002). Commands target the live selection, so a briefly stale display
+ * can never cause the wrong layers to be modified.
  */
 
 export interface HostFacts {
@@ -48,9 +57,23 @@ export interface CommandOutcome {
 export interface SessionState {
   readonly connection: ConnectionState;
   readonly snapshot: SelectionSnapshot;
+  readonly settings: KvfxSettings;
+  readonly query: string;
+  readonly selectedIndex: number;
   readonly lastOutcome: CommandOutcome | undefined;
   readonly busy: boolean;
+  /** Settings-load notes, shown in diagnostics rather than as an error. */
+  readonly notices: readonly string[];
 }
+
+/**
+ * How long to wait before writing settings.
+ *
+ * Favourites and usage change on every command, and `cep.fs` writes are
+ * synchronous. Debouncing keeps a burst of commands from becoming a burst of
+ * file writes; a flush on blur and on panel unload means nothing is lost.
+ */
+const PERSIST_DELAY_MS = 800;
 
 const registry = createProductionCommandRegistry();
 
@@ -60,25 +83,40 @@ function asString(value: unknown, fallback = "unknown"): string {
 
 export class Session {
   #client: HostClient | undefined;
-  #state: SessionState = {
-    connection: { status: "checking" },
-    snapshot: EMPTY_SNAPSHOT,
-    lastOutcome: undefined,
-    busy: false,
-  };
-
+  readonly #store: SettingsStore;
   readonly #onChange: (state: SessionState) => void;
+  #persistTimer: ReturnType<typeof setTimeout> | undefined;
+  #settingsWritable = true;
+  #state: SessionState;
 
-  constructor(onChange: (state: SessionState) => void) {
+  constructor(onChange: (state: SessionState) => void, store?: SettingsStore) {
     this.#onChange = onChange;
+    this.#store = store ?? createSettingsStore() ?? createMemoryStore();
+
+    const loaded = migrateSettings(this.#store.read());
+    this.#settingsWritable = loaded.writable;
+
+    const knownIds = new Set(registry.all().map((command) => command.id));
+    const pruned = pruneUnknownCommands(loaded.settings, knownIds);
+
+    this.#state = {
+      connection: { status: "checking" },
+      snapshot: EMPTY_SNAPSHOT,
+      settings: pruned,
+      query: "",
+      selectedIndex: 0,
+      lastOutcome: undefined,
+      busy: false,
+      notices: loaded.warnings,
+    };
   }
 
   get state(): SessionState {
     return this.#state;
   }
 
-  get registry(): ReturnType<typeof createProductionCommandRegistry> {
-    return registry;
+  get settingsLocation(): string {
+    return this.#store.location();
   }
 
   context(): CommandContext {
@@ -86,10 +124,87 @@ export class Session {
     return { snapshot: this.#state.snapshot, aeVersion: facts?.aeVersion ?? "0" };
   }
 
+  /** The ranked palette for the current query, selection and settings. */
+  entries(): readonly PaletteEntry[] {
+    return buildPalette({
+      registry,
+      context: this.context(),
+      settings: this.#state.settings,
+      query: this.#state.query,
+      nowMs: Date.now(),
+    });
+  }
+
+  registryGet(commandId: string): Command | undefined {
+    return registry.get(commandId);
+  }
+
+  setSelectedIndex(index: number): void {
+    if (index === this.#state.selectedIndex) return;
+    this.#set({ selectedIndex: index });
+  }
+
+  selectedEntry(): PaletteEntry | undefined {
+    const list = this.entries();
+    return list[Math.min(this.#state.selectedIndex, list.length - 1)];
+  }
+
   #set(patch: Partial<SessionState>): void {
     this.#state = { ...this.#state, ...patch };
     this.#onChange(this.#state);
   }
+
+  // -------------------------------------------------------------------------
+  // Settings
+  // -------------------------------------------------------------------------
+
+  #updateSettings(next: KvfxSettings): void {
+    this.#set({ settings: next });
+    if (!this.#settingsWritable) return;
+
+    if (this.#persistTimer !== undefined) clearTimeout(this.#persistTimer);
+    this.#persistTimer = setTimeout(() => {
+      this.flushSettings();
+    }, PERSIST_DELAY_MS);
+  }
+
+  /** Writes pending settings immediately. Safe to call at any time. */
+  flushSettings(): void {
+    if (this.#persistTimer !== undefined) {
+      clearTimeout(this.#persistTimer);
+      this.#persistTimer = undefined;
+    }
+    if (!this.#settingsWritable) return;
+
+    const result = this.#store.write(this.#state.settings);
+    if (!result.ok && !this.#state.notices.includes(result.reason)) {
+      // Losing preferences is annoying; losing them silently is worse.
+      this.#set({ notices: [...this.#state.notices, result.reason] });
+    }
+  }
+
+  toggleFavourite(commandId: string): void {
+    this.#updateSettings(toggleFavourite(this.#state.settings, commandId));
+  }
+
+  // -------------------------------------------------------------------------
+  // Palette interaction
+  // -------------------------------------------------------------------------
+
+  setQuery(query: string): void {
+    this.#set({ query, selectedIndex: 0 });
+  }
+
+  moveSelection(delta: number): void {
+    const count = this.entries().length;
+    if (count === 0) return;
+    const next = (this.#state.selectedIndex + delta + count) % count;
+    this.#set({ selectedIndex: next });
+  }
+
+  // -------------------------------------------------------------------------
+  // Host
+  // -------------------------------------------------------------------------
 
   #transport(): HostTransport | { readonly unavailable: string } {
     if (!isRunningInCep()) {
@@ -106,7 +221,6 @@ export class Session {
     }
   }
 
-  /** Verifies the channel and reads the current selection. */
   async connect(): Promise<void> {
     this.#set({ connection: { status: "checking" }, busy: true });
 
@@ -157,17 +271,15 @@ export class Session {
     if (client === undefined || this.#state.connection.status !== "connected") return;
 
     const result = await client.send({ kind: "query", op: "kvfx.op.selection.snapshot" });
-    if (result.ok) {
-      this.#set({ snapshot: decodeSnapshot(result.value) });
-    }
+    if (result.ok) this.#set({ snapshot: decodeSnapshot(result.value) });
   }
 
   /**
    * Runs a command: build its plan, send it as one request, re-read selection.
    *
    * The whole plan crosses the bridge once and executes inside one undo group,
-   * so the user gets exactly one entry in Edit ▸ Undo no matter how many
-   * operations the command needed (ADR-0006).
+   * so the user gets exactly one entry in Edit ▸ Undo however many operations
+   * the command needed (ADR-0006).
    */
   async run(command: Command): Promise<void> {
     const client = this.#client;
@@ -199,7 +311,16 @@ export class Session {
       },
     });
 
+    // Usage is recorded only on success, so a command that failed because of a
+    // precondition does not climb the rankings.
+    if (result.ok) this.#updateSettings(recordUsage(this.#state.settings, command.id, Date.now()));
+
     await this.refreshSelection();
     this.#set({ busy: false });
+  }
+
+  async runSelected(): Promise<void> {
+    const entry = this.selectedEntry();
+    if (entry !== undefined && entry.available) await this.run(entry.command);
   }
 }

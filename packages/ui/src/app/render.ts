@@ -1,18 +1,6 @@
-import { PRODUCT_NAME, PRODUCT_VERSION, type AvailableCommand } from "@kvfx/core";
+import { PRODUCT_NAME, PRODUCT_VERSION, type PaletteEntry, type Platform } from "@kvfx/core";
+import { type PaletteHandlers, renderPalette } from "../palette/palette-view.js";
 import type { ConnectionState, SessionState } from "./session.js";
-
-/**
- * Renders the panel.
- *
- * Deliberately framework-free. This is the ancestor of the command palette
- * (Phase 4) — a flat, keyboard-reachable list of every command with its
- * availability resolved — and it is small enough that a rendering library would
- * be the largest thing in the bundle.
- *
- * Unavailable commands are shown, disabled, with the reason. A list that makes
- * entries vanish teaches the user nothing; one that says "Select a layer first"
- * teaches the rule once.
- */
 
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -61,26 +49,15 @@ function selectionLine(state: SessionState): HTMLElement {
   else {
     const count = snapshot.layers.length;
     const layers =
-      count === 0 ? "nothing selected" : count === 1 ? "1 layer selected" : `${String(count)} layers selected`;
+      count === 0
+        ? "nothing selected"
+        : count === 1
+          ? "1 layer selected"
+          : `${String(count)} layers selected`;
     text = `${snapshot.comp.name} — ${layers}`;
   }
 
   return element("div", "kvfx-selection", text);
-}
-
-function commandRow(entry: AvailableCommand, onRun: () => void, busy: boolean): HTMLElement {
-  const row = element("button", "kvfx-command");
-  row.type = "button";
-  row.disabled = !entry.available || busy;
-  row.title = entry.available ? entry.command.description : (entry.reason ?? "");
-
-  row.append(element("span", "kvfx-command__name", entry.command.name));
-  if (!entry.available && entry.reason !== undefined) {
-    row.append(element("span", "kvfx-command__hint", entry.reason));
-  }
-
-  row.addEventListener("click", onRun);
-  return row;
 }
 
 function detailBlock(title: string, body: string): HTMLDetailsElement {
@@ -93,13 +70,23 @@ function detailBlock(title: string, body: string): HTMLDetailsElement {
   return details;
 }
 
-export interface RenderOptions {
+export interface RenderOptions extends PaletteHandlers {
+  readonly entries: readonly PaletteEntry[];
+  readonly platform: Platform;
+  readonly paletteHotkeyLabel: string;
   readonly onRefresh: () => void;
-  readonly onRun: (commandId: string) => void;
-  readonly commands: readonly AvailableCommand[];
 }
 
-export function render(root: HTMLElement, state: SessionState, options: RenderOptions): void {
+export interface RenderResult {
+  /** The search field, so the caller can focus it for the palette shortcut. */
+  readonly input: HTMLInputElement | undefined;
+}
+
+export function render(
+  root: HTMLElement,
+  state: SessionState,
+  options: RenderOptions,
+): RenderResult {
   root.replaceChildren();
 
   const titlebar = element("header", "kvfx-titlebar");
@@ -109,25 +96,35 @@ export function render(root: HTMLElement, state: SessionState, options: RenderOp
   );
 
   const body = element("main", "kvfx-body");
-  body.append(statusLine(state.connection));
+  let input: HTMLInputElement | undefined;
 
   if (state.connection.status === "connected") {
     body.append(selectionLine(state));
 
-    const list = element("div", "kvfx-commands");
-    for (const entry of options.commands) {
-      list.append(commandRow(entry, () => options.onRun(entry.command.id), state.busy));
-    }
-    body.append(list);
+    const palette = renderPalette(
+      {
+        entries: options.entries,
+        query: state.query,
+        selectedIndex: state.selectedIndex,
+        busy: state.busy,
+        platform: options.platform,
+      },
+      options,
+    );
+    input = palette.input;
+    body.append(palette.root);
 
     if (state.lastOutcome !== undefined) {
-      const outcome = element(
-        "div",
-        `kvfx-outcome ${state.lastOutcome.ok ? "kvfx-outcome--ok" : "kvfx-outcome--error"}`,
-        `${state.lastOutcome.commandName}: ${state.lastOutcome.message}`,
+      body.append(
+        element(
+          "div",
+          `kvfx-outcome ${state.lastOutcome.ok ? "kvfx-outcome--ok" : "kvfx-outcome--error"}`,
+          `${state.lastOutcome.commandName}: ${state.lastOutcome.message}`,
+        ),
       );
-      body.append(outcome);
     }
+  } else {
+    body.append(statusLine(state.connection));
   }
 
   if (state.connection.status === "no-host") {
@@ -141,14 +138,18 @@ export function render(root: HTMLElement, state: SessionState, options: RenderOp
         "kvfx-note",
         "The panel loaded, but After Effects did not answer. Reopening the panel usually reloads the host script.",
       ),
-      detailBlock(
-        "Show details",
-        `${state.connection.error.code}\n${state.connection.error.message}`,
-      ),
+      detailBlock("Show details", `${state.connection.error.code}\n${state.connection.error.message}`),
     );
   }
 
+  if (state.notices.length > 0) {
+    body.append(detailBlock("Settings notices", state.notices.join("\n\n")));
+  }
+
   const footer = element("footer", "kvfx-footer");
+  footer.append(
+    element("span", "kvfx-hintbar", `${options.paletteHotkeyLabel} to search · ↑↓ to move · ↵ to run`),
+  );
   const refresh = element("button", "kvfx-button", "Refresh");
   refresh.type = "button";
   refresh.disabled = state.busy;
@@ -156,4 +157,5 @@ export function render(root: HTMLElement, state: SessionState, options: RenderOp
   footer.append(refresh);
 
   root.append(titlebar, body, footer);
+  return { input };
 }

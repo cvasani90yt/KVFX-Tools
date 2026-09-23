@@ -167,6 +167,36 @@ runs, After Effects is frozen.
 * Long work is chunked and yielded via `app.scheduleTask`, or moved off-host.
 * Wall-clock budgets are enforced per operation; nothing heavy runs on the host.
 
+## F11 — CEP provides filesystem access and platform paths without Node
+
+**Status: verified.** This is what lets settings persist with no sidecar.
+
+`CEPEngine_extensions.js` is built into the CEP HTML engine and exposes
+`window.cep.fs` — `readFile`, `writeFile`, `makedir` — callable directly from an
+extension with **no JavaScript file reference and without `--enable-nodejs`**.
+Success is `err === 0`; the documentation names only `NO_ERROR - 0`,
+`ERR_UNKNOWN - 1` and `ERR_INVALID_PARAMS - 2` as a general contract.
+
+`window.__adobe_cep__.getSystemPath("userData")` returns the platform
+application-data root as a `file://` URL. `CSInterface.js` shows the required
+post-processing: `decodeURI`, then strip `file:///` on Windows and `file://` on
+macOS — the two differ, so a single fixed prefix breaks one platform.
+
+`window.cep.util.registerExtensionUnloadCallback` exists for flushing work when
+the panel closes.
+
+**Consequences:**
+
+* Settings live in `%APPDATA%\KVFXTools` / `~/Library/Application Support/KVFXTools`
+  and are written from the panel's own process, so a save does **not** freeze
+  After Effects the way an ExtendScript round-trip would.
+* We depend only on `err === 0`, never on a specific error code: any read
+  failure is treated as "no settings yet" and falls back to defaults.
+* `cep.fs` can write anywhere the user can, so every path is derived from
+  `getSystemPath` plus our own folder name, and no caller-supplied path is
+  accepted.
+* `makedir` is not recursive; each level is created in turn.
+
 ---
 
 ## Open spikes (blocking nothing in the MVP, but scheduled)

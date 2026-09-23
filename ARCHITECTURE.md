@@ -348,9 +348,17 @@ macOS     ~/Library/Application Support/KVFXTools/
 
 * Every store carries a `schemaVersion`. Migrations are forward-only, tested, and
   run behind a one-time backup of the affected store.
-* Everything is JSON. Search indexes (presets, expressions, command history) are
-  built in memory at startup from those files — at realistic project and library
-  sizes that is faster than a database and removes an entire dependency.
+* Everything is JSON, written through CEP's built-in `cep.fs` bridge (`F11`),
+  which runs in the panel's process — so saving settings does not freeze
+  After Effects the way an ExtendScript round-trip would. The platform root
+  comes from `getSystemPath("userData")`; no path is ever hard-coded, and
+  nothing accepts a caller-supplied path.
+* Search indexes (presets, expressions, command history) are built in memory at
+  startup from those files — at realistic library sizes that is faster than a
+  database and removes an entire dependency.
+* Writes are debounced and flushed on blur and on panel unload. Any read failure
+  is treated as "no settings yet"; a file written by a newer build is used but
+  never overwritten, so downgrading cannot destroy settings.
 * **The product stores no secrets**, because ADR-0007 removed every feature that
   needed one. Nothing is sent anywhere: no telemetry, no account, no network.
 * Per-project data (notes, tasks, deadline) is keyed by a KVFX project GUID.

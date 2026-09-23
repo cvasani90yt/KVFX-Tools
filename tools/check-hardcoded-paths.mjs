@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { repoRoot } from "../scripts/paths.mjs";
+import { stripComments } from "./strip-source.mjs";
 
 /**
  * Fails the build on absolute path literals.
@@ -15,6 +16,14 @@ import { repoRoot } from "../scripts/paths.mjs";
  * a path character after the separator. A looser rule also matches ordinary
  * prose such as "cannot parse:\n", and a guard that cries wolf is a guard
  * someone switches off.
+ *
+ * Comments are stripped first, for the same reason: a path inside a string is a
+ * real defect, while a path in a comment explaining platform behaviour is
+ * documentation. String literals are left intact so the defect is still caught.
+ *
+ * Test directories are exempt. The rule exists to stop *product* code embedding
+ * a path that only works on one platform; a test that verifies cross-platform
+ * path handling has to contain both platforms' paths to be worth anything.
  */
 
 const BANNED = [
@@ -27,7 +36,15 @@ const BANNED = [
 
 const EXEMPT = new Set([join("scripts", "paths.mjs"), join("tools", "check-hardcoded-paths.mjs")]);
 
-const SKIP_DIRS = new Set(["node_modules", "dist", "dist-types", ".git", "build", "coverage"]);
+const SKIP_DIRS = new Set([
+  "node_modules",
+  "dist",
+  "dist-types",
+  ".git",
+  "build",
+  "coverage",
+  "tests",
+]);
 const SKIP_FILES = new Set(["package-lock.json"]);
 
 async function* candidates(dir) {
@@ -52,7 +69,7 @@ for await (const file of candidates(repoRoot)) {
   const where = relative(repoRoot, file);
   if (EXEMPT.has(where)) continue;
   checked += 1;
-  const lines = (await readFile(file, "utf8")).split("\n");
+  const lines = stripComments(await readFile(file, "utf8")).split("\n");
   for (let i = 0; i < lines.length; i += 1) {
     for (const [pattern, label] of BANNED) {
       if (pattern.test(lines[i])) failures.push(`  ${where}:${String(i + 1)} — ${label}`);
