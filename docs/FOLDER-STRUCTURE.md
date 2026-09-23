@@ -1,9 +1,10 @@
 # KVFX Tools — Folder Structure
 
-Adapted to the Adobe-supported stack (CEP 12 + ExtendScript + out-of-process
-sidecar). The specification's suggested tree assumed a single-runtime project;
-this layout maps the same modules onto the four runtimes we actually have, so
-that each one can be built, linted and tested independently.
+Adapted to the Adobe-supported stack: a CEP 12 panel plus an ExtendScript host
+bundle. The specification's suggested tree assumed a single runtime; this layout
+maps the same modules onto the two we actually have, plus the pure-logic package
+that neither of them may reach into, so each can be built, linted and tested
+independently.
 
 ```
 kvfx-tools/
@@ -46,17 +47,14 @@ kvfx-tools/
 │   │   └── tests/               Tier 2 — mock-AE environment
 │   │
 │   ├── bridge/                  Typed IPC, shared by both transports
-│   │   └── src/{protocol,host,sidecar}/
+│   │   └── src/{protocol,host}/
 │   │
 │   ├── ui/                      CEP panel (Chromium 99 baseline)
 │   │   ├── src/{app,palette,hud,views,components,state,theme,styles}/
 │   │   │   └── app/cep/         THE ONLY place CEP APIs are touched (ADR-0001)
 │   │   └── public/
 │   │
-│   ├── sidecar/                 Standalone Node 22 binary (ADR-0005)
-│   │   └── src/{server,rpc,ai,captions,media,index,db,secrets,updates,licensing,log}/
-│   │
-│   └── native/aegp/             AEGP C++ helper — DEFERRED, optional, flagged
+│   └── ui/  (continued)
 │
 ├── cep/
 │   ├── CSXS/                    manifest.xml, .debug
@@ -81,12 +79,14 @@ Resolved once at startup through a platform-safe API. No hard-coded paths
 anywhere in the codebase; a lint rule blocks path literals containing `C:\`,
 `/Users/` or `%APPDATA%` outside the path-resolution module.
 
+`packages/sidecar` and `packages/native` were removed by ADR-0007 along with the
+features that justified them.
+
 ## Dependency direction
 
 ```
 ui ──▶ bridge ──▶ host          ui ──▶ core
-sidecar ──▶ core                host ──▶ (nothing)
-core ──▶ (nothing)
+core ──▶ (nothing)              host ──▶ (nothing)
 ```
 
 `core` depends on nothing and is imported by everything. `host` imports nothing —

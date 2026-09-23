@@ -1,12 +1,17 @@
-import { PRODUCT_NAME, PRODUCT_VERSION } from "@kvfx/core";
-import type { ConnectionState } from "./connection.js";
+import { PRODUCT_NAME, PRODUCT_VERSION, type AvailableCommand } from "@kvfx/core";
+import type { ConnectionState, SessionState } from "./session.js";
 
 /**
- * Renders the panel shell.
+ * Renders the panel.
  *
- * Deliberately framework-free: the Phase 2 shell exists to prove the bridge, and
- * introducing a rendering library before there is a UI to render would be a
- * decision made on no evidence. The component layer arrives in Phase 4.
+ * Deliberately framework-free. This is the ancestor of the command palette
+ * (Phase 4) — a flat, keyboard-reachable list of every command with its
+ * availability resolved — and it is small enough that a rendering library would
+ * be the largest thing in the bundle.
+ *
+ * Unavailable commands are shown, disabled, with the reason. A list that makes
+ * entries vanish teaches the user nothing; one that says "Select a layer first"
+ * teaches the rule once.
  */
 
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -20,10 +25,6 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function fact(list: HTMLDListElement, label: string, value: string): void {
-  list.append(element("dt", undefined, label), element("dd", undefined, value));
-}
-
 function statusLine(state: ConnectionState): HTMLElement {
   const row = element("div", "kvfx-status");
   const dot = element("span", "kvfx-dot");
@@ -31,11 +32,11 @@ function statusLine(state: ConnectionState): HTMLElement {
 
   switch (state.status) {
     case "checking":
-      label = "Checking connection to After Effects…";
+      label = "Connecting to After Effects…";
       break;
     case "connected":
       dot.classList.add("kvfx-dot--ok");
-      label = `Connected — round trip ${String(state.roundTripMs)} ms`;
+      label = `After Effects ${state.facts.aeVersion} · ${String(state.roundTripMs)} ms`;
       break;
     case "no-host":
       dot.classList.add("kvfx-dot--warn");
@@ -51,6 +52,37 @@ function statusLine(state: ConnectionState): HTMLElement {
   return row;
 }
 
+function selectionLine(state: SessionState): HTMLElement {
+  const { snapshot } = state;
+  let text: string;
+
+  if (!snapshot.hasProject) text = "No project open";
+  else if (snapshot.comp === undefined) text = "No composition open";
+  else {
+    const count = snapshot.layers.length;
+    const layers =
+      count === 0 ? "nothing selected" : count === 1 ? "1 layer selected" : `${String(count)} layers selected`;
+    text = `${snapshot.comp.name} — ${layers}`;
+  }
+
+  return element("div", "kvfx-selection", text);
+}
+
+function commandRow(entry: AvailableCommand, onRun: () => void, busy: boolean): HTMLElement {
+  const row = element("button", "kvfx-command");
+  row.type = "button";
+  row.disabled = !entry.available || busy;
+  row.title = entry.available ? entry.command.description : (entry.reason ?? "");
+
+  row.append(element("span", "kvfx-command__name", entry.command.name));
+  if (!entry.available && entry.reason !== undefined) {
+    row.append(element("span", "kvfx-command__hint", entry.reason));
+  }
+
+  row.addEventListener("click", onRun);
+  return row;
+}
+
 function detailBlock(title: string, body: string): HTMLDetailsElement {
   const details = element("details", "kvfx-detail");
   const summary = document.createElement("summary");
@@ -62,10 +94,12 @@ function detailBlock(title: string, body: string): HTMLDetailsElement {
 }
 
 export interface RenderOptions {
-  readonly onRecheck: () => void;
+  readonly onRefresh: () => void;
+  readonly onRun: (commandId: string) => void;
+  readonly commands: readonly AvailableCommand[];
 }
 
-export function render(root: HTMLElement, state: ConnectionState, options: RenderOptions): void {
+export function render(root: HTMLElement, state: SessionState, options: RenderOptions): void {
   root.replaceChildren();
 
   const titlebar = element("header", "kvfx-titlebar");
@@ -75,24 +109,32 @@ export function render(root: HTMLElement, state: ConnectionState, options: Rende
   );
 
   const body = element("main", "kvfx-body");
-  body.append(statusLine(state));
+  body.append(statusLine(state.connection));
 
-  if (state.status === "connected") {
-    const list = element("dl", "kvfx-facts");
-    fact(list, "After Effects", state.facts.aeVersion);
-    fact(list, "Build", state.facts.aeBuild);
-    fact(list, "Host bundle", state.facts.hostBundleVersion);
-    fact(list, "ExtendScript", state.facts.engineVersion);
-    fact(list, "Language", state.facts.aeLanguage);
-    fact(list, "OS", state.facts.os);
+  if (state.connection.status === "connected") {
+    body.append(selectionLine(state));
+
+    const list = element("div", "kvfx-commands");
+    for (const entry of options.commands) {
+      list.append(commandRow(entry, () => options.onRun(entry.command.id), state.busy));
+    }
     body.append(list);
+
+    if (state.lastOutcome !== undefined) {
+      const outcome = element(
+        "div",
+        `kvfx-outcome ${state.lastOutcome.ok ? "kvfx-outcome--ok" : "kvfx-outcome--error"}`,
+        `${state.lastOutcome.commandName}: ${state.lastOutcome.message}`,
+      );
+      body.append(outcome);
+    }
   }
 
-  if (state.status === "no-host") {
-    body.append(element("p", "kvfx-note", state.message));
+  if (state.connection.status === "no-host") {
+    body.append(element("p", "kvfx-note", state.connection.message));
   }
 
-  if (state.status === "failed") {
+  if (state.connection.status === "failed") {
     body.append(
       element(
         "p",
@@ -101,18 +143,17 @@ export function render(root: HTMLElement, state: ConnectionState, options: Rende
       ),
       detailBlock(
         "Show details",
-        `${state.error.code}\n${state.error.message}${
-          state.error.diagnosticId === undefined ? "" : `\nDiagnostic ${state.error.diagnosticId}`
-        }`,
+        `${state.connection.error.code}\n${state.connection.error.message}`,
       ),
     );
   }
 
-  const button = element("button", "kvfx-button", "Re-check");
-  button.type = "button";
-  button.disabled = state.status === "checking";
-  button.addEventListener("click", options.onRecheck);
-  body.append(button);
+  const footer = element("footer", "kvfx-footer");
+  const refresh = element("button", "kvfx-button", "Refresh");
+  refresh.type = "button";
+  refresh.disabled = state.busy;
+  refresh.addEventListener("click", options.onRefresh);
+  footer.append(refresh);
 
-  root.append(titlebar, body);
+  root.append(titlebar, body, footer);
 }

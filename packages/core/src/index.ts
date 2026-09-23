@@ -10,4 +10,6 @@
 export * from "./types/product.js";
 export * from "./types/result.js";
 export * from "./types/errors.js";
+export * from "./types/json.js";
 export * from "./util/version.js";
+export * from "./commands/index.js";

@@ -25,6 +25,15 @@ export const MAX_BUDGET_MS = 1000;
 /** How much of an unparseable host reply we quote back in the error. */
 const ERROR_EXCERPT_CHARS = 200;
 
+/**
+ * The operation id a `kind: "plan"` request must carry.
+ *
+ * Part of the wire contract, so it lives here rather than in the host: the
+ * panel has to name it when sending, and the host has to recognise it when
+ * receiving.
+ */
+export const PLAN_OPERATION_ID = "kvfx.op.core.plan";
+
 export type RequestKind =
   /** A single primitive operation. */
   | "op"
@@ -87,7 +96,13 @@ export class ProtocolError extends Error {
   }
 }
 
-const OP_ID_PATTERN = /^kvfx\.op\.[a-z0-9]+(?:\.[a-z0-9]+)+$/;
+/**
+ * Operation ids: `kvfx.op.<group>.<name>`, lowerCamelCase per segment.
+ *
+ * Enforced here because an id the host does not recognise produces a confusing
+ * runtime failure, whereas a malformed one is caught before anything is sent.
+ */
+const OP_ID_PATTERN = /^kvfx\.op\.[a-z][a-zA-Z0-9]*(?:\.[a-z][a-zA-Z0-9]*)+$/;
 
 export function buildRequest(input: BuildRequestInput): HostRequest {
   if (!OP_ID_PATTERN.test(input.op)) {

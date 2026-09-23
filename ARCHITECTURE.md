@@ -1,6 +1,9 @@
 # KVFX Tools — Architecture
 
-**Status:** Phase 1 (research + architecture). No implementation code exists yet.
+**Status:** Phase 3 (core command engine). Scope reduced by ADR-0007 — the AI,
+caption, media-download, reference-board, native-helper, licensing-activation and
+update-installer modules are cut, and the local sidecar is cut with them. The
+architecture below reflects that: **three moving parts, not five.**
 **Target host:** Adobe After Effects 26.x, forward-designed for 27.x+.
 **Platforms:** Windows 10/11 (x64, ARM64), macOS 13+ (Apple silicon + Intel).
 
@@ -18,8 +21,7 @@ alternative instead of pretending.
 |---|---|---|
 | Panel UI | **CEP 12** extension, TypeScript, Vite, Preact | UXP panels do not exist for AE (`F1`); CEP is fully supported in AE 26 (`F2`) |
 | AE automation | **ExtendScript (ES3)**, compiled bundle | the only in-process automation API for AE (`F10`) |
-| Heavy/async work | **Out-of-process sidecar**, Node 22 single-file binary | avoids CEP's Node 17 / NW 0.62.1 native-module ABI trap (`F3`), keeps AE responsive |
-| Deep host integration | **AEGP C++ plugin**, optional, deferred | menu commands + idle hooks; unproven for shortcuts (`F8`) |
+| Storage | **Versioned JSON** under the platform app-data directory | no database, no second process, nothing to keep alive |
 
 ### 1.1 CEP vs UXP vs native C++ vs ExtendScript
 
@@ -67,24 +69,27 @@ fully functional without it.
 │  packages/ui — CEP panel (Chromium 99)                       │
 │  command palette · HUD · module views · settings             │
 │  holds the command REGISTRY (metadata + composition)         │
-└───────────┬──────────────────────────────┬───────────────────┘
-            │ JSON-RPC over evalScript     │ JSON-RPC over localhost WS
-            │ (packages/bridge/host)       │ (packages/bridge/sidecar)
-┌───────────▼──────────────────┐  ┌────────▼──────────────────────────┐
-│  packages/host — ExtendScript│  │  packages/sidecar — Node 22 binary │
-│  versioned OPERATION table   │  │  AI · Whisper · media · index · DB │
-│  AE DOM adapters · undo      │  │  secrets · updates · licensing      │
-└───────────┬──────────────────┘  └────────┬──────────────────────────┘
-            │                              │
-┌───────────▼──────────────────┐  ┌────────▼──────────────────────────┐
-│  After Effects 26.x          │  │  OS keychain · SQLite · filesystem │
-└──────────────────────────────┘  └───────────────────────────────────┘
+└───────────────────────────┬──────────────────────────────────┘
+                            │ JSON-RPC over evalScript
+                            │ (packages/bridge)
+┌───────────────────────────▼──────────────────────────────────┐
+│  packages/host — ExtendScript (ES5 output, ES3-safe)         │
+│  versioned OPERATION table · AE DOM adapters · undo · plans  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+┌───────────────────────────▼──────────────────────────────────┐
+│  After Effects 26.x                                          │
+└──────────────────────────────────────────────────────────────┘
 
             packages/core — pure TypeScript, no AE, no DOM
-   search · curves · timing algebra · naming · colour · presets ·
-   expression templates · storage schema + migrations · diagnostics
+   commands · search · curves · timing algebra · naming · colour ·
+   presets · expression templates · storage schema · diagnostics
             (this is where the testable logic lives)
 ```
+
+Nothing in the product opens a network socket, and no second process is
+launched. That is a deliberate consequence of ADR-0007, and it stays true by
+default.
 
 The single most important structural decision: **`packages/core` knows nothing
 about After Effects, Chromium, Node or the filesystem.** It is pure functions
@@ -101,29 +106,25 @@ serialiser are all unit-testable with no host at all.
 | `host` | ExtendScript operation table, AE DOM adapters, undo wrapper, selection snapshot | business logic, string formatting for UI, anything async |
 | `bridge` | wire protocol, request/response envelopes, versioning, timeouts, transport adapters | feature logic |
 | `ui` | panel shell, palette, views, components, state, theme, CEP adapter | AE API calls not routed through `bridge`, algorithms that belong in `core` |
-| `sidecar` | HTTP/WS server, AI providers, Whisper, media, SQLite index, keychain, updates | anything that must run synchronously with AE |
-| `native` | AEGP C++ helper (deferred) | anything the product depends on |
 
 ---
 
-## 3. The twelve layers, mapped
+## 3. The layers, mapped
 
-| # | Requested layer | Where it lives |
-|---|---|---|
-| 1 | UI | `packages/ui` |
-| 2 | AE communication | `packages/bridge/src/host` + `packages/host/src/runtime` |
-| 3 | Core command engine | `packages/core/src/commands` (registry) + `packages/host/src/ops` (primitives) |
-| 4 | Animation/keyframe engine | `packages/core/src/keyframes`, `core/src/animation`, `host/src/ops/keyframe` |
-| 5 | Preset engine | `packages/core/src/presets` + `sidecar/src/index` + `host/src/ops/preset` |
-| 6 | Asset engine | `packages/sidecar/src/index` (search/thumbnails) + `host/src/ops/asset` |
-| 7 | AI engine | `packages/sidecar/src/ai` (providers) + `core/src/expressions` (validation) |
-| 8 | Local service | `packages/sidecar` |
-| 9 | Persistence/database | `core/src/storage` (schema + migration) + `sidecar/src/db` (SQLite) |
-| 10 | Performance/diagnostics | `core/src/diagnostics` + `host/src/ops/project` + `sidecar/src/log` |
-| 11 | Licensing | `core/src/licensing` (token verification) + `sidecar/src/licensing` (network, storage) |
-| 12 | Update system | `packages/sidecar/src/updates` |
+ADR-0007 removed four of the twelve layers originally specified (AI engine, local
+service, licensing enforcement, update system). What remains:
 
----
+| Requested layer | Where it lives |
+|---|---|
+| UI | `packages/ui` |
+| AE communication | `packages/bridge` + `packages/host/src/runtime` |
+| Core command engine | `packages/core/src/commands` (commands + registry) + `packages/host/src/ops` (primitives) |
+| Animation/keyframe engine | `core/src/keyframes`, `core/src/animation`, `host/src/ops/keyframe` |
+| Preset engine | `core/src/presets` + `host/src/ops/preset` |
+| Asset engine | `core/src/presets` + in-memory index built at startup |
+| Persistence | `core/src/storage` — versioned JSON files, no database |
+| Performance/diagnostics | `core/src/diagnostics` + `host/src/ops/project` |
+| Licensing | `core/src/licensing` — interfaces only; no enforcement ships (ADR-0007) |
 
 ## 4. Command architecture
 
@@ -281,10 +282,9 @@ Response  { v, id, ok, result?, error?: { code, message, detail, diagnosticId } 
   (`§11`); they are captured, assigned a diagnostic id, logged, and mapped to a
   friendly message.
 
-The sidecar transport is a localhost WebSocket bound to `127.0.0.1` on an
-ephemeral port, with a per-session token written to a user-only-readable file
-that the panel reads. It rejects any request whose `Origin` is not our extension.
-It is a local IPC channel, not a web server, and must never be reachable off-host.
+There is exactly one transport: `evalScript` into After Effects. ADR-0007 removed
+the sidecar, so the protocol has no second channel to keep in step and the
+product opens no sockets at all.
 
 ---
 
@@ -328,21 +328,13 @@ it works identically on both platforms. Temp files live in a KVFX-owned cache
 directory with a documented retention policy and are cleaned on a schedule and on
 uninstall — never with a recursive delete of a path we did not create.
 
-**Media from URL.** Optional module. Direct media URLs only. No DRM
-circumvention, no authentication bypass, no access-restriction workarounds. The
-downloader refuses anything that requires defeating a protection measure.
-
-**Captions.** Whisper runs in the sidecar, off AE's thread, streaming progress to
-the panel. Nothing about it touches AE until the user approves the result and we
-build caption layers in one undoable plan.
-
 **HUD.** `SPIKE-05` — AE's panel system governs window size and floating
 behaviour; the compact HUD ships in whatever minimum useful form AE actually
 permits, and the design will be finalised after the spike, not before.
 
 ---
 
-## 10. Storage, configuration and secrets
+## 10. Storage and configuration
 
 Resolved once at startup, platform-appropriate, never inside the extension
 install directory:
@@ -351,17 +343,16 @@ install directory:
 Windows   %APPDATA%\KVFXTools\
 macOS     ~/Library/Application Support/KVFXTools/
           config/       presets/      expressions/   palettes/
-          workspaces/   references/   logs/          cache/
+          workspaces/   logs/         cache/
 ```
 
 * Every store carries a `schemaVersion`. Migrations are forward-only, tested, and
   run behind a one-time backup of the affected store.
-* Large/searchable data (asset index, reference board, command history) lives in
-  SQLite inside the sidecar. Small preferences live in JSON.
-* **Secrets never touch config files.** API keys and license tokens go to the OS
-  keychain (macOS Keychain, Windows Credential Manager) via the sidecar. No API
-  key is ever hard-coded, logged, or sent anywhere except the provider the user
-  configured.
+* Everything is JSON. Search indexes (presets, expressions, command history) are
+  built in memory at startup from those files — at realistic project and library
+  sizes that is faster than a database and removes an entire dependency.
+* **The product stores no secrets**, because ADR-0007 removed every feature that
+  needed one. Nothing is sent anywhere: no telemetry, no account, no network.
 * Per-project data (notes, tasks, deadline) is keyed by a KVFX project GUID.
   `SPIKE-03` decides whether that GUID can be stamped into `Project.xmpPacket`
   additively without clobbering other metadata; if not, we key by project path +

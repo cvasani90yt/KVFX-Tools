@@ -10,16 +10,21 @@ Keyboard-first. Minimal, dense, fast UI. Non-destructive. Undo-safe.
 
 ---
 
-## Project status — Phase 2 of 15 complete
+## Project status — Phase 3 of 15 complete
 
-The architecture is settled and the project skeleton builds, tests and packages
-end to end. What exists today is the spine, not the features: a working
-panel → After Effects bridge with undo discipline, host-version gating, budget
-enforcement and structured errors, plus the guards that keep the two hostile
-runtime baselines honest. The command engine lands in Phase 3.
+The command engine works end to end. Thirteen layer commands run from the panel,
+each as a single undo step: solo, shy, visibility, 3D, guide and adjustment
+toggles, lock and unlock-all, layer reordering, and null and adjustment layer
+creation.
+
+Scope was reduced by [ADR-0007](docs/adr/0007-scope-reduction.md) — the AI,
+caption, media-download, reference-board, native-helper, licensing-activation
+and update-installer modules are cut, and the local sidecar went with them. The
+product is three moving parts: a CEP panel, an ExtendScript host bundle, and
+JSON files on disk. It opens no sockets and launches no second process.
 
 ```bash
-npm install && npm run verify   # typecheck + lint + 85 tests + build + guards
+npm install && npm run verify   # typecheck + lint + 154 tests + build + guards
 ```
 
 | Document | What it is |
@@ -40,10 +45,10 @@ npm install && npm run verify   # typecheck + lint + 85 tests + build + guards
   Effects; this is not a preference, it is the only HTML panel option.
 * **After Effects automation** — ExtendScript, treated as a device driver: small,
   versioned primitives, no business logic.
-* **Heavy work** — a separate local process, so transcription, AI and indexing
-  can never freeze After Effects.
 * **Logic** — pure TypeScript with no host dependency, which is what makes the
   test strategy real rather than aspirational.
+* **Storage** — versioned JSON files. No database, no second process, no sockets.
+  See [ADR-0007](docs/adr/0007-scope-reduction.md) for what was cut and why.
 
 ## Target
 

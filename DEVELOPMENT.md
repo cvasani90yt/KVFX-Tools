@@ -10,7 +10,7 @@ the codebase.
 | Requirement | Notes |
 |---|---|
 | After Effects 26.x | Windows 10/11 or macOS 13+ |
-| Node.js 22 LTS | For the build toolchain and the sidecar |
+| Node.js 22 LTS | For the build toolchain |
 | Git | — |
 | Adobe ZXP signing certificate | Packaging only (Phase 14); not needed for local dev |
 

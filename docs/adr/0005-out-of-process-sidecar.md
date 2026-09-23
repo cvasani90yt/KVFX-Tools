@@ -1,6 +1,11 @@
 # ADR-0005 — Heavy work runs in a separate process, not in CEP's Node
 
-**Status:** Accepted · Phase 1 · Implemented from Phase 11
+**Status:** SUPERSEDED by ADR-0007 — the sidecar was removed along with the
+features that justified it. Kept for the record: the reasoning about CEP's Node
+ABI still holds, and would apply again if any out-of-process work is ever
+revived.
+
+**Status (original):** Accepted · Phase 1 · Implemented from Phase 11
 
 ## Context
 CEP 12 embeds Node 17.7.1 with Node-Webkit 0.62.1 (`F3`). Native modules loaded
