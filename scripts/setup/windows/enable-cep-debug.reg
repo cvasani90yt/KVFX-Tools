@@ -1,0 +1,28 @@
+Windows Registry Editor Version 5.00
+
+; KVFX Tools - enable Adobe CEP debug mode
+;
+; After Effects refuses to load an UNSIGNED extension unless PlayerDebugMode is
+; set. KVFX Tools is not code-signed yet (that is a Phase 14 deliverable), so
+; this is required to run it.
+;
+; What this changes:
+;   - Writes one value per CEP version under HKEY_CURRENT_USER.
+;   - HKCU means your user account only. No administrator rights are needed and
+;     no other user on this machine is affected.
+;   - It only relaxes the signature requirement for Adobe extension loading. It
+;     changes nothing else about Windows or After Effects.
+;
+; It is fully reversible: run disable-cep-debug.reg to undo it.
+;
+; CSXS.12 covers After Effects 26.x, CSXS.11 covers 22.x-25.x. Setting the one
+; you do not have installed is harmless. For a future CEP version, copy a block
+; below and change the number.
+;
+; Quit and reopen After Effects after running this.
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.12]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.11]
+"PlayerDebugMode"="1"

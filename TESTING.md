@@ -11,10 +11,27 @@ and lands in `build/`. If you were sent the zip directly, skip to step 2.
 ## Step 1 — Enable CEP debug mode (one time per machine)
 
 After Effects refuses to load an **unsigned** extension unless this is set. Code
-signing is a Phase 14 deliverable, so until then this step is required. It
-affects only your user account and only Adobe extension loading.
+signing is a Phase 14 deliverable, so until then this step is required. It is
+per-user, needs no administrator rights, and is reversible.
 
-**macOS** — paste into Terminal:
+### The easy way — double-click an installer
+
+From [`scripts/setup/`](scripts/setup/):
+
+| Platform | Run this | To undo later |
+|---|---|---|
+| Windows | `windows/enable-cep-debug.reg` | `windows/disable-cep-debug.reg` |
+| macOS | `macos/enable-cep-debug.command` | `macos/disable-cep-debug.command` |
+
+**Windows** will ask you to confirm a registry change. That prompt is expected —
+say yes.
+
+**macOS** may block the script because it was downloaded. Right-click ▸ **Open**
+▸ **Open** is the standard way to run an unsigned script you trust.
+
+### Or by hand
+
+**macOS** — Terminal:
 
 ```bash
 defaults write com.adobe.CSXS.12 PlayerDebugMode 1
@@ -22,15 +39,19 @@ defaults write com.adobe.CSXS.11 PlayerDebugMode 1
 killall cfprefsd
 ```
 
-**Windows** — paste into Command Prompt:
+**Windows** — Command Prompt:
 
 ```bat
 reg add HKCU\Software\Adobe\CSXS.12 /v PlayerDebugMode /t REG_SZ /d 1 /f
 reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1 /f
 ```
 
-Both versions are set because CSXS.12 covers After Effects 26 and CSXS.11 covers
-22–25; setting the one you do not need is harmless.
+Both CEP versions are set because CSXS.12 covers After Effects 26 and CSXS.11
+covers 22–25; setting the one you do not have is harmless.
+
+Either way it changes one documented Adobe developer switch and nothing else.
+[`scripts/setup/README.md`](scripts/setup/README.md) says exactly what is
+written and where.
 
 **Quit and reopen After Effects afterwards.**
 
@@ -157,6 +178,11 @@ Screenshots of the panel are useful. So is the exact After Effects version from
 
 Delete the `com.kvfx.tools` folder from the extensions directory. That removes
 the panel and nothing else.
+
+To also undo step 1, run the matching `disable-cep-debug` script from
+[`scripts/setup/`](scripts/setup/). After that, After Effects will again refuse
+unsigned extensions — which is the default, and the right state to be in once
+you are finished testing.
 
 Your settings live separately and are left alone:
 

@@ -1,0 +1,21 @@
+Windows Registry Editor Version 5.00
+
+; KVFX Tools - disable Adobe CEP debug mode
+;
+; Restores the default behaviour: After Effects will again refuse to load
+; unsigned extensions. Run this when you are finished testing, or to undo
+; enable-cep-debug.reg.
+;
+; Unsigned extensions, including this build of KVFX Tools, will stop loading
+; after you run this. Signed extensions are unaffected.
+;
+; The trailing "-" on each value name deletes that value. The surrounding key is
+; left in place because After Effects uses it for its own settings.
+;
+; Quit and reopen After Effects after running this.
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.12]
+"PlayerDebugMode"=-
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.11]
+"PlayerDebugMode"=-
