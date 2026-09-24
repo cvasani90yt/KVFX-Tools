@@ -18,6 +18,19 @@ export interface CommandUsage {
   readonly lastUsedMs: number;
 }
 
+/** Panel state worth remembering between sessions. */
+export interface UiSettings {
+  /** Last active tab id. */
+  readonly activeTab: string;
+  /** Align grid's reference mode: "auto", "composition" or "selection". */
+  readonly alignReference: string;
+}
+
+export const DEFAULT_UI_SETTINGS: UiSettings = {
+  activeTab: "quick",
+  alignReference: "auto",
+};
+
 export interface KvfxSettings {
   readonly schemaVersion: number;
   /** Command ids the user pinned. Ordered by when they were added. */
@@ -28,6 +41,7 @@ export interface KvfxSettings {
   readonly usage: Readonly<Record<string, CommandUsage>>;
   /** User overrides, keyed by command id. Always beats a command's default. */
   readonly shortcuts: Readonly<Record<string, string>>;
+  readonly ui: UiSettings;
 }
 
 export function defaultSettings(): KvfxSettings {
@@ -37,6 +51,7 @@ export function defaultSettings(): KvfxSettings {
     recents: [],
     usage: {},
     shortcuts: {},
+    ui: DEFAULT_UI_SETTINGS,
   };
 }
 
@@ -132,6 +147,19 @@ export function migrateSettings(raw: unknown): MigrationResult {
   return { settings: readFields(raw), writable: true, warnings };
 }
 
+function uiSettings(value: unknown): UiSettings {
+  if (!isRecord(value)) return DEFAULT_UI_SETTINGS;
+  const activeTab = value["activeTab"];
+  const alignReference = value["alignReference"];
+  return {
+    activeTab: typeof activeTab === "string" && activeTab.length > 0 ? activeTab : DEFAULT_UI_SETTINGS.activeTab,
+    alignReference:
+      alignReference === "auto" || alignReference === "composition" || alignReference === "selection"
+        ? alignReference
+        : DEFAULT_UI_SETTINGS.alignReference,
+  };
+}
+
 function readFields(raw: Record<string, unknown>): KvfxSettings {
   return {
     schemaVersion: CURRENT_SETTINGS_VERSION,
@@ -139,7 +167,16 @@ function readFields(raw: Record<string, unknown>): KvfxSettings {
     recents: stringList(raw["recents"], MAX_RECENTS),
     usage: usageMap(raw["usage"]),
     shortcuts: stringMap(raw["shortcuts"]),
+    ui: uiSettings(raw["ui"]),
   };
+}
+
+export function setUiSetting<K extends keyof UiSettings>(
+  settings: KvfxSettings,
+  key: K,
+  value: UiSettings[K],
+): KvfxSettings {
+  return { ...settings, ui: { ...settings.ui, [key]: value } };
 }
 
 // ---------------------------------------------------------------------------

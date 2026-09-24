@@ -1,6 +1,32 @@
-import { PRODUCT_NAME, PRODUCT_VERSION, type PaletteEntry, type Platform } from "@kvfx/core";
+import {
+  PRODUCT_NAME,
+  PRODUCT_VERSION,
+  type AlignReference,
+  type PaletteEntry,
+  type Platform,
+} from "@kvfx/core";
 import { type PaletteHandlers, renderPalette } from "../palette/palette-view.js";
+import { renderLayersView } from "../views/layers-view.js";
 import type { ConnectionState, SessionState } from "./session.js";
+
+/**
+ * Panel shell: title bar, tab strip, active view, status footer.
+ *
+ * Only tabs that are actually implemented appear. The specification lists
+ * fourteen sections, but rendering twelve empty ones would be a wall of dead
+ * controls — the opposite of the "no buttons that do nothing" rule this project
+ * is held to. Each tab arrives with the phase that fills it.
+ */
+
+export interface TabSpec {
+  readonly id: string;
+  readonly label: string;
+}
+
+export const TABS: readonly TabSpec[] = [
+  { id: "quick", label: "Quick" },
+  { id: "layers", label: "Layers" },
+];
 
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -70,11 +96,33 @@ function detailBlock(title: string, body: string): HTMLDetailsElement {
   return details;
 }
 
+function tabStrip(activeId: string, onSelect: (id: string) => void): HTMLElement {
+  const strip = element("nav", "kvfx-tabs");
+  strip.setAttribute("role", "tablist");
+
+  for (const tab of TABS) {
+    const button = element("button", "kvfx-tab", tab.label);
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    const selected = tab.id === activeId;
+    button.setAttribute("aria-selected", selected ? "true" : "false");
+    if (selected) button.classList.add("kvfx-tab--on");
+    button.addEventListener("click", () => onSelect(tab.id));
+    strip.append(button);
+  }
+
+  return strip;
+}
+
 export interface RenderOptions extends PaletteHandlers {
   readonly entries: readonly PaletteEntry[];
   readonly platform: Platform;
   readonly paletteHotkeyLabel: string;
+  readonly availableIds: ReadonlySet<string>;
+  readonly reasons: ReadonlyMap<string, string>;
   readonly onRefresh: () => void;
+  readonly onSelectTab: (tabId: string) => void;
+  readonly onReferenceChange: (reference: AlignReference) => void;
 }
 
 export interface RenderResult {
@@ -99,20 +147,38 @@ export function render(
   let input: HTMLInputElement | undefined;
 
   if (state.connection.status === "connected") {
+    const activeTab = TABS.some((tab) => tab.id === state.settings.ui.activeTab)
+      ? state.settings.ui.activeTab
+      : TABS[0]?.id ?? "quick";
+
     body.append(selectionLine(state));
 
-    const palette = renderPalette(
-      {
-        entries: options.entries,
-        query: state.query,
-        selectedIndex: state.selectedIndex,
-        busy: state.busy,
-        platform: options.platform,
-      },
-      options,
-    );
-    input = palette.input;
-    body.append(palette.root);
+    if (activeTab === "layers") {
+      body.append(
+        renderLayersView(
+          {
+            reference: state.settings.ui.alignReference as AlignReference,
+            busy: state.busy,
+            availableIds: options.availableIds,
+            reasons: options.reasons,
+          },
+          { onRun: options.onRun, onReferenceChange: options.onReferenceChange },
+        ),
+      );
+    } else {
+      const palette = renderPalette(
+        {
+          entries: options.entries,
+          query: state.query,
+          selectedIndex: state.selectedIndex,
+          busy: state.busy,
+          platform: options.platform,
+        },
+        options,
+      );
+      input = palette.input;
+      body.append(palette.root);
+    }
 
     if (state.lastOutcome !== undefined) {
       body.append(
@@ -156,6 +222,11 @@ export function render(
   refresh.addEventListener("click", options.onRefresh);
   footer.append(refresh);
 
-  root.append(titlebar, body, footer);
+  const shell = element("div", "kvfx-shell");
+  if (state.connection.status === "connected") {
+    shell.append(tabStrip(state.settings.ui.activeTab, options.onSelectTab));
+  }
+
+  root.append(titlebar, shell, body, footer);
   return { input };
 }

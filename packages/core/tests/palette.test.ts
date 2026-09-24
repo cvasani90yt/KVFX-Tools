@@ -68,9 +68,28 @@ describe("buildPalette — searching", () => {
     expect(names("adjustment")[0]).toBe("Create Adjustment Layer");
   });
 
-  it("finds ordering commands by their direction", () => {
-    expect(names("top")[0]).toBe("Move to Top");
-    expect(names("bottom")[0]).toBe("Move to Bottom");
+  it("finds ordering commands by their full name", () => {
+    expect(names("move to top")[0]).toBe("Move to Top");
+    expect(names("move to bottom")[0]).toBe("Move to Bottom");
+  });
+
+  it("breaks a keyword tie by how well the name matched", () => {
+    // "top" is claimed as a keyword by Align Top, Move to Top and three anchor
+    // spots, so all five score identically. Alphabetical order would bury the
+    // two commands a user typing "top" most likely wants.
+    const ranked = names("top");
+    expect(ranked.slice(0, 2)).toEqual(["Align Top", "Move to Top"]);
+    expect(ranked.indexOf("Move to Top")).toBeLessThan(ranked.indexOf("Anchor to Top Left"));
+  });
+
+  it("finds alignment commands", () => {
+    expect(names("align left")[0]).toBe("Align Left");
+    expect(names("anchor centre")[0]).toBe("Anchor to Centre");
+    // The two distribute commands tie exactly; both must be immediately visible.
+    expect(names("distribute").slice(0, 2).sort()).toEqual([
+      "Distribute Horizontally",
+      "Distribute Vertically",
+    ]);
   });
 
   it("matches an acronym", () => {
@@ -114,8 +133,23 @@ describe("buildPalette — searching", () => {
 });
 
 describe("buildPalette — availability", () => {
-  it("lists every command when browsing with no query", () => {
-    expect(names("")).toHaveLength(registry.all().length);
+  it("lists every visible command when browsing with no query", () => {
+    const visible = registry.all().filter((command) => command.metadata.hidden !== true);
+    expect(names("")).toHaveLength(visible.length);
+  });
+
+  it("keeps hidden variants out of the palette but still invokable", () => {
+    // The align grid's reference toggle drives explicit "to Composition" and
+    // "to Selection" variants. Showing all three in the palette would list the
+    // same action three times.
+    const hidden = registry.all().filter((command) => command.metadata.hidden === true);
+    expect(hidden.length).toBeGreaterThan(0);
+
+    const listed = names("");
+    for (const command of hidden) {
+      expect(listed).not.toContain(command.name);
+      expect(registry.get(command.id)).toBeDefined();
+    }
   });
 
   it("ranks unavailable commands last rather than hiding them", () => {

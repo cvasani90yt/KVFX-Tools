@@ -1,4 +1,4 @@
-import type { JsonObject } from "../types/json.js";
+import type { JsonObject, JsonValue } from "../types/json.js";
 
 /**
  * Command model.
@@ -137,9 +137,17 @@ export interface CommandMetadata {
   readonly requiresComp: boolean;
   /** Minimum After Effects version, when the command depends on a newer API. */
   readonly aeMin?: string;
+  /**
+   * Kept out of the palette while remaining invokable.
+   *
+   * Used for explicit variants a dedicated control drives — the align grid's
+   * reference toggle, for instance — so the palette shows one clear entry per
+   * action instead of every parameter combination.
+   */
+  readonly hidden?: boolean;
 }
 
-export interface Command {
+export interface CommandBase {
   readonly id: string;
   readonly name: string;
   readonly description: string;
@@ -155,5 +163,31 @@ export interface Command {
   readonly defaultShortcut?: string;
   readonly metadata: CommandMetadata;
   canExecute(ctx: CommandContext): CommandAvailability;
+}
+
+/** A command whose plan depends only on the snapshot it already has. */
+export interface SimpleCommand extends CommandBase {
+  readonly kind: "simple";
   plan(ctx: CommandContext): OperationPlan;
 }
+
+/**
+ * A command that must read real values out of After Effects before it can plan.
+ *
+ * Alignment is the motivating case: it cannot know where to move a layer
+ * without its bounds, transform and parent chain. The `probe` is a read-only
+ * query; the plan built from its result addresses layers by id and carries
+ * explicit values, so a selection change between the two steps cannot misplace
+ * anything (ADR-0004).
+ *
+ * This is the deliberate exception to ADR-0006, not an escape hatch: it costs a
+ * second round trip, and it exists so the transform maths can stay in `core`
+ * under test rather than being duplicated into ExtendScript.
+ */
+export interface MeasuredCommand extends CommandBase {
+  readonly kind: "measured";
+  probe(ctx: CommandContext): PlanStep;
+  plan(ctx: CommandContext, measurement: JsonValue): OperationPlan;
+}
+
+export type Command = SimpleCommand | MeasuredCommand;

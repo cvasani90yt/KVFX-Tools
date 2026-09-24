@@ -16,3 +16,4 @@ export * from "./commands/index.js";
 export * from "./search/index.js";
 export * from "./storage/index.js";
 export * from "./input/index.js";
+export * from "./geometry/index.js";

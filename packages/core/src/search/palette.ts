@@ -31,6 +31,15 @@ export interface PaletteEntry {
   readonly matchedKeyword: string | undefined;
   /** The effective binding: the user's override, else the command's default. */
   readonly shortcut: string | undefined;
+  /**
+   * How well the query matched the command's *name*, ignoring other fields.
+   *
+   * Used only to break ties. Several commands can claim the same keyword —
+   * "top" belongs to Align Top, Move to Top and three anchor spots — and an
+   * exact keyword hit scores all of them identically. Falling straight to
+   * alphabetical order then buries the command the user most likely meant.
+   */
+  readonly nameScore: number;
 }
 
 /** Field weights. The name is what users aim at; the rest are safety nets. */
@@ -138,6 +147,8 @@ export function buildPalette(options: PaletteOptions): readonly PaletteEntry[] {
   const entries: PaletteEntry[] = [];
 
   for (const { command, available, reason } of resolved) {
+    if (command.metadata.hidden === true) continue;
+
     const isFavourite = settings.favourites.includes(command.id);
     const usage = settings.usage[command.id];
     const personal =
@@ -158,6 +169,7 @@ export function buildPalette(options: PaletteOptions): readonly PaletteEntry[] {
         matchedOn: "none",
         matchedKeyword: undefined,
         shortcut,
+        nameScore: 0,
       });
       continue;
     }
@@ -175,6 +187,7 @@ export function buildPalette(options: PaletteOptions): readonly PaletteEntry[] {
       matchedOn: match.matchedOn,
       matchedKeyword: match.matchedKeyword,
       shortcut,
+      nameScore: fuzzyMatch(query, command.name)?.score ?? 0,
     });
   }
 
@@ -212,5 +225,11 @@ function compare(
   }
 
   if (a.score !== b.score) return b.score - a.score;
+
+  // Tie: prefer the command whose name matched better. This respects where in
+  // the name the match landed rather than just how long the name is, so "top"
+  // ranks Align Top and Move to Top above Anchor to Top Left.
+  if (a.nameScore !== b.nameScore) return b.nameScore - a.nameScore;
+
   return a.command.name.localeCompare(b.command.name);
 }

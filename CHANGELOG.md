@@ -107,3 +107,36 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The palette is a search field above a list rather than a modal overlay: in a
   docked panel an overlay would hide the panel's own contents to show a list
   that *is* the panel's contents.
+
+### Added — Phase 5: layer tools and the panel layout
+- **Tabbed panel layout.** A Quick tab (the palette) and a Layers tab with
+  spatial controls. Only implemented tabs are shown — rendering the other twelve
+  the specification lists would be a wall of dead controls
+- **Align grid** — six edges plus horizontal and vertical distribution, with an
+  Auto / Comp / Selection reference toggle. Auto aligns one layer to the
+  composition and two or more to each other
+- **3×3 anchor-point grid** — moves the anchor without moving the layer
+- 2D affine transform maths in `@kvfx/core`: anchor, scale, rotation and the
+  full parent chain, with composition-space corrections converted back through
+  the parent's inverse
+- `measured` commands: a read-only probe, maths in core, then an explicit
+  by-id write. The deliberate exception to ADR-0006, so the transform maths
+  stays under test rather than being duplicated into ExtendScript
+- Host operations `layer.measure` and `layer.setTransform`
+- Original inline SVG icon set
+- The active tab and align reference persist between sessions
+
+### Changed
+- Palette ties now break on how well the *name* matched. "top" is claimed as a
+  keyword by five commands, so all scored identically and alphabetical order
+  buried Move to Top below three anchor variants.
+
+### Known limitations
+- **3D layers are declined, not aligned.** The transform maths for them is not
+  written; the layer is skipped with a reason rather than moved to a plausible
+  wrong place.
+- **Layers with an animated or dimension-separated position are skipped.**
+  Writing a keyframe instead would alter animation the user did not ask us to
+  touch.
+- Distribution spaces layer *centres*, not the gaps between edges.
+- 327 tests.

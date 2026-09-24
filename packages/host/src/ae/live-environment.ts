@@ -1,5 +1,12 @@
 import { nowMs } from "../runtime/es3.js";
-import type { AeCompHandle, AeEnvironment, AeLayerHandle, LayerFlag } from "./environment.js";
+import type {
+  AeCompHandle,
+  AeEnvironment,
+  AeLayerHandle,
+  LayerFlag,
+  LayerGeometry,
+  Vec2Value,
+} from "./environment.js";
 
 /** Maps our flag names onto the After Effects property names. */
 const FLAG_PROPERTY: { [flag: string]: string } = {
@@ -11,6 +18,47 @@ const FLAG_PROPERTY: { [flag: string]: string } = {
   guide: "guideLayer",
   adjustment: "adjustmentLayer",
 };
+
+/**
+ * Match names rather than display names, so the code works in a localised
+ * After Effects. A German or Japanese install has different display names and
+ * identical match names.
+ */
+const TRANSFORM_GROUP = "ADBE Transform Group";
+const PROPERTY_ANCHOR = "ADBE Anchor Point";
+const PROPERTY_POSITION = "ADBE Position";
+const PROPERTY_SCALE = "ADBE Scale";
+const PROPERTY_ROTATION = "ADBE Rotate Z";
+
+function transformGroup(raw: AeRawLayer): AeRawPropertyGroup | null {
+  return raw.property(TRANSFORM_GROUP);
+}
+
+function readProperty(raw: AeRawLayer, matchName: string): AeRawProperty | null {
+  const group = transformGroup(raw);
+  return group ? group.property(matchName) : null;
+}
+
+/**
+ * Explains why a property cannot take a plain `setValue`.
+ *
+ * Writing a keyframe into an animated property, or into a dimension-separated
+ * one, would alter animation the user never asked us to touch — so these are
+ * reported and skipped instead (ARCHITECTURE §7).
+ */
+function blockedReasonFor(property: AeRawProperty | null, label: string): string | undefined {
+  if (!property) return `${label} is unavailable on this layer`;
+  if (property.numKeys > 0) return `${label} is animated`;
+  if (property.dimensionsSeparated === true) return `${label} has separated dimensions`;
+  return undefined;
+}
+
+function readVec2(property: AeRawProperty | null, fallback: Vec2Value): Vec2Value {
+  if (!property) return fallback;
+  const value = property.value;
+  if (!value || value.length < 2) return fallback;
+  return { x: value[0] as number, y: value[1] as number };
+}
 
 /** Solid colour for generated adjustment layers; invisible by definition. */
 const ADJUSTMENT_COLOR: [number, number, number] = [0, 0, 0];
@@ -57,6 +105,58 @@ function wrapLayer(raw: AeRawLayer, comp: AeRawComp): AeLayerHandle {
     },
     moveAfterIndex: function (index: number): void {
       raw.moveAfter(comp.layer(index));
+    },
+
+    geometry: function (time: number): LayerGeometry | undefined {
+      // Cameras and lights have no sourceRectAtTime, which is also how we
+      // recognise them without classifying layer types.
+      if (typeof raw.sourceRectAtTime !== "function") {
+        return {
+          sourceRect: { left: 0, top: 0, width: 0, height: 0 },
+          anchorPoint: { x: 0, y: 0 },
+          position: { x: 0, y: 0 },
+          scale: { x: 100, y: 100 },
+          rotation: 0,
+          parentId: raw.parent ? raw.parent.id : undefined,
+          threeD: false,
+          isAV: false,
+          blockedReason: undefined,
+        };
+      }
+
+      // `false` excludes stroke and shadow extents, so bounds match the visible
+      // artwork rather than whatever an effect happens to paint outside it.
+      const rect = raw.sourceRectAtTime(time, false);
+      const positionProperty = readProperty(raw, PROPERTY_POSITION);
+      const anchorProperty = readProperty(raw, PROPERTY_ANCHOR);
+      const rotationProperty = readProperty(raw, PROPERTY_ROTATION);
+
+      const rotationValue = rotationProperty ? rotationProperty.value : null;
+      const positionBlocked = blockedReasonFor(positionProperty, "Position");
+      const anchorBlocked = blockedReasonFor(anchorProperty, "Anchor Point");
+
+      return {
+        sourceRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+        anchorPoint: readVec2(anchorProperty, { x: 0, y: 0 }),
+        position: readVec2(positionProperty, { x: 0, y: 0 }),
+        scale: readVec2(readProperty(raw, PROPERTY_SCALE), { x: 100, y: 100 }),
+        rotation:
+          rotationValue && rotationValue.length > 0 ? (rotationValue[0] as number) : 0,
+        parentId: raw.parent ? raw.parent.id : undefined,
+        threeD: raw.threeDLayer === true,
+        isAV: true,
+        blockedReason: positionBlocked || anchorBlocked,
+      };
+    },
+
+    setPosition: function (value: Vec2Value): void {
+      const property = readProperty(raw, PROPERTY_POSITION);
+      if (property) property.setValue([value.x, value.y]);
+    },
+
+    setAnchorPoint: function (value: Vec2Value): void {
+      const property = readProperty(raw, PROPERTY_ANCHOR);
+      if (property) property.setValue([value.x, value.y]);
     },
   };
 }

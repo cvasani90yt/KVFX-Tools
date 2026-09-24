@@ -34,11 +34,17 @@ const session = new Session((state: SessionState) => {
   const hadFocus = restoreFocus || document.activeElement === searchInput;
   const caret = searchInput?.selectionStart ?? null;
 
+  const availability = session.availability();
+
   const result = render(panel, state, {
     entries: session.entries(),
     platform,
     paletteHotkeyLabel,
+    availableIds: availability.ids,
+    reasons: availability.reasons,
     onRefresh: () => void session.refreshSelection(),
+    onSelectTab: (tabId) => session.setActiveTab(tabId),
+    onReferenceChange: (reference) => session.setAlignReference(reference),
     onQueryChange: (query) => session.setQuery(query),
     onSelect: (index) => {
       // Re-rendering on hover would fight the mouse, so selection is stored

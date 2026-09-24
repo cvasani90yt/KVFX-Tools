@@ -18,7 +18,9 @@ import {
   migrateSettings,
   pruneUnknownCommands,
   recordUsage,
+  setUiSetting,
   toggleFavourite,
+  type AlignReference,
 } from "@kvfx/core";
 import { createCepTransport, isRunningInCep } from "./cep/cep-transport.js";
 import { type SettingsStore, createMemoryStore, createSettingsStore } from "./cep/settings-store.js";
@@ -187,6 +189,34 @@ export class Session {
     this.#updateSettings(toggleFavourite(this.#state.settings, commandId));
   }
 
+  setActiveTab(tabId: string): void {
+    if (tabId === this.#state.settings.ui.activeTab) return;
+    this.#updateSettings(setUiSetting(this.#state.settings, "activeTab", tabId));
+  }
+
+  setAlignReference(reference: AlignReference): void {
+    if (reference === this.#state.settings.ui.alignReference) return;
+    this.#updateSettings(setUiSetting(this.#state.settings, "alignReference", reference));
+  }
+
+  /**
+   * Availability for every command, including the ones hidden from the palette.
+   *
+   * The align grid drives hidden variants, so it cannot rely on the palette's
+   * filtered list to know whether a button should be enabled.
+   */
+  availability(): { ids: Set<string>; reasons: Map<string, string> } {
+    const ids = new Set<string>();
+    const reasons = new Map<string, string>();
+
+    for (const entry of registry.resolve(this.context())) {
+      if (entry.available) ids.add(entry.command.id);
+      else if (entry.reason !== undefined) reasons.set(entry.command.id, entry.reason);
+    }
+
+    return { ids, reasons };
+  }
+
   // -------------------------------------------------------------------------
   // Palette interaction
   // -------------------------------------------------------------------------
@@ -295,7 +325,36 @@ export class Session {
 
     this.#set({ busy: true, lastOutcome: undefined });
 
-    const plan = command.plan(this.context());
+    // A measured command reads real geometry out of After Effects before it can
+    // decide anything. The probe is read-only and opens no undo group; the plan
+    // built from it addresses layers by id and carries explicit values, so a
+    // selection change between the two steps cannot misplace anything.
+    let plan;
+    if (command.kind === "measured") {
+      const probe = command.probe(this.context());
+      const measured = await client.send({ kind: "query", op: probe.op, args: probe.args });
+      if (!measured.ok) {
+        this.#set({
+          busy: false,
+          lastOutcome: { commandName: command.name, ok: false, message: measured.error.message },
+        });
+        return;
+      }
+      plan = command.plan(this.context(), measured.value);
+    } else {
+      plan = command.plan(this.context());
+    }
+
+    // Nothing to do is a real outcome, not a failure: aligning one layer that
+    // is already in place, or distributing fewer than three layers.
+    if (plan.steps.length === 0) {
+      this.#set({
+        busy: false,
+        lastOutcome: { commandName: command.name, ok: true, message: "Nothing to change" },
+      });
+      return;
+    }
+
     const result = await client.send({
       kind: "plan",
       op: PLAN_OPERATION_ID,

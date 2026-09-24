@@ -2,6 +2,7 @@ import { createRegistry, type OperationRegistry } from "../runtime/registry.js";
 import { snapshotOperation } from "./selection.js";
 import { createLayerOperation } from "./layer/create.js";
 import { setFlagOperation } from "./layer/flags.js";
+import { measureOperation, setTransformOperation } from "./layer/geometry.js";
 import { reorderOperation } from "./layer/reorder.js";
 import { systemOperations } from "./system.js";
 
@@ -19,5 +20,7 @@ export function createProductionRegistry(): OperationRegistry {
     setFlagOperation,
     reorderOperation,
     createLayerOperation,
+    measureOperation,
+    setTransformOperation,
   ]);
 }

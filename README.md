@@ -10,12 +10,23 @@ Keyboard-first. Minimal, dense, fast UI. Non-destructive. Undo-safe.
 
 ---
 
-## Project status — Phase 4 of 15 complete
+## Project status — Phase 5 of 15 complete
 
-The palette works. Type to search thirteen layer commands by name, keyword or
-acronym — `mtt` finds Move to Top, `eye` finds Toggle Visibility — navigate with
-the arrow keys, run with Enter. Favourites, recents and usage ranking persist
-between sessions. Every command runs as a single undo step.
+Two tabs. **Quick** is the command palette: type to search by name, keyword or
+acronym — `mtt` finds Move to Top, `eye` finds Toggle Visibility — arrow keys to
+navigate, Enter to run. Favourites, recents and usage ranking persist.
+
+**Layers** is the spatial toolset: an align grid with an Auto / Comp / Selection
+reference toggle, horizontal and vertical distribution, a 3×3 anchor-point grid
+that moves the anchor without moving the layer, plus order, switch and create
+controls.
+
+Alignment does the full transform maths — anchor, scale, rotation and the parent
+chain — so a layer parented to a rotated null lands where you expect. 3D layers
+and layers with animated positions are declined with a reason rather than moved
+to a plausibly wrong place.
+
+Every command runs as a single undo step.
 
 `Mod+Space` focuses the search field **while the panel has keyboard focus**;
 After Effects does not allow a global shortcut from a script or CEP panel
@@ -28,7 +39,7 @@ product is three moving parts: a CEP panel, an ExtendScript host bundle, and
 JSON files on disk. It opens no sockets and launches no second process.
 
 ```bash
-npm install && npm run verify   # typecheck + lint + 250 tests + build + guards
+npm install && npm run verify   # typecheck + lint + 327 tests + build + guards
 ```
 
 | Document | What it is |

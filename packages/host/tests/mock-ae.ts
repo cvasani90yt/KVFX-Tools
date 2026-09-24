@@ -3,6 +3,8 @@ import type {
   AeEnvironment,
   AeLayerHandle,
   LayerFlag,
+  LayerGeometry,
+  Vec2Value,
 } from "../src/ae/environment.js";
 
 /**
@@ -18,6 +20,18 @@ import type {
  * behaviour. That is what the tier 3 fixture projects are for.
  */
 
+export interface MockGeometrySpec {
+  readonly sourceRect?: { left: number; top: number; width: number; height: number };
+  readonly anchorPoint?: Vec2Value;
+  readonly position?: Vec2Value;
+  readonly scale?: Vec2Value;
+  readonly rotation?: number;
+  /** Name of the parent layer, resolved to an id when the comp is built. */
+  readonly parent?: string;
+  /** Why this layer's position cannot be written — animated, separated, etc. */
+  readonly blockedReason?: string;
+}
+
 export interface MockLayerSpec {
   readonly name: string;
   /** Camera and light layers are not AVLayers and lack several switches. */
@@ -30,6 +44,7 @@ export interface MockLayerSpec {
   readonly threeD?: boolean;
   readonly guide?: boolean;
   readonly adjustment?: boolean;
+  readonly geometry?: MockGeometrySpec;
 }
 
 interface MockLayer {
@@ -38,6 +53,13 @@ interface MockLayer {
   isAV: boolean;
   selected: boolean;
   flags: Record<string, boolean>;
+  sourceRect: { left: number; top: number; width: number; height: number };
+  anchorPoint: Vec2Value;
+  position: Vec2Value;
+  scale: Vec2Value;
+  rotation: number;
+  parentName: string | undefined;
+  blockedReason: string | undefined;
 }
 
 const AV_ONLY: readonly LayerFlag[] = ["solo", "threeD", "guide", "adjustment"];
@@ -59,6 +81,8 @@ export interface MockAe extends AeEnvironment {
   /** Layer names in stack order, top first — the assertion ordering tests need. */
   stack(): string[];
   layerByName(name: string): MockLayer | undefined;
+  positionOf(name: string): Vec2Value | undefined;
+  anchorOf(name: string): Vec2Value | undefined;
   idOf(name: string): number;
   select(...names: string[]): void;
 }
@@ -96,6 +120,13 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
       guide: layer.guide ?? false,
       adjustment: layer.adjustment ?? false,
     },
+    sourceRect: layer.geometry?.sourceRect ?? { left: 0, top: 0, width: 100, height: 50 },
+    anchorPoint: layer.geometry?.anchorPoint ?? { x: 0, y: 0 },
+    position: layer.geometry?.position ?? { x: 0, y: 0 },
+    scale: layer.geometry?.scale ?? { x: 100, y: 100 },
+    rotation: layer.geometry?.rotation ?? 0,
+    parentName: layer.geometry?.parent,
+    blockedReason: layer.geometry?.blockedReason,
   }));
 
   const positionOf = (layer: MockLayer): number => stack.indexOf(layer);
@@ -133,6 +164,29 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
         stack.splice(positionOf(layer), 1);
         stack.splice(positionOf(target) + 1, 0, layer);
       },
+
+      geometry: (): LayerGeometry | undefined => {
+        const parent = layer.parentName === undefined
+          ? undefined
+          : stack.find((candidate) => candidate.name === layer.parentName);
+        return {
+          sourceRect: layer.isAV ? layer.sourceRect : { left: 0, top: 0, width: 0, height: 0 },
+          anchorPoint: layer.anchorPoint,
+          position: layer.position,
+          scale: layer.scale,
+          rotation: layer.rotation,
+          parentId: parent?.id,
+          threeD: layer.flags["threeD"] === true,
+          isAV: layer.isAV,
+          blockedReason: layer.blockedReason,
+        };
+      },
+      setPosition: (value) => {
+        layer.position = value;
+      },
+      setAnchorPoint: (value) => {
+        layer.anchorPoint = value;
+      },
     };
   }
 
@@ -157,6 +211,13 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
           isAV: true,
           selected: false,
           flags: { enabled: true, locked: false, shy: false, solo: false, threeD: false, guide: false, adjustment: false },
+          sourceRect: { left: 0, top: 0, width: 100, height: 100 },
+          anchorPoint: { x: 0, y: 0 },
+          position: { x: 0, y: 0 },
+          scale: { x: 100, y: 100 },
+          rotation: 0,
+          parentName: undefined,
+          blockedReason: undefined,
         };
         stack.unshift(layer);
         return wrap(layer);
@@ -168,6 +229,13 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
           isAV: true,
           selected: false,
           flags: { enabled: true, locked: false, shy: false, solo: false, threeD: false, guide: false, adjustment: true },
+          sourceRect: { left: 0, top: 0, width: 1920, height: 1080 },
+          anchorPoint: { x: 0, y: 0 },
+          position: { x: 0, y: 0 },
+          scale: { x: 100, y: 100 },
+          rotation: 0,
+          parentName: undefined,
+          blockedReason: undefined,
         };
         stack.unshift(layer);
         return wrap(layer);
@@ -186,6 +254,8 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
     },
     stack: () => stack.map((l) => l.name),
     layerByName: (name) => stack.find((l) => l.name === name),
+    positionOf: (name) => stack.find((l) => l.name === name)?.position,
+    anchorOf: (name) => stack.find((l) => l.name === name)?.anchorPoint,
     idOf: (name) => stack.find((l) => l.name === name)?.id ?? -1,
     select: (...names) => {
       for (const layer of stack) layer.selected = names.includes(layer.name);

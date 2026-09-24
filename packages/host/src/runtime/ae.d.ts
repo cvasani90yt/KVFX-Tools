@@ -7,10 +7,33 @@
  * that type-checks by accident.
  */
 
+interface AeRawProperty {
+  value: number[];
+  readonly numKeys: number;
+  readonly dimensionsSeparated?: boolean;
+  readonly canSetExpression: boolean;
+  setValue(value: number[]): void;
+}
+
+interface AeRawPropertyGroup {
+  property(nameOrMatchName: string): AeRawProperty | null;
+}
+
+interface AeRawSourceRect {
+  readonly top: number;
+  readonly left: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 interface AeRawLayer {
   readonly id: number;
   readonly index: number;
   name: string;
+  readonly parent: AeRawLayer | null;
+  /** Present on AVLayer; absent on cameras and lights. */
+  sourceRectAtTime?(time: number, includeExtents: boolean): AeRawSourceRect;
+  property(nameOrMatchName: string): AeRawPropertyGroup | null;
   enabled: boolean;
   locked: boolean;
   shy: boolean;
