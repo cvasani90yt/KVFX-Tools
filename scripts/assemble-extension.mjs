@@ -41,7 +41,12 @@ await rm(stagedExtensionDir, { recursive: true, force: true });
 await mkdir(join(stagedExtensionDir, "CSXS"), { recursive: true });
 await mkdir(join(stagedExtensionDir, "host"), { recursive: true });
 
-await cp(uiDist, stagedExtensionDir, { recursive: true });
+await cp(uiDist, stagedExtensionDir, {
+  recursive: true,
+  // Vite copies everything in public/ to the bundle root, including repository
+  // housekeeping files.
+  filter: (src) => !basename(src).startsWith("."),
+});
 await cp(hostBundle, join(stagedExtensionDir, "host", "kvfx-host.jsx"));
 
 // Keep the manifest's bundle version in step with the workspace version so a

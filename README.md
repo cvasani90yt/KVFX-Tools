@@ -40,7 +40,8 @@ npm install && npm run verify   # typecheck + lint + 250 tests + build + guards
 | [`docs/FOLDER-STRUCTURE.md`](docs/FOLDER-STRUCTURE.md) | Repository layout and dependency rules |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Working in the codebase |
 | [`BUILD.md`](BUILD.md) | Build pipeline, guards, toolchain limitations |
-| [`INSTALL.md`](INSTALL.md) | Installing the panel into After Effects |
+| [`TESTING.md`](TESTING.md) | **Install and try it — no build tools needed** |
+| [`INSTALL.md`](INSTALL.md) | Installing a development build from source |
 | [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | Symptoms, causes, fixes |
 
 ## Stack, in one line each
