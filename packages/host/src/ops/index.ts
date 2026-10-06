@@ -1,10 +1,18 @@
 import { createRegistry, type OperationRegistry } from "../runtime/registry.js";
-import { snapshotOperation } from "./selection.js";
+import { effectOperations } from "./effect.js";
+import { fontOperations } from "./fonts.js";
+import { fxOperations } from "./fx.js";
+import { keyframeOperations } from "./keys.js";
 import { createLayerOperation } from "./layer/create.js";
+import { layerEditOperations } from "./layer/edit.js";
 import { setFlagOperation } from "./layer/flags.js";
 import { measureOperation, setTransformOperation } from "./layer/geometry.js";
 import { reorderOperation } from "./layer/reorder.js";
+import { projectOperations } from "./project.js";
+import { propertyOperations } from "./prop.js";
+import { snapshotOperation } from "./selection.js";
 import { systemOperations } from "./system.js";
+import { textOperations } from "./text.js";
 
 /**
  * The production operation table.
@@ -22,5 +30,13 @@ export function createProductionRegistry(): OperationRegistry {
     createLayerOperation,
     measureOperation,
     setTransformOperation,
+    ...layerEditOperations,
+    ...propertyOperations,
+    ...effectOperations,
+    ...keyframeOperations,
+    ...textOperations,
+    ...fxOperations,
+    ...fontOperations,
+    ...projectOperations,
   ]);
 }

@@ -3,7 +3,9 @@ import type {
   AeCompHandle,
   AeEnvironment,
   AeLayerHandle,
+  InterpolationTypes,
   LayerFlag,
+  ValueTypes,
   LayerGeometry,
   Vec2Value,
 } from "./environment.js";
@@ -55,7 +57,7 @@ function blockedReasonFor(property: AeRawProperty | null, label: string): string
 
 function readVec2(property: AeRawProperty | null, fallback: Vec2Value): Vec2Value {
   if (!property) return fallback;
-  const value = property.value;
+  const value = property.value as number[] | null;
   if (!value || value.length < 2) return fallback;
   return { x: value[0] as number, y: value[1] as number };
 }
@@ -140,8 +142,10 @@ function wrapLayer(raw: AeRawLayer, comp: AeRawComp): AeLayerHandle {
         anchorPoint: readVec2(anchorProperty, { x: 0, y: 0 }),
         position: readVec2(positionProperty, { x: 0, y: 0 }),
         scale: readVec2(readProperty(raw, PROPERTY_SCALE), { x: 100, y: 100 }),
-        rotation:
-          rotationValue && rotationValue.length > 0 ? (rotationValue[0] as number) : 0,
+        // Rotate Z is a one-dimensional property, so its value is a number. An
+        // earlier version indexed it like an array, which read every rotation
+        // as 0 and made alignment wrong for any rotated layer.
+        rotation: typeof rotationValue === "number" ? rotationValue : 0,
         parentId: raw.parent ? raw.parent.id : undefined,
         threeD: raw.threeDLayer === true,
         isAV: true,
@@ -227,41 +231,158 @@ function wrapComp(raw: AeRawComp): AeCompHandle {
 }
 
 /** The real environment, backed by After Effects' own globals. */
-export function createLiveEnvironment(): AeEnvironment {
+/**
+ * Everything the environment needs from the ExtendScript global scope.
+ *
+ * Gathered into one object so the environment can be built against After
+ * Effects in production and against a mock DOM in tests. The mock then
+ * exercises this module's own wrapping code rather than a hand-written
+ * stand-in for it, which is where the integration bugs would otherwise hide.
+ */
+export interface HostGlobals {
+  readonly app: AeApplication;
+  readonly os: string;
+  readonly engineVersion: string;
+  readonly isComp: (item: unknown) => boolean;
+  readonly newKeyframeEase: (speed: number, influence: number) => AeKeyframeEase;
+  readonly newFile: (path: string) => AeFile;
+  readonly newImportOptions: (file: AeFile) => AeImportOptions;
+  readonly interpolation: InterpolationTypes;
+  readonly valueTypes: ValueTypes;
+  readonly leafPropertyType: number;
+  readonly purgeAllTarget: number;
+  readonly nowMs: () => number;
+}
+
+export function createEnvironment(g: HostGlobals): AeEnvironment {
+  const host = g.app;
+
+  function rawComp(): AeRawComp | undefined {
+    const project = host.project;
+    if (!project) return undefined;
+    const active = project.activeItem;
+    // `activeItem` is null with nothing open, and an ordinary footage item
+    // when the user has selected one in the project panel.
+    if (!active || !g.isComp(active)) return undefined;
+    return active as AeRawComp;
+  }
+
   return {
     version: function (): string {
-      return app.version;
+      return host.version;
     },
     buildName: function (): string {
-      return app.buildName;
+      return host.buildName;
     },
     language: function (): string {
-      return app.isoLanguage;
+      return host.isoLanguage;
     },
     os: function (): string {
-      return $.os;
+      return g.os;
     },
     engineVersion: function (): string {
-      return $.version;
+      return g.engineVersion;
     },
     hasProject: function (): boolean {
-      return !!app.project;
+      return !!host.project;
     },
     activeComp: function (): AeCompHandle | undefined {
-      const project = app.project;
-      if (!project) return undefined;
-      const active = project.activeItem;
-      // `activeItem` is null with nothing open, and an ordinary footage item
-      // when the user has selected one in the project panel.
-      if (!active || !(active instanceof CompItem)) return undefined;
-      return wrapComp(active);
+      const comp = rawComp();
+      return comp ? wrapComp(comp) : undefined;
     },
     beginUndoGroup: function (name: string): void {
-      app.beginUndoGroup(name);
+      host.beginUndoGroup(name);
     },
     endUndoGroup: function (): void {
-      app.endUndoGroup();
+      host.endUndoGroup();
     },
-    nowMs: nowMs,
+    nowMs: g.nowMs,
+
+    rawComp: rawComp,
+    rawProject: function (): AeRawProject | undefined {
+      return host.project || undefined;
+    },
+    memoryInUse: function (): number {
+      return host.memoryInUse;
+    },
+    purgeAllCaches: function (): void {
+      host.purge(g.purgeAllTarget);
+    },
+    runMenuCommand: function (menuText: string): boolean {
+      const id = host.findMenuCommandId(menuText);
+      // findMenuCommandId returns 0 for text it does not recognise — including
+      // the same command in a localised build, which is why callers must treat
+      // false as "not available here", not as an error in the project.
+      if (!id) return false;
+      host.executeCommand(id);
+      return true;
+    },
+    newKeyframeEase: g.newKeyframeEase,
+    interpolation: function (): InterpolationTypes {
+      return g.interpolation;
+    },
+    valueTypes: function (): ValueTypes {
+      return g.valueTypes;
+    },
+    leafPropertyType: function (): number {
+      return g.leafPropertyType;
+    },
+    isComp: g.isComp,
+    fonts: function (): AeFontsObject | undefined {
+      return host.fonts || undefined;
+    },
+    fileExists: function (path: string): boolean {
+      return g.newFile(path).exists;
+    },
+    importFile: function (path: string): AeRawItem {
+      const project = host.project;
+      if (!project) throw new Error("No project is open.");
+      return project.importFile(g.newImportOptions(g.newFile(path)));
+    },
+    applyPreset: function (layer: AeRawLayer, path: string): void {
+      if (typeof layer.applyPreset !== "function") {
+        throw new Error("This layer type cannot take an animation preset.");
+      }
+      layer.applyPreset(g.newFile(path));
+    },
   };
+}
+
+/** The real environment, backed by After Effects' own globals. */
+export function createLiveEnvironment(): AeEnvironment {
+  return createEnvironment({
+    app: app,
+    os: $.os,
+    engineVersion: $.version,
+    isComp: function (item: unknown): boolean {
+      return item instanceof CompItem;
+    },
+    newKeyframeEase: function (speed: number, influence: number): AeKeyframeEase {
+      return new KeyframeEase(speed, influence);
+    },
+    newFile: function (path: string): AeFile {
+      return new File(path);
+    },
+    newImportOptions: function (file: AeFile): AeImportOptions {
+      return new ImportOptions(file);
+    },
+    interpolation: {
+      linear: KeyframeInterpolationType.LINEAR,
+      bezier: KeyframeInterpolationType.BEZIER,
+      hold: KeyframeInterpolationType.HOLD,
+    },
+    valueTypes: {
+      noValue: PropertyValueType.NO_VALUE,
+      oneD: PropertyValueType.OneD,
+      twoD: PropertyValueType.TwoD,
+      twoDSpatial: PropertyValueType.TwoD_SPATIAL,
+      threeD: PropertyValueType.ThreeD,
+      threeDSpatial: PropertyValueType.ThreeD_SPATIAL,
+      color: PropertyValueType.COLOR,
+      textDocument: PropertyValueType.TEXT_DOCUMENT,
+    },
+    leafPropertyType: PropertyType.PROPERTY,
+    purgeAllTarget: PurgeTarget.ALL_CACHES,
+    nowMs: nowMs,
+  });
 }

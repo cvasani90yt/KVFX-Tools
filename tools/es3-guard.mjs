@@ -50,6 +50,8 @@ const BANNED_LIBRARY = [
   [/\bJSON\./, "JSON — use runtime/serialize.ts"],
   [/\bDate\.now\b/, "Date.now — use nowMs()"],
   [/\.forEach\s*\(/, "Array.prototype.forEach"],
+  [/\.(?:map|filter|some|every|reduce|reduceRight|find|findIndex)\s*\(/, "ES5+ array iteration method — use a for loop"],
+  [/\.includes\s*\(/, "includes — use indexOf on strings, a loop on arrays"],
   [/\.trim\s*\(\s*\)/, "String.prototype.trim"],
   [/\.bind\s*\(/, "Function.prototype.bind"],
   [/\.padStart\s*\(/, "String.prototype.padStart — use padZero()"],

@@ -210,6 +210,7 @@ function runPlan(
   }
 
   const results: HostJson[] = [];
+  const refs: { [name: string]: HostJson } = {};
 
   for (let i = 0; i < list.length; i += 1) {
     if (env.nowMs() > deadlineMs) {
@@ -249,13 +250,93 @@ function runPlan(
       );
     }
 
-    results[results.length] = {
-      op: stepOp,
-      result: operation.run({ env, args: stepArgs as { [key: string]: HostJson }, deadlineMs }),
-    };
+    const resolvedArgs = resolveRefs(stepArgs, refs, i) as { [key: string]: HostJson };
+    const result = operation.run({ env, args: resolvedArgs, deadlineMs });
+    results[results.length] = { op: stepOp, result: result };
+
+    const bind = bag["bind"];
+    if (typeof bind === "string" && bind.length > 0) {
+      refs[bind] = boundValue(result);
+    }
   }
 
   return { stepCount: list.length, steps: results as unknown as HostJson };
+}
+
+/**
+ * Plan-local references.
+ *
+ * A step that creates something can `bind` a name to it, and later steps refer
+ * to it as `{"$ref": "name"}`. That lets one plan say "create a text layer, add
+ * a slider to *that* layer, and drive its source text from *that* slider" —
+ * all inside one undo group — even though the new layer's id cannot be known
+ * when the plan is written. Without this, every multi-step feature would need
+ * its own bespoke ExtendScript operation, and its logic would leave `core`
+ * where it can be tested.
+ *
+ * A step binds the `id` its operation returned, or the `ids` array when it
+ * created several things; `{"$ref": "name", "at": 2}` picks one element of a
+ * bound array. An unknown reference, or an element that does not exist, is an
+ * error rather than a silent null: a plan that refers to something it never
+ * created would otherwise go on to act on the wrong thing.
+ */
+const MAX_REF_DEPTH = 16;
+
+function boundValue(result: HostJson): HostJson {
+  if (result && typeof result === "object" && !isArray(result)) {
+    const bag = result as { [key: string]: HostJson };
+    if (typeof bag["id"] === "number") return bag["id"];
+    if (isArray(bag["ids"])) return bag["ids"] as HostJson;
+  }
+  return result;
+}
+
+function resolveRefs(
+  value: HostJson,
+  refs: { [name: string]: HostJson },
+  stepIndex: number,
+  depth = 0,
+): HostJson {
+  if (depth > MAX_REF_DEPTH || value === null || typeof value !== "object") return value;
+
+  if (isArray(value)) {
+    const list = value as HostJson[];
+    const out: HostJson[] = [];
+    for (let i = 0; i < list.length; i += 1) {
+      out[out.length] = resolveRefs(list[i] as HostJson, refs, stepIndex, depth + 1);
+    }
+    return out;
+  }
+
+  const bag = value as { [key: string]: HostJson };
+  const ref = bag["$ref"];
+  if (typeof ref === "string") {
+    if (!Object.prototype.hasOwnProperty.call(refs, ref)) {
+      throw hostError(
+        ErrorCode.InvalidRequest,
+        `Step ${String(stepIndex)} refers to "${ref}", which no earlier step bound`,
+      );
+    }
+    const bound = refs[ref] as HostJson;
+    const at = bag["at"];
+    if (typeof at !== "number") return bound;
+    const list = isArray(bound) ? (bound as HostJson[]) : [];
+    if (at < 0 || at >= list.length) {
+      throw hostError(
+        ErrorCode.PreconditionFailed,
+        `Step ${String(stepIndex)} needs item ${String(at + 1)} of "${ref}", but only ${String(list.length)} were made`,
+      );
+    }
+    return list[at] as HostJson;
+  }
+
+  const out: { [key: string]: HostJson } = {};
+  for (const key in bag) {
+    if (Object.prototype.hasOwnProperty.call(bag, key)) {
+      out[key] = resolveRefs(bag[key] as HostJson, refs, stepIndex, depth + 1);
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

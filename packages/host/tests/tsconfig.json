@@ -4,7 +4,7 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2021",
-    "lib": ["ES2021"],
+    "lib": ["ES2022"],
     "types": [],
     "composite": false,
     "declaration": false,
@@ -14,5 +14,5 @@
   },
   // Sources are pulled in automatically through the tests' imports; listing
   // them here as well would make this the governing project for src files too.
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts", "../src/runtime/ae.d.ts"]
 }

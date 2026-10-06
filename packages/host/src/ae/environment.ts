@@ -1,3 +1,4 @@
+
 /**
  * The host's window onto After Effects.
  *
@@ -81,6 +82,25 @@ export interface AeCompHandle {
   addAdjustment(name: string): AeLayerHandle;
 }
 
+/** PropertyValueType constants, as After Effects numbers them. */
+export interface ValueTypes {
+  readonly noValue: number;
+  readonly oneD: number;
+  readonly twoD: number;
+  readonly twoDSpatial: number;
+  readonly threeD: number;
+  readonly threeDSpatial: number;
+  readonly color: number;
+  readonly textDocument: number;
+}
+
+/** Keyframe interpolation constants, as After Effects numbers them. */
+export interface InterpolationTypes {
+  readonly linear: number;
+  readonly bezier: number;
+  readonly hold: number;
+}
+
 export interface AeEnvironment {
   /** `app.version`, e.g. "26.0.1x45". */
   version(): string;
@@ -99,4 +119,35 @@ export interface AeEnvironment {
   endUndoGroup(): void;
   /** Milliseconds since the epoch. Injectable so budget tests are deterministic. */
   nowMs(): number;
+
+  // --- Raw DOM access -------------------------------------------------------
+  //
+  // The facade above suits the layout operations. Operations that walk effect
+  // stacks, text animators or keyframes need the property tree itself, and
+  // wrapping every corner of it would double the code for no gain. They use the
+  // raw DOM through these accessors — which tests satisfy with a mock DOM, so
+  // the same operation code runs in both places.
+
+  /** The active composition's raw object, or `undefined`. */
+  rawComp(): AeRawComp | undefined;
+  rawProject(): AeRawProject | undefined;
+  /** Bytes of memory After Effects has in use. */
+  memoryInUse(): number;
+  /** Purges every cache After Effects holds. Not undoable, and changes no project data. */
+  purgeAllCaches(): void;
+  /** Runs a menu command by its exact menu text. False when the text is unknown. */
+  runMenuCommand(menuText: string): boolean;
+  newKeyframeEase(speed: number, influence: number): AeKeyframeEase;
+  interpolation(): InterpolationTypes;
+  valueTypes(): ValueTypes;
+  /** The PropertyType constant for a leaf property, as opposed to a group. */
+  leafPropertyType(): number;
+  /** True when the item is a composition. */
+  isComp(item: unknown): boolean;
+  fonts(): AeFontsObject | undefined;
+  fileExists(path: string): boolean;
+  /** Imports a file into the project and returns the new item. */
+  importFile(path: string): AeRawItem;
+  /** Applies an Animation Preset (.ffx) to a layer. */
+  applyPreset(layer: AeRawLayer, path: string): void;
 }

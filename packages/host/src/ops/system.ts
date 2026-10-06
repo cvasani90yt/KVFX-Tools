@@ -29,4 +29,37 @@ export const pingOperation: Operation = {
   },
 };
 
-export const systemOperations: Operation[] = [pingOperation];
+/**
+ * Memory After Effects has in use, for the header meter.
+ *
+ * Unlike a selection scan this is a single property read that does not grow
+ * with project size, which is why the panel may refresh it periodically while
+ * it is visible — the polling ADR-0002 rejects is polling whose cost scales
+ * with the project.
+ */
+export const memoryOperation: Operation = {
+  id: "kvfx.op.system.memory",
+  mutates: false,
+  run: function (ctx: OperationContext): HostJson {
+    return { bytes: ctx.env.memoryInUse() };
+  },
+};
+
+/**
+ * Purges every cache.
+ *
+ * Declared non-mutating on purpose: it changes no project data and After
+ * Effects cannot undo it, so wrapping it in an undo group would put a no-op
+ * entry in Edit ▸ Undo and imply the purge could be reversed.
+ */
+export const purgeOperation: Operation = {
+  id: "kvfx.op.system.purge",
+  mutates: false,
+  run: function (ctx: OperationContext): HostJson {
+    const before = ctx.env.memoryInUse();
+    ctx.env.purgeAllCaches();
+    return { bytesBefore: before, bytesAfter: ctx.env.memoryInUse() };
+  },
+};
+
+export const systemOperations: Operation[] = [pingOperation, memoryOperation, purgeOperation];
