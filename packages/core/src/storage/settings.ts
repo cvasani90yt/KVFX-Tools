@@ -24,11 +24,20 @@ export interface UiSettings {
   readonly activeTab: string;
   /** Align grid's reference mode: "auto", "composition" or "selection". */
   readonly alignReference: string;
+  /**
+   * Ids of tool groups the user has folded away.
+   *
+   * Stored as the collapsed set rather than the expanded one, so a group added
+   * in a later version arrives open: a new feature the user has never seen
+   * should not be hidden from them by an old settings file.
+   */
+  readonly collapsedGroups: readonly string[];
 }
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
   activeTab: "quick",
   alignReference: "auto",
+  collapsedGroups: [],
 };
 
 export interface KvfxSettings {
@@ -157,6 +166,20 @@ function uiSettings(value: unknown): UiSettings {
       alignReference === "auto" || alignReference === "composition" || alignReference === "selection"
         ? alignReference
         : DEFAULT_UI_SETTINGS.alignReference,
+    collapsedGroups: stringList(value["collapsedGroups"]),
+  };
+}
+
+export function toggleGroupCollapsed(settings: KvfxSettings, groupId: string): KvfxSettings {
+  const collapsed = settings.ui.collapsedGroups.includes(groupId);
+  return {
+    ...settings,
+    ui: {
+      ...settings.ui,
+      collapsedGroups: collapsed
+        ? settings.ui.collapsedGroups.filter((id) => id !== groupId)
+        : [...settings.ui.collapsedGroups, groupId],
+    },
   };
 }
 

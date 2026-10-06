@@ -20,6 +20,7 @@ import {
   recordUsage,
   setUiSetting,
   toggleFavourite,
+  toggleGroupCollapsed,
   type AlignReference,
 } from "@kvfx/core";
 import { createCepTransport, isRunningInCep } from "./cep/cep-transport.js";
@@ -192,6 +193,10 @@ export class Session {
   setActiveTab(tabId: string): void {
     if (tabId === this.#state.settings.ui.activeTab) return;
     this.#updateSettings(setUiSetting(this.#state.settings, "activeTab", tabId));
+  }
+
+  toggleGroup(groupId: string): void {
+    this.#updateSettings(toggleGroupCollapsed(this.#state.settings, groupId));
   }
 
   setAlignReference(reference: AlignReference): void {

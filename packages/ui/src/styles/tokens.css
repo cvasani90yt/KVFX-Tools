@@ -60,22 +60,42 @@
   /* Lines */
   --kvfx-border: #2a2e37;
 
-  /* Spacing — a 4px rhythm; no ad-hoc pixel values in component styles. */
-  --kvfx-space-1: 4px;
-  --kvfx-space-2: 8px;
-  --kvfx-space-3: 12px;
-  --kvfx-space-4: 16px;
-  --kvfx-space-5: 24px;
+  /*
+   * Spacing — a 2px rhythm.
+   *
+   * Tighter than a typical web scale on purpose. An After Effects panel is
+   * often docked at 280–340px wide in a column the user wants to keep narrow,
+   * so vertical space is the scarcest resource in the product. Comparable
+   * panels fit several hundred controls in this space; air costs features.
+   */
+  --kvfx-space-1: 2px;
+  --kvfx-space-2: 4px;
+  --kvfx-space-3: 8px;
+  --kvfx-space-4: 12px;
+  --kvfx-space-5: 16px;
 
-  --kvfx-radius-sm: 4px;
-  --kvfx-radius-md: 6px;
+  --kvfx-radius-sm: 3px;
+  --kvfx-radius-md: 5px;
 
-  /* Type — compact by default; density is a feature of this product. */
+  /* Control metrics — one place, so density stays consistent. */
+  --kvfx-row-h: 22px;
+  --kvfx-tool-w: 30px;
+  --kvfx-tool-h: 26px;
+
+  /*
+   * Type.
+   *
+   * 12px body, 10px for labels. Smaller than the web norm because this is a
+   * dense tool panel read at arm's length on a desktop, not body copy — and
+   * because After Effects' own UI sits at a similar size, so matching it keeps
+   * the panel from looking oversized next to the timeline.
+   */
   --kvfx-font-ui:
     "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --kvfx-font-mono: "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
-  --kvfx-text-xs: 11px;
-  --kvfx-text-sm: 12px;
-  --kvfx-text-md: 13px;
-  --kvfx-text-lg: 15px;
+  --kvfx-text-xxs: 9px;
+  --kvfx-text-xs: 10px;
+  --kvfx-text-sm: 11px;
+  --kvfx-text-md: 12px;
+  --kvfx-text-lg: 13px;
 }

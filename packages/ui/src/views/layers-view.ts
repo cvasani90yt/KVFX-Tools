@@ -17,11 +17,13 @@ export interface LayersViewModel {
   /** Ids the current selection allows, so buttons disable honestly. */
   readonly availableIds: ReadonlySet<string>;
   readonly reasons: ReadonlyMap<string, string>;
+  readonly collapsedGroups: ReadonlySet<string>;
 }
 
 export interface LayersViewHandlers {
   readonly onRun: (commandId: string) => void;
   readonly onReferenceChange: (reference: AlignReference) => void;
+  readonly onToggleGroup: (groupId: string) => void;
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -35,19 +37,79 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function section(title: string, hint?: string): HTMLElement {
-  const wrapper = element("section", "kvfx-section");
-  const heading = element("div", "kvfx-section__head");
-  heading.append(element("h2", "kvfx-section__title", title));
-  if (hint !== undefined) heading.append(element("span", "kvfx-section__hint", hint));
-  wrapper.append(heading);
-  return wrapper;
+/**
+ * A collapsible group.
+ *
+ * Every group lives in one scrolling column rather than behind a sub-tab, so
+ * the whole toolset is reachable without navigating, and anything the user does
+ * not need folds away. The collapsed set is persisted, so the panel reopens in
+ * the shape they left it.
+ *
+ * Returns the body element; callers append their controls to it. A collapsed
+ * group renders no body at all rather than hiding it with CSS, which keeps the
+ * disabled controls of a folded group out of the tab order.
+ */
+function group(
+  id: string,
+  title: string,
+  model: LayersViewModel,
+  handlers: LayersViewHandlers,
+  hint?: string,
+): { readonly root: HTMLElement; readonly body: HTMLElement | undefined } {
+  const collapsed = model.collapsedGroups.has(id);
+  const root = element("section", "kvfx-group");
+  if (collapsed) root.classList.add("kvfx-group--collapsed");
+
+  const header = element("button", "kvfx-group__head");
+  header.type = "button";
+  header.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  header.append(
+    element("span", "kvfx-group__chevron", collapsed ? "▸" : "▾"),
+    element("span", "kvfx-group__title", title),
+  );
+  if (hint !== undefined) header.append(element("span", "kvfx-group__hint", hint));
+  header.addEventListener("click", () => handlers.onToggleGroup(id));
+  root.append(header);
+
+  if (collapsed) return { root, body: undefined };
+
+  const body = element("div", "kvfx-group__body");
+  root.append(body);
+  return { root, body };
 }
 
 interface ToolButtonSpec {
   readonly commandId: string;
   readonly icon: string;
   readonly label: string;
+}
+
+/**
+ * A labelled tile: icon plus its name.
+ *
+ * Align and anchor stay icon-only because those arrangements are conventional
+ * across every design tool and read as a unit. Everything else gets a label —
+ * a grid of unlabelled icons for Solo, Shy, Guide and 3D asks the user to learn
+ * a private vocabulary before they can use the panel at all.
+ */
+/** Slightly smaller than a standalone tool icon, to sit with 11px text. */
+const TILE_ICON_PX = 14;
+
+function labelledTile(
+  spec: ToolButtonSpec,
+  model: LayersViewModel,
+  handlers: LayersViewHandlers,
+): HTMLButtonElement {
+  const button = element("button", "kvfx-tile");
+  button.type = "button";
+
+  const available = model.availableIds.has(spec.commandId);
+  button.disabled = !available || model.busy;
+  button.title = available ? spec.label : (model.reasons.get(spec.commandId) ?? spec.label);
+
+  button.append(createIcon(spec.icon, TILE_ICON_PX), element("span", "kvfx-tile__label", spec.label));
+  button.addEventListener("click", () => handlers.onRun(spec.commandId));
+  return button;
 }
 
 function toolButton(
@@ -110,8 +172,10 @@ const ALIGN_ROW_V: ReadonlyArray<{ edge: AlignEdge; icon: string; label: string 
 ];
 
 function alignSection(model: LayersViewModel, handlers: LayersViewHandlers): HTMLElement {
-  const wrapper = section("Align");
-  wrapper.append(referenceToggle(model, handlers));
+  const { root, body } = group("align", "Align", model, handlers);
+  if (body === undefined) return root;
+
+  body.append(referenceToggle(model, handlers));
 
   const grid = element("div", "kvfx-grid kvfx-grid--four");
   for (const spec of [...ALIGN_ROW_H, ...ALIGN_ROW_V]) {
@@ -137,8 +201,8 @@ function alignSection(model: LayersViewModel, handlers: LayersViewHandlers): HTM
     ),
   );
 
-  wrapper.append(grid);
-  return wrapper;
+  body.append(grid);
+  return root;
 }
 
 /** Row-major, matching the 3×3 arrangement on screen. */
@@ -167,7 +231,9 @@ const ANCHOR_LABELS: Readonly<Record<AnchorSpot, string>> = {
 };
 
 function anchorSection(model: LayersViewModel, handlers: LayersViewHandlers): HTMLElement {
-  const wrapper = section("Anchor point", "the layer does not move");
+  const { root, body } = group("anchor", "Anchor", model, handlers, "layer stays put");
+  if (body === undefined) return root;
+
   const grid = element("div", "kvfx-anchor");
 
   for (const spot of ANCHOR_GRID) {
@@ -187,43 +253,46 @@ function anchorSection(model: LayersViewModel, handlers: LayersViewHandlers): HT
     grid.append(button);
   }
 
-  wrapper.append(grid);
-  return wrapper;
+  body.append(grid);
+  return root;
 }
 
 const ORDER_TOOLS: readonly ToolButtonSpec[] = [
-  { commandId: "kvfx.layer.movetop", icon: "move-top", label: "Move to top" },
-  { commandId: "kvfx.layer.moveup", icon: "move-up", label: "Move up" },
-  { commandId: "kvfx.layer.movedown", icon: "move-down", label: "Move down" },
-  { commandId: "kvfx.layer.movebottom", icon: "move-bottom", label: "Move to bottom" },
+  { commandId: "kvfx.layer.movetop", icon: "move-top", label: "To top" },
+  { commandId: "kvfx.layer.moveup", icon: "move-up", label: "Up" },
+  { commandId: "kvfx.layer.movedown", icon: "move-down", label: "Down" },
+  { commandId: "kvfx.layer.movebottom", icon: "move-bottom", label: "To bottom" },
 ];
 
 const SWITCH_TOOLS: readonly ToolButtonSpec[] = [
-  { commandId: "kvfx.layer.solo", icon: "solo", label: "Toggle solo" },
-  { commandId: "kvfx.layer.visibility", icon: "eye", label: "Toggle visibility" },
-  { commandId: "kvfx.layer.shy", icon: "shy", label: "Toggle shy" },
-  { commandId: "kvfx.layer.threed", icon: "cube", label: "Toggle 3D" },
-  { commandId: "kvfx.layer.guide", icon: "guide", label: "Toggle guide layer" },
-  { commandId: "kvfx.layer.lock", icon: "lock", label: "Lock selected layers" },
-  { commandId: "kvfx.layer.unlockall", icon: "unlock", label: "Unlock all layers" },
+  { commandId: "kvfx.layer.solo", icon: "solo", label: "Solo" },
+  { commandId: "kvfx.layer.visibility", icon: "eye", label: "Visible" },
+  { commandId: "kvfx.layer.shy", icon: "shy", label: "Shy" },
+  { commandId: "kvfx.layer.threed", icon: "cube", label: "3D" },
+  { commandId: "kvfx.layer.guide", icon: "guide", label: "Guide" },
+  { commandId: "kvfx.layer.lock", icon: "lock", label: "Lock" },
+  { commandId: "kvfx.layer.unlockall", icon: "unlock", label: "Unlock all" },
 ];
 
 const CREATE_TOOLS: readonly ToolButtonSpec[] = [
-  { commandId: "kvfx.layer.createnull", icon: "null", label: "Create null" },
-  { commandId: "kvfx.layer.createadjustment", icon: "adjustment", label: "Create adjustment layer" },
+  { commandId: "kvfx.layer.createnull", icon: "null", label: "Null" },
+  { commandId: "kvfx.layer.createadjustment", icon: "adjustment", label: "Adjustment" },
 ];
 
 function toolSection(
+  id: string,
   title: string,
   tools: readonly ToolButtonSpec[],
   model: LayersViewModel,
   handlers: LayersViewHandlers,
 ): HTMLElement {
-  const wrapper = section(title);
-  const grid = element("div", "kvfx-grid kvfx-grid--four");
-  for (const spec of tools) grid.append(toolButton(spec, model, handlers));
-  wrapper.append(grid);
-  return wrapper;
+  const { root, body } = group(id, title, model, handlers);
+  if (body === undefined) return root;
+
+  const grid = element("div", "kvfx-tiles");
+  for (const spec of tools) grid.append(labelledTile(spec, model, handlers));
+  body.append(grid);
+  return root;
 }
 
 export function renderLayersView(
@@ -234,9 +303,9 @@ export function renderLayersView(
   root.append(
     alignSection(model, handlers),
     anchorSection(model, handlers),
-    toolSection("Order", ORDER_TOOLS, model, handlers),
-    toolSection("Switches", SWITCH_TOOLS, model, handlers),
-    toolSection("Create", CREATE_TOOLS, model, handlers),
+    toolSection("order", "Order", ORDER_TOOLS, model, handlers),
+    toolSection("switches", "Switches", SWITCH_TOOLS, model, handlers),
+    toolSection("create", "Create", CREATE_TOOLS, model, handlers),
   );
   return root;
 }

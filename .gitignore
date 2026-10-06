@@ -41,3 +41,4 @@ logs/
 *.log
 .cache/
 dist-types/
+build/preview/

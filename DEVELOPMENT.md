@@ -56,6 +56,29 @@ npm run dev       # watch build, re-assembles the extension on change
 npm run dev:link  # link the build into After Effects (Windows/macOS)
 ```
 
+## 3b. Looking at the panel without After Effects
+
+```bash
+npm run build && npm run preview          # build/preview/panel.png
+npm run preview -- --tab quick            # the palette instead of the Layers tab
+npm run preview -- --width 260,320,420    # dock widths to render
+```
+
+`scripts/preview.mjs` stubs `__adobe_cep__` with canned replies and screenshots
+the **built** bundle, so what you see is what ships. The stub selection
+deliberately includes a parented layer and a 3D layer, so the cases the align
+maths declines are visible rather than hypothetical.
+
+Two things it gets right that are easy to get wrong:
+
+* **The panel renders inside an iframe** at the target width. Chromium enforces
+  a 500px minimum viewport in every headless mode, so `--window-size=300`
+  silently lays out at 500 and the screenshot is merely cropped — which looks
+  exactly like missing controls, and did.
+* **It serves over HTTP**, because Chromium refuses ES module scripts from
+  `file://`. CEP relaxes that rule; a plain browser does not, and the panel
+  renders blank.
+
 ## 4. Testing strategy
 
 Three tiers, in the order they run:

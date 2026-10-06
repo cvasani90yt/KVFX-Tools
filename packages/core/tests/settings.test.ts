@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CURRENT_SETTINGS_VERSION,
+  DEFAULT_UI_SETTINGS,
+  toggleGroupCollapsed,
   MAX_RECENTS,
   defaultSettings,
   migrateSettings,
@@ -166,6 +168,51 @@ describe("setShortcut", () => {
     expect(set.shortcuts["a"]).toBe("Ctrl+1");
     expect(setShortcut(set, "a", undefined).shortcuts["a"]).toBeUndefined();
     expect(setShortcut(set, "a", "").shortcuts["a"]).toBeUndefined();
+  });
+});
+
+describe("UI settings", () => {
+  it("defaults to the Quick tab with nothing collapsed", () => {
+    expect(defaultSettings().ui).toEqual(DEFAULT_UI_SETTINGS);
+    expect(defaultSettings().ui.collapsedGroups).toEqual([]);
+  });
+
+  it("round-trips a stored UI block", () => {
+    const result = migrateSettings({
+      schemaVersion: 1,
+      ui: { activeTab: "layers", alignReference: "selection", collapsedGroups: ["anchor"] },
+    });
+    expect(result.settings.ui).toEqual({
+      activeTab: "layers",
+      alignReference: "selection",
+      collapsedGroups: ["anchor"],
+    });
+  });
+
+  it("falls back on an unrecognised align reference", () => {
+    const result = migrateSettings({ schemaVersion: 1, ui: { alignReference: "sideways" } });
+    expect(result.settings.ui.alignReference).toBe("auto");
+  });
+
+  it("falls back when the UI block is missing or malformed", () => {
+    expect(migrateSettings({ schemaVersion: 1 }).settings.ui).toEqual(DEFAULT_UI_SETTINGS);
+    expect(migrateSettings({ schemaVersion: 1, ui: "nope" }).settings.ui).toEqual(DEFAULT_UI_SETTINGS);
+  });
+
+  it("toggles a group collapsed and back", () => {
+    const collapsed = toggleGroupCollapsed(defaultSettings(), "anchor");
+    expect(collapsed.ui.collapsedGroups).toEqual(["anchor"]);
+    expect(toggleGroupCollapsed(collapsed, "anchor").ui.collapsedGroups).toEqual([]);
+  });
+
+  it("stores the collapsed set, so a group added later arrives open", () => {
+    // Storing the expanded set instead would hide a brand-new feature from
+    // anyone with an existing settings file — exactly the people who would
+    // never find it.
+    const settings = toggleGroupCollapsed(defaultSettings(), "align");
+    const reloaded = migrateSettings(JSON.parse(JSON.stringify(settings))).settings;
+    expect(reloaded.ui.collapsedGroups).toEqual(["align"]);
+    expect(reloaded.ui.collapsedGroups).not.toContain("a-group-added-in-a-later-version");
   });
 });
 

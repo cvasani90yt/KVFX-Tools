@@ -7,6 +7,8 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  /* Both, so a panel taller than its content never shows white behind it. */
+  background: var(--kvfx-surface-base);
 }
 
 body {
@@ -31,20 +33,29 @@ body {
 .kvfx-titlebar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--kvfx-space-2);
+  gap: var(--kvfx-space-3);
   padding: var(--kvfx-space-2) var(--kvfx-space-3);
   border-bottom: 1px solid var(--kvfx-border);
   background: var(--kvfx-surface-raised);
   flex: 0 0 auto;
+  min-height: var(--kvfx-row-h);
+}
+
+.kvfx-titlebar__spacer {
+  flex: 1 1 auto;
 }
 
 .kvfx-wordmark {
   font-size: var(--kvfx-text-sm);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--kvfx-text-secondary);
+  color: var(--kvfx-text-primary);
+  white-space: nowrap;
+}
+
+.kvfx-wordmark__mark {
+  color: var(--kvfx-accent);
 }
 
 .kvfx-version {
@@ -57,6 +68,24 @@ body {
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--kvfx-space-3);
+}
+
+/* A thin scrollbar: the default one eats real width in a narrow dock. */
+.kvfx-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.kvfx-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kvfx-body::-webkit-scrollbar-thumb {
+  background: var(--kvfx-border);
+  border-radius: 4px;
+}
+
+.kvfx-body::-webkit-scrollbar-thumb:hover {
+  background: var(--kvfx-text-muted);
 }
 
 .kvfx-status {
@@ -305,17 +334,18 @@ body {
 .kvfx-command__action {
   appearance: none;
   display: flex;
-  align-items: baseline;
-  gap: var(--kvfx-space-2);
+  align-items: center;
+  gap: var(--kvfx-space-3);
   flex: 1 1 auto;
   min-width: 0;
+  min-height: var(--kvfx-row-h);
   text-align: left;
   border: 0;
   background: transparent;
   color: var(--kvfx-text-primary);
   font-family: inherit;
   font-size: var(--kvfx-text-sm);
-  padding: var(--kvfx-space-1) var(--kvfx-space-2);
+  padding: 0 var(--kvfx-space-2);
   border-radius: var(--kvfx-radius-sm);
   cursor: pointer;
 }
@@ -367,7 +397,7 @@ body {
 .kvfx-star {
   appearance: none;
   flex: 0 0 auto;
-  width: 22px;
+  width: 18px;
   border: 0;
   background: transparent;
   color: var(--kvfx-text-muted);
@@ -493,8 +523,9 @@ body {
 
 .kvfx-grid--four {
   /* Fixed tracks rather than auto-fit: the buttons are icon-sized targets and
-     should not stretch into unrecognisable slabs on a wide panel. */
-  grid-template-columns: repeat(4, 34px);
+     should not stretch into unrecognisable slabs on a wide panel. Six across
+     fits the narrowest dock the manifest allows (260px) without wrapping. */
+  grid-template-columns: repeat(6, var(--kvfx-tool-w));
 }
 
 .kvfx-tool {
@@ -502,8 +533,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 30px;
+  width: var(--kvfx-tool-w);
+  height: var(--kvfx-tool-h);
   border: 1px solid var(--kvfx-border);
   border-radius: var(--kvfx-radius-sm);
   background: var(--kvfx-surface-overlay);
@@ -577,8 +608,8 @@ body {
 
 .kvfx-anchor {
   display: grid;
-  grid-template-columns: repeat(3, 30px);
-  grid-template-rows: repeat(3, 26px);
+  grid-template-columns: repeat(3, var(--kvfx-tool-w));
+  grid-template-rows: repeat(3, var(--kvfx-tool-h));
   gap: 1px;
   border: 1px solid var(--kvfx-border);
   border-radius: var(--kvfx-radius-sm);
@@ -622,4 +653,131 @@ body {
 
 .kvfx-anchor__cell:hover:not([disabled]) .kvfx-anchor__dot {
   background: var(--kvfx-accent);
+}
+
+/* --- Collapsible groups -------------------------------------------------- */
+
+.kvfx-group {
+  border-bottom: 1px solid var(--kvfx-border);
+}
+
+.kvfx-group:last-child {
+  border-bottom: 0;
+}
+
+.kvfx-group__head {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--kvfx-space-2);
+  width: 100%;
+  min-height: var(--kvfx-row-h);
+  border: 0;
+  background: transparent;
+  color: var(--kvfx-text-secondary);
+  font-family: inherit;
+  font-size: var(--kvfx-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: var(--kvfx-space-2) 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.kvfx-group__head:hover {
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-group__head:focus-visible {
+  outline: 2px solid var(--kvfx-accent);
+  outline-offset: -2px;
+}
+
+.kvfx-group__chevron {
+  flex: 0 0 auto;
+  width: 9px;
+  font-size: var(--kvfx-text-xxs);
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-group__title {
+  flex: 0 0 auto;
+}
+
+.kvfx-group__hint {
+  flex: 1 1 auto;
+  font-size: var(--kvfx-text-xxs);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--kvfx-text-muted);
+  text-align: right;
+}
+
+.kvfx-group__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kvfx-space-2);
+  padding-bottom: var(--kvfx-space-3);
+}
+
+/* The view itself no longer needs gaps — the group borders do that work. */
+.kvfx-view {
+  gap: 0;
+}
+
+/* --- Labelled tiles ------------------------------------------------------ */
+
+.kvfx-tiles {
+  display: grid;
+  /* Two across at the narrowest dock, three once there is room. */
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--kvfx-space-1);
+}
+
+.kvfx-tile {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--kvfx-space-2);
+  min-height: var(--kvfx-row-h);
+  padding: 0 var(--kvfx-space-2);
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-sm);
+  background: var(--kvfx-surface-overlay);
+  color: var(--kvfx-text-secondary);
+  font-family: inherit;
+  font-size: var(--kvfx-text-sm);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.kvfx-tile:hover:not([disabled]) {
+  background: var(--kvfx-surface-hover);
+  border-color: var(--kvfx-text-muted);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-tile:focus-visible {
+  outline: 2px solid var(--kvfx-accent);
+  outline-offset: 1px;
+}
+
+.kvfx-tile[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.kvfx-tile .kvfx-icon {
+  flex: 0 0 auto;
+}
+
+.kvfx-tile__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -1,5 +1,4 @@
 import {
-  PRODUCT_NAME,
   PRODUCT_VERSION,
   type AlignReference,
   type PaletteEntry,
@@ -123,6 +122,7 @@ export interface RenderOptions extends PaletteHandlers {
   readonly onRefresh: () => void;
   readonly onSelectTab: (tabId: string) => void;
   readonly onReferenceChange: (reference: AlignReference) => void;
+  readonly onToggleGroup: (groupId: string) => void;
 }
 
 export interface RenderResult {
@@ -138,10 +138,21 @@ export function render(
   root.replaceChildren();
 
   const titlebar = element("header", "kvfx-titlebar");
+  const wordmark = element("span", "kvfx-wordmark");
+  wordmark.append(element("span", "kvfx-wordmark__mark", "KVFX"), document.createTextNode(" Tools"));
   titlebar.append(
-    element("span", "kvfx-wordmark", PRODUCT_NAME),
+    wordmark,
+    element("span", "kvfx-titlebar__spacer"),
     element("span", "kvfx-version", PRODUCT_VERSION),
   );
+
+  // Connected is the normal case and needs no words — a dot in the header is
+  // enough, and it buys back a whole row of the panel's scarcest resource.
+  if (state.connection.status === "connected") {
+    const dot = element("span", "kvfx-dot kvfx-dot--ok");
+    dot.title = `After Effects ${state.connection.facts.aeVersion} · round trip ${String(state.connection.roundTripMs)} ms`;
+    titlebar.append(dot);
+  }
 
   const body = element("main", "kvfx-body");
   let input: HTMLInputElement | undefined;
@@ -161,8 +172,13 @@ export function render(
             busy: state.busy,
             availableIds: options.availableIds,
             reasons: options.reasons,
+            collapsedGroups: new Set(state.settings.ui.collapsedGroups),
           },
-          { onRun: options.onRun, onReferenceChange: options.onReferenceChange },
+          {
+            onRun: options.onRun,
+            onReferenceChange: options.onReferenceChange,
+            onToggleGroup: options.onToggleGroup,
+          },
         ),
       );
     } else {

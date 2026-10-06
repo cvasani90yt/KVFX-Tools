@@ -45,6 +45,7 @@ const session = new Session((state: SessionState) => {
     onRefresh: () => void session.refreshSelection(),
     onSelectTab: (tabId) => session.setActiveTab(tabId),
     onReferenceChange: (reference) => session.setAlignReference(reference),
+    onToggleGroup: (groupId) => session.toggleGroup(groupId),
     onQueryChange: (query) => session.setQuery(query),
     onSelect: (index) => {
       // Re-rendering on hover would fight the mouse, so selection is stored

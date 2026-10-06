@@ -2,7 +2,7 @@
   "name": "kvfx-tools",
   "version": "0.1.0-dev",
   "private": true,
-  "description": "KVFX Tools — workflow accelerator for Adobe After Effects",
+  "description": "KVFX Tools \u2014 workflow accelerator for Adobe After Effects",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {
@@ -33,7 +33,8 @@
     "guard:boundaries": "node tools/check-boundaries.mjs",
     "guard:paths": "node tools/check-hardcoded-paths.mjs",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run guard",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "preview": "node scripts/preview.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
