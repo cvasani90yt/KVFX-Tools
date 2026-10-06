@@ -298,7 +298,8 @@ body {
 }
 
 .kvfx-command--selected {
-  background: var(--kvfx-surface-hover);
+  background: var(--kvfx-accent-soft);
+  box-shadow: inset 2px 0 0 var(--kvfx-accent);
 }
 
 .kvfx-command__action {
@@ -381,7 +382,7 @@ body {
 }
 
 .kvfx-star--on {
-  color: var(--kvfx-warn);
+  color: var(--kvfx-accent);
 }
 
 .kvfx-star:focus-visible {
@@ -563,7 +564,8 @@ body {
 
 .kvfx-segmented__option--on {
   background: var(--kvfx-accent);
-  color: #fff;
+  color: var(--kvfx-accent-ink);
+  font-weight: 600;
 }
 
 .kvfx-segmented__option:focus-visible {

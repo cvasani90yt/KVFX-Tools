@@ -18,15 +18,43 @@
   /* Text */
   --kvfx-text-primary: #e8eaed;
   --kvfx-text-secondary: #9aa0ab;
-  --kvfx-text-muted: #6b7280;
+  /*
+   * 4.88:1 on the base surface. The previous value was 3.96:1, which fails
+   * WCAG AA for normal text — and this token carries exactly the text that
+   * most needs reading: the reason a control is disabled.
+   */
+  --kvfx-text-muted: #79818e;
 
-  /* Accent */
-  --kvfx-accent: #5b8def;
-  --kvfx-accent-hover: #6f9bf2;
+  /*
+   * Accent — amber/orange.
+   *
+   * Leaning orange rather than pure amber on purpose: it keeps a clear gap from
+   * the yellow used for warnings, and it is nowhere near After Effects' own
+   * selection blue, so a KVFX control never reads as part of the host UI.
+   */
+  --kvfx-accent: #ff8f3f;
+  --kvfx-accent-hover: #ffa45c;
+  /*
+   * Text and icons drawn ON an accent fill.
+   *
+   * White on this orange is about 2.3:1 and genuinely hard to read at 11px;
+   * near-black is about 8:1. Any filled accent surface uses this, never white.
+   */
+  --kvfx-accent-ink: #241200;
+  /* Low-opacity accent for selected rows and subtle fills. */
+  --kvfx-accent-soft: rgba(255, 143, 63, 0.14);
+  --kvfx-accent-edge: rgba(255, 143, 63, 0.55);
 
-  /* Status */
+  /*
+   * Status.
+   *
+   * Warning and the accent sit close in luminance (1.33:1 against each other),
+   * so they are told apart by hue, not brightness. That is acceptable only
+   * because exactly one status dot is ever shown at a time — they never need to
+   * be compared side by side. Do not use these as adjacent categorical colours.
+   */
   --kvfx-ok: #3fb950;
-  --kvfx-warn: #d29922;
+  --kvfx-warn: #e3c44a;
   --kvfx-error: #f05c5c;
 
   /* Lines */
