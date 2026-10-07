@@ -9,14 +9,15 @@ script, and all of it stays editable.
 |---|---|
 | `KVFX-Promo-Builder.jsx` | Builds the whole project. Run it in After Effects. |
 | `assets/ui/*.png` | Screenshots of the real panel at 2× (760 × 1720), one per tab, plus the search palette. |
-| `assets/anime/*.png` | Key art for the anime section. **You add these** (see [Assets](#assets)). |
+| `assets/anime/` | Key art for the anime section, included (see [Assets](#assets)). |
 | `assets/music.mp3` | Optional. If present it is placed under the edit. `.wav`, `.m4a` and `.aac` work too. |
 
 ## Build it
 
-1. Put the anime stills in `assets/anime/` with the names below. You can skip
-   this step: missing files become purple placeholders named
-   `MISSING anime/…`, and you can swap them later with **File ▸ Replace Footage**.
+1. The anime stills are already in `assets/anime/`. To use your own, keep the
+   same names (`.png` or `.jpg`). A missing file becomes a purple placeholder
+   named `MISSING anime/…` that you can swap later with
+   **File ▸ Replace Footage**.
 2. Install the fonts. All three are free on Google Fonts: **Unbounded**,
    **Inter** and **JetBrains Mono**. Without them the script falls back to
    Arial and Courier and says so.
@@ -69,19 +70,20 @@ can find it in the panel.
 
 ## Assets
 
-| File | Content | Size |
-|---|---|---|
-| `anime/city.png` | Empty rooftop at night over a neon city in the rain. Amber signs, teal shadows, no people, no text. | 1584 × 2816 |
-| `anime/hero.png` | Original character, three-quarter close-up: ash-grey undercut, eyebrow scar, glowing amber eyes, techwear, orange rim light. | 1584 × 2816 |
-| `anime/hero-cutout.png` | The same image with a transparent background, used for parallax. | 1584 × 2816 |
-| `anime/leap.png` | Original character mid-leap swinging a glowing orange blade, with speed lines. | 1584 × 2816 |
-| `anime/leap-cutout.png` | The same image with a transparent background. | 1584 × 2816 |
-| `anime/eye.png` | Extreme close-up of an amber eye reflecting neon. | 1584 × 2816 |
+| File | Content |
+|---|---|
+| `anime/city.jpg` | Empty rooftop at night over a neon city in the rain. Amber signs, teal shadows, no people, no text. |
+| `anime/hero.jpg` | Original character, three-quarter close-up: ash-grey undercut, eyebrow scar, amber eyes, techwear, orange rim light. Used as a carousel card. |
+| `anime/hero-cutout.png` | The same character on a transparent background, for the parallax shots. |
+| `anime/leap.jpg` | Original character mid-leap, swinging a glowing orange blade. |
+| `anime/leap-cutout.png` | The same frame on a transparent background, with the blade, its arc and the sparks kept in the matte. |
+| `anime/eye.jpg` | Extreme close-up of an amber eye reflecting neon. |
 
-The script uses a cutout when it is there and the full image when it isn't.
-Other images work too: anything roughly 9:16 is scaled to fit. Use original
-characters only. Clips or stills from existing anime need a licence before
-they go into a paid ad.
+All six are 1125 × 2000. The script sizes the characters by on-screen height,
+so a higher-resolution version with the same name drops straight in and comes
+out sharper on the camera push-ins. If only one version of a character exists,
+the script uses it in both places. Use original characters only. Clips or
+stills from existing anime need a licence before they go into a paid ad.
 
 Screenshots in `assets/ui/` come from the built panel. Regenerate them after a
 UI change:

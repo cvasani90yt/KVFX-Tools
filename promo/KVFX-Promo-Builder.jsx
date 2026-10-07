@@ -344,10 +344,20 @@
     return Folder.selectDialog("Pick the KVFX promo \"assets\" folder (Cancel builds with placeholders)");
   }
 
+  // "anime/city.png" also finds anime/city.jpg or .jpeg.
   function assetFile(rel) {
     if (!ASSET_DIR) return null;
-    var f = new File(ASSET_DIR.fsName + "/" + rel);
-    return f.exists ? f : null;
+    var names = [rel];
+    var dot = rel.lastIndexOf(".");
+    if (dot > 0 && rel.substr(dot).toLowerCase() === ".png") {
+      names.push(rel.substr(0, dot) + ".jpg");
+      names.push(rel.substr(0, dot) + ".jpeg");
+    }
+    for (var i = 0; i < names.length; i++) {
+      var f = new File(ASSET_DIR.fsName + "/" + names[i]);
+      if (f.exists) return f;
+    }
+    return null;
   }
 
   function footage(rel) {
@@ -374,7 +384,7 @@
   }
 
   function placeholderSize(rel) {
-    if (rel.indexOf("anime/") === 0) return [1584, 2816];
+    if (rel.indexOf("anime/") === 0) return [1125, 2000];
     if (rel.indexOf("ui/") === 0) return [760, 1720];
     return [W, H];
   }
@@ -406,6 +416,12 @@
   function coverPct(l, extra, w, h) {
     var s = srcSize(l);
     return Math.max((w || W) / s[0], (h || H) / s[1]) * 100 * (extra || 1);
+  }
+
+  // Scale (%) that makes a layer the given height in pixels, whatever the
+  // resolution of the file that was dropped in.
+  function heightPct(l, px) {
+    return px / srcSize(l)[1] * 100;
   }
 
   function place3D(l, pos, scalePct) {
@@ -1247,8 +1263,8 @@
     glow(cityA, 40, 0.6);
     span(cityA, A0, A1);
     var heroA = still(comp, ["anime/hero-cutout.png", "anime/hero.png"], "Hero");
-    place3D(heroA, [CX, CY + 260, 0], 62);
-    anim(tr(heroA, "ADBE Position"), [[2.0, [CX, CY + 1100, 0]], [2.3, [CX, CY + 260, 0]]], "snap");
+    place3D(heroA, [CX + 40, CY + 350, 0], heightPct(heroA, 2300));
+    anim(tr(heroA, "ADBE Position"), [[2.0, [CX + 40, CY + 1400, 0]], [2.3, [CX + 40, CY + 350, 0]]], "snap");
     glow(heroA, 60, 0.8);
     heroA.motionBlur = true;
     span(heroA, 2.0, A1);
@@ -1285,7 +1301,7 @@
     blurLayer(cityC, 10);
     span(cityC, C0, C1);
     var heroC = still(comp, ["anime/hero-cutout.png", "anime/hero.png"], "Hero - parallax");
-    place3D(heroC, [CX, CY + 220, 0], 60);
+    place3D(heroC, [CX + 40, CY + 330, 0], heightPct(heroC, 2300));
     glow(heroC, 70, 0.9);
     span(heroC, C0, C1);
     var lines = speedLines(comp, "Speed lines", C.cream);
@@ -1309,8 +1325,8 @@
     fx(cityD, "ADBE Tint", "Teal grade", [[1, rgba(C.ink)], [2, rgba(C.teal)], [3, 35]]);
     span(cityD, D0, D1);
     var leap = still(comp, ["anime/leap-cutout.png", "anime/leap.png"], "Leap");
-    place3D(leap, [CX, CY + 120, 0], 64);
-    anim(tr(leap, "ADBE Position"), [[D0, [CX + 1200, CY + 260, 0]], [D0 + 0.25, [CX, CY + 120, 0]]], "linear");
+    place3D(leap, [CX, CY + 60, 0], heightPct(leap, 2240));
+    anim(tr(leap, "ADBE Position"), [[D0, [CX + 1300, CY + 200, 0]], [D0 + 0.25, [CX, CY + 60, 0]]], "linear");
     anim(tr(leap, "ADBE Rotate Z"), [[D0, -18], [D0 + 0.25, 0]], "linear");
     expr(tr(leap, "ADBE Position"), elasticExpression());
     expr(tr(leap, "ADBE Rotate Z"), elasticExpression());
@@ -1405,7 +1421,8 @@
       var card = still(comp, files[i], "Card " + (i + 1));
       card.threeDLayer = true;
       card.parent = hub;
-      setScale(card, 24);
+      var cardPct = heightPct(card, 680);
+      setScale(card, cardPct);
       expr(tr(card, "ADBE Position"), [
         "// KVFX Tools - carousel",
         "var count = " + count + ";",
@@ -1417,7 +1434,7 @@
         "[c[0] + radius * Math.sin(a), c[1], c[2] - radius * Math.cos(a)];"
       ].join("\n"));
       expr(tr(card, "ADBE Orientation"), "// KVFX Tools - carousel\nlookAt(position, parent.anchorPoint);");
-      popIn(card, t0 + i * 0.1, 24);
+      popIn(card, t0 + i * 0.1, cardPct);
       span(card, t0, t1);
     }
   }
