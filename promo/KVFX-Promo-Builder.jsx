@@ -38,11 +38,12 @@
   var SCENES = [
     { key: "hook", name: "01 Hook", dur: 3.0 },
     { key: "brand", name: "02 Brand Sting", dur: 2.5 },
-    { key: "anime", name: "03 Anime Edits", dur: 13.0 },
-    { key: "saas", name: "04 SaaS Promo", dur: 11.0 },
-    { key: "mograph", name: "05 Everyday Mograph", dur: 8.0 },
-    { key: "features", name: "06 Feature Wall", dur: 4.5 },
-    { key: "cta", name: "07 Call To Action", dur: 3.5 }
+    { key: "panel", name: "03 Inside The Panel", dur: 12.8 },
+    { key: "anime", name: "04 Anime Edits", dur: 13.0 },
+    { key: "saas", name: "05 SaaS Promo", dur: 11.0 },
+    { key: "mograph", name: "06 Everyday Mograph", dur: 8.0 },
+    { key: "features", name: "07 Feature Wall", dur: 4.5 },
+    { key: "cta", name: "08 Call To Action", dur: 3.5 }
   ];
 
   var W = CFG.width;
@@ -385,7 +386,7 @@
 
   function placeholderSize(rel) {
     if (rel.indexOf("anime/") === 0) return [1125, 2000];
-    if (rel.indexOf("ui/") === 0) return [760, 1720];
+    if (rel.indexOf("ui/") === 0 || rel.indexOf("clips/") === 0) return [760, 1720];
     return [W, H];
   }
 
@@ -620,11 +621,13 @@
   }
 
   // Rounded-rectangle mask path, used to round the corners of nested comps.
-  function roundedMask(l, w, h, r) {
+  function roundedMask(l, w, h, r, ox, oy) {
     try {
       var k = r * 0.5523;
+      var x = ox || 0;
+      var y = oy || 0;
       var s = new Shape();
-      s.vertices = [[r, 0], [w - r, 0], [w, r], [w, h - r], [w - r, h], [r, h], [0, h - r], [0, r]];
+      s.vertices = [[x + r, y], [x + w - r, y], [x + w, y + r], [x + w, y + h - r], [x + w - r, y + h], [x + r, y + h], [x, y + h - r], [x, y + r]];
       s.inTangents = [[-k, 0], [0, 0], [0, -k], [0, 0], [k, 0], [0, 0], [0, k], [0, 0]];
       s.outTangents = [[0, 0], [k, 0], [0, 0], [0, k], [0, 0], [-k, 0], [0, 0], [0, -k]];
       s.closed = true;
@@ -778,14 +781,15 @@
 
   // Characters (or words) arrive one after another. The animator holds the
   // "before" state; the selector releases each unit with a cubic ease-out.
-  // o: stagger (s), dur (s), y, scale, rot, blur, words
+  // o: stagger (s), dur (s), x, y, scale, rot, blur, words
   function charIn(l, t0, o) {
     o = o || {};
     var stagger = o.stagger === undefined ? 0.03 : o.stagger;
     var dur = o.dur || 0.45;
     var props = [["ADBE Text Opacity", 0]];
     var y = o.y === undefined ? 90 : o.y;
-    if (y !== 0) props.push(["ADBE Text Position 3D", [0, y, 0]]);
+    var x = o.x || 0;
+    if (y !== 0 || x !== 0) props.push(["ADBE Text Position 3D", [x, y, 0]]);
     if (o.scale !== undefined) props.push(["ADBE Text Scale 3D", [o.scale, o.scale, 100]]);
     if (o.rot) props.push(["ADBE Text Rotation", o.rot]);
     if (o.blur) props.push(["ADBE Text Blur", [o.blur, o.blur]]);
@@ -978,9 +982,10 @@
     return holder;
   }
 
-  // A screenshot of the real panel sliding in, framed like a device.
+  // The real panel sliding in, framed like a device: a recording when o.clip
+  // names one (starting o.from seconds in), else the screenshot of tab `file`.
   function panelCard(comp, file, o) {
-    var l = still(comp, "ui/" + file + ".png", "Panel \u00B7 " + file);
+    var l = o.clip ? panelClip(comp, o.clip, file, o.t0, o.t1, o.from) : still(comp, "ui/" + file + ".png", "Panel \u00B7 " + file);
     var s = o.scale || 44;
     var size = srcSize(l);
     var bezel = shape(comp, "Panel bezel");
@@ -1160,6 +1165,293 @@
     expr(fxProp(l, idx, 3), "var r = sourceRectAtTime(time, false);\n[r.left + r.width, r.top + r.height / 2];");
   }
 
+  // A soft glow that fills the frame. It is a radial Gradient Ramp added over
+  // the scene, so unlike a blurred shape it has no edge to crop.
+  function radialGlow(comp, center, radius, col, opacity, name) {
+    var l = solid(comp, C.ink, name || "Glow");
+    if (!fx(l, "ADBE Ramp", "Radial glow", [[1, center], [2, rgba(col)], [3, [center[0] + radius, center[1]]], [4, [0, 0, 0, 1]], [5, 2]])) {
+      l.remove();
+      return null;
+    }
+    l.blendingMode = BlendingMode.ADD;
+    tr(l, "ADBE Opacity").setValue(opacity);
+    return l;
+  }
+
+  // A recording of the panel (assets/clips/<name>.mp4) that starts playing at
+  // t0 from `from` seconds in, and holds its last frame if the shot runs on.
+  // Without the recording, the screenshot ui/<tab>.png stands in.
+  function panelClip(comp, name, tab, t0, t1, from) {
+    var item = footage("clips/" + name + ".mp4");
+    if (!item) {
+      var still0 = still(comp, "ui/" + tab + ".png", "Panel \u00B7 " + tab);
+      span(still0, t0, t1);
+      return still0;
+    }
+    var start = from || 0;
+    var l = comp.layers.add(item);
+    l.name = "Panel clip \u00B7 " + name;
+    l.startTime = t0 - start;
+    try {
+      if (l.canSetTimeRemapEnabled) {
+        l.timeRemapEnabled = true;
+        expr(l.property("ADBE Time Remapping"), "Math.min(Math.max(time - " + t0 + " + " + start + ", 0), " + Math.max(0, item.duration - FD) + ");");
+      }
+    } catch (e) {
+      warn("Time remap on " + l.name + ": " + errText(e));
+    }
+    try {
+      span(l, t0, t1);
+    } catch (e2) {
+      span(l, t0, Math.min(t1, l.startTime + item.duration));
+    }
+    return l;
+  }
+
+  // The panel as a floating device: recording, bezel and shadow.
+  // o: clip, tab, from, t0, t1, pos, scale, threeD, rotX, rotY, rotZ, pop
+  function deviceCard(comp, o) {
+    var l = panelClip(comp, o.clip, o.tab || o.clip, o.t0, o.t1, o.from);
+    var size = srcSize(l);
+    var bezel = shape(comp, "Panel bezel");
+    rectGroup(bezel, "bezel", size[0] + 44, size[1] + 44, 56, [0, 0], C.ink2, C.amber, 5);
+    bezel.moveAfter(l);
+    if (o.threeD) {
+      l.threeDLayer = true;
+      bezel.threeDLayer = true;
+    }
+    bezel.parent = l;
+    setPos(bezel, o.threeD ? [size[0] / 2, size[1] / 2, 6] : [size[0] / 2, size[1] / 2]);
+    dropShadow(l, 40, 110);
+    setScale(l, o.scale);
+    setPos(l, o.pos);
+    if (o.threeD) {
+      tr(l, "ADBE Rotate X").setValue(o.rotX || 0);
+      tr(l, "ADBE Rotate Y").setValue(o.rotY || 0);
+    }
+    tr(l, "ADBE Rotate Z").setValue(o.rotZ || 0);
+    if (o.pop) popIn(l, o.t0, o.scale);
+    span(bezel, o.t0, o.t1);
+    return l;
+  }
+
+  // A magnified window onto part of a recording. region is [x, y, w, h] in
+  // the recording's pixels; it is shown `zoom` times larger, centred on pos.
+  function zoomInset(comp, o) {
+    var r = o.region;
+    var w = r[2] * o.zoom;
+    var h = r[3] * o.zoom;
+    var back = shape(comp, "Inset back");
+    rectGroup(back, "panel", w + 20, h + 20, 30, [0, 0], C.ink2, null, 0);
+    rectGroup(back, "hard shadow", w + 20, h + 20, 30, [14, 14], C.amber, C.ink, 5);
+    var l = panelClip(comp, o.clip, o.tab || o.clip, o.t0, o.t1, o.from);
+    roundedMask(l, r[2], r[3], 14, r[0], r[1]);
+    tr(l, "ADBE Anchor Point").setValue([r[0] + r[2] / 2, r[1] + r[3] / 2]);
+    setScale(l, o.zoom * 100);
+    var frame = shape(comp, "Inset frame");
+    rectGroup(frame, "frame", w + 20, h + 20, 30, [0, 0], null, C.ink, 6);
+    var holder = nul(comp, "Zoom \u00B7 " + o.clip, o.pos);
+    parentAll([back, l, frame], holder);
+    setPos(back, [0, 0]);
+    setPos(l, [0, 0]);
+    setPos(frame, [0, 0]);
+    tr(holder, "ADBE Rotate Z").setValue(o.rot || 0);
+    popIn(holder, o.t0, 100);
+    popOut(holder, o.t1, 100);
+    spanAll([back, frame, holder], o.t0, o.t1);
+    return holder;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Graph editor: the curve being dragged in the Ease tab, drawn big. A driver
+  // null loops a playhead across it, solves the bezier from the curve's own
+  // path every frame, and moves a ball by the result - so what you see is
+  // exactly the motion the curve makes.
+  // ---------------------------------------------------------------------------
+
+  function bezierShape(b, gw, gh) {
+    var s = new Shape();
+    s.vertices = [[-gw / 2, gh / 2], [gw / 2, -gh / 2]];
+    s.outTangents = [[b[0] * gw, -b[1] * gh], [0, 0]];
+    s.inTangents = [[0, 0], [(b[2] - 1) * gw, (1 - b[3]) * gh]];
+    s.closed = false;
+    return s;
+  }
+
+  function armShape(b, gw, gh, second) {
+    var s = new Shape();
+    if (second) s.vertices = [[gw / 2, -gh / 2], [(b[2] - 0.5) * gw, (0.5 - b[3]) * gh]];
+    else s.vertices = [[-gw / 2, gh / 2], [(b[0] - 0.5) * gw, (0.5 - b[1]) * gh]];
+    s.closed = false;
+    return s;
+  }
+
+  // o: x, y (card centre), t0, t1, keys: [[time, [x1, y1, x2, y2], label], ...]
+  function graphEditor(comp, o) {
+    var gw = 720;
+    var gh = 340;
+    var px = o.x;
+    var py = o.y - 30;
+    var made = [];
+
+    var card = shape(comp, "Graph card");
+    rectGroup(card, "card", 900, 620, 36, [0, 0], C.ink2, C.ink3, 4);
+    rectGroup(card, "hard shadow", 900, 620, 36, [14, 14], C.amber, C.ink, 5);
+    for (var g = 0; g <= 4; g++) {
+      pathGroup(card, "grid v" + g, [[-gw / 2 + g * gw / 4, -gh / 2 - 30], [-gw / 2 + g * gw / 4, gh / 2 + 30]], false, null, C.ink3, 2);
+      pathGroup(card, "grid h" + g, [[-gw / 2 - 30, -gh / 2 + g * gh / 4], [gw / 2 + 30, -gh / 2 + g * gh / 4]], false, null, C.ink3, 2);
+    }
+    pathGroup(card, "track", [[-gw / 2, gh / 2 + 120], [gw / 2, gh / 2 + 120]], false, null, C.ink3, 6);
+    setPos(card, [px, py]);
+    made.push(card);
+
+    var title = txt(comp, "GRAPH EDITOR", { font: "mono", size: 22, color: C.mute, just: LEFT, anchor: "left", tracking: 120, pos: [o.x - 410, o.y - 270] });
+    made.push(title);
+
+    var curve = shape(comp, "Graph curve");
+    var ci = pathGroup(curve, "curve", [[-gw / 2, gh / 2], [gw / 2, -gh / 2]], false, null, C.amber, 9);
+    setPos(curve, [px, py]);
+    glow(curve, 30, 0.8);
+    made.push(curve);
+    var arms = shape(comp, "Graph handles");
+    var a1 = pathGroup(arms, "arm out", [[0, 0], [1, 1]], false, null, C.mute, 3);
+    var a2 = pathGroup(arms, "arm in", [[0, 0], [1, 1]], false, null, C.mute, 3);
+    var d1 = ellipseGroup(arms, "handle out", 24, [0, 0], C.cream, C.ink, 4);
+    var d2 = ellipseGroup(arms, "handle in", 24, [0, 0], C.cream, C.ink, 4);
+    var k1 = rectGroup(arms, "key start", 26, 26, 0, [0, 0], C.amber, C.ink, 4);
+    var k2 = rectGroup(arms, "key end", 26, 26, 0, [0, 0], C.amber, C.ink, 4);
+    gXform(arms, k1).property("ADBE Vector Position").setValue([-gw / 2, gh / 2]);
+    gXform(arms, k1).property("ADBE Vector Rotation").setValue(45);
+    gXform(arms, k2).property("ADBE Vector Position").setValue([gw / 2, -gh / 2]);
+    gXform(arms, k2).property("ADBE Vector Rotation").setValue(45);
+    setPos(arms, [px, py]);
+    made.push(arms);
+
+    // Morph everything through the curves, in step with the recording.
+    var curveKeys = [];
+    var arm1Keys = [];
+    var arm2Keys = [];
+    var dot1Keys = [];
+    var dot2Keys = [];
+    for (var i = 0; i < o.keys.length; i++) {
+      var t = o.keys[i][0];
+      var b = o.keys[i][1];
+      curveKeys.push([t, bezierShape(b, gw, gh)]);
+      arm1Keys.push([t, armShape(b, gw, gh, false)]);
+      arm2Keys.push([t, armShape(b, gw, gh, true)]);
+      dot1Keys.push([t, [(b[0] - 0.5) * gw, (0.5 - b[1]) * gh]]);
+      dot2Keys.push([t, [(b[2] - 0.5) * gw, (0.5 - b[3]) * gh]]);
+    }
+    anim(gItem(curve, ci, 1).property("ADBE Vector Shape"), curveKeys, "smooth");
+    anim(gItem(arms, a1, 1).property("ADBE Vector Shape"), arm1Keys, "smooth");
+    anim(gItem(arms, a2, 1).property("ADBE Vector Shape"), arm2Keys, "smooth");
+    anim(gXform(arms, d1).property("ADBE Vector Position"), dot1Keys, "smooth");
+    anim(gXform(arms, d2).property("ADBE Vector Position"), dot2Keys, "smooth");
+
+    // Driver: Phase loops 0 -> 1, Value is the curve solved at that phase.
+    var driver = nul(comp, "Graph driver", [px, py]);
+    var phaseIdx = slider(driver, "Phase", 0);
+    var valueIdx = slider(driver, "Value", 0);
+    expr(fxProp(driver, phaseIdx, 1), "var p = ((time - " + o.t0 + ") % 1.3) / 1.0;\nMath.min(Math.max(p, 0), 1);");
+    expr(fxProp(driver, valueIdx, 1), [
+      "var L = thisComp.layer(\"Graph curve\");",
+      "var P = L.content(\"curve\").content(1).path;",
+      "var o = P.outTangents()[0];",
+      "var n = P.inTangents()[1];",
+      "var gw = " + gw + ";",
+      "var gh = " + gh + ";",
+      "var x1 = o[0] / gw, y1 = -o[1] / gh, x2 = 1 + n[0] / gw, y2 = 1 - n[1] / gh;",
+      "var t = effect(\"Phase\")(1);",
+      "function bx(s) { return 3 * (1 - s) * (1 - s) * s * x1 + 3 * (1 - s) * s * s * x2 + s * s * s; }",
+      "function by(s) { return 3 * (1 - s) * (1 - s) * s * y1 + 3 * (1 - s) * s * s * y2 + s * s * s; }",
+      "var lo = 0, hi = 1, s = t;",
+      "for (var k = 0; k < 24; k++) { if (bx(s) < t) lo = s; else hi = s; s = (lo + hi) / 2; }",
+      "by(s);"
+    ].join("\n"));
+    made.push(driver);
+
+    // These three are parented to the group null below, so their expressions
+    // return positions relative to it: the plot centre sits at (0, -30).
+    var ref = "thisComp.layer(\"Graph driver\")";
+    var left = -gw / 2;
+    var mid = py - o.y;
+    var head = shape(comp, "Playhead");
+    rectGroup(head, "line", 4, gh + 70, 2, [0, 0], C.cream, null, 0);
+    tr(head, "ADBE Opacity").setValue(55);
+    expr(tr(head, "ADBE Position"), "var d = " + ref + ";\n[" + left + " + d.effect(\"Phase\")(1) * " + gw + ", " + mid + "];");
+    made.push(head);
+    var tracer = shape(comp, "Tracer");
+    ellipseGroup(tracer, "dot", 30, [0, 0], C.amber, C.cream, 5);
+    expr(tr(tracer, "ADBE Position"), "var d = " + ref + ";\n[" + left + " + d.effect(\"Phase\")(1) * " + gw + ", " + (mid + gh / 2) + " - d.effect(\"Value\")(1) * " + gh + "];");
+    made.push(tracer);
+    var ball = shape(comp, "Ball");
+    ellipseGroup(ball, "ball", 64, [0, 0], C.amber, C.ink, 6);
+    expr(tr(ball, "ADBE Position"), "var d = " + ref + ";\n[" + left + " + d.effect(\"Value\")(1) * " + gw + ", " + (mid + gh / 2 + 120) + "];");
+    made.push(ball);
+
+    // Curve name, swapped as the curve changes.
+    for (var j = 0; j < o.keys.length; j++) {
+      if (!o.keys[j][2]) continue;
+      var until = o.t1;
+      for (var q = j + 1; q < o.keys.length; q++) {
+        if (o.keys[q][2]) {
+          until = o.keys[q][0];
+          break;
+        }
+      }
+      var label = txt(comp, o.keys[j][2], { font: "mono", size: 26, color: C.amber, tracking: 80, just: CENTER, pos: [o.x + 300, o.y - 270] });
+      span(label, Math.max(o.t0, o.keys[j][0]), until);
+      made.push(label);
+    }
+
+    var group = nul(comp, "Graph editor", [o.x, o.y]);
+    parentAll(made, group);
+    popIn(group, o.t0, 100);
+    popOut(group, o.t1, 100);
+    made.push(group);
+    spanAll(made, o.t0, o.t1);
+    return group;
+  }
+
+  // The ten Text tab presets, one per beat, each word animating as itself.
+  var REEL = [
+    ["TYPEWRITER", { stagger: 0.035, dur: 0.01, y: 0 }],
+    ["FADE IN", { stagger: 0.03, dur: 0.3, y: 0 }],
+    ["RISE", { stagger: 0.05, dur: 0.3, y: 140 }],
+    ["DROP", { stagger: 0.05, dur: 0.3, y: -160 }],
+    ["SLIDE", { stagger: 0.04, dur: 0.3, x: 200, y: 0 }],
+    ["POP", { stagger: 0.06, dur: 0.3, scale: 0, y: 0 }],
+    ["BLUR IN", { stagger: 0.03, dur: 0.35, blur: 50, y: 0 }],
+    ["SPIN", { stagger: 0.05, dur: 0.35, rot: -180, scale: 0, y: 0 }],
+    ["TRACK IN", { track: 600 }],
+    ["ZOOM OUT", { stagger: 0.03, dur: 0.3, scale: 420, y: 0 }]
+  ];
+
+  function textReel(comp, t0, slot, y) {
+    for (var i = 0; i < REEL.length; i++) {
+      var a = t0 + i * slot;
+      var word = txt(comp, REEL[i][0], { font: "display", size: 150, color: i % 3 === 2 ? C.amber : C.cream, maxW: 940, pos: [CX, y] });
+      word.motionBlur = true;
+      span(word, a, a + slot);
+      if (REEL[i][1].track) {
+        var getT = textAnimator(word, "KV Track In", [["ADBE Text Tracking Amount", 0]]);
+        if (getT) {
+          try {
+            getT().property("ADBE Text Selectors").addProperty("ADBE Text Selector");
+            anim(getT().property("ADBE Text Animator Properties").property("ADBE Text Tracking Amount"), [[a, REEL[i][1].track], [a + 0.3, 0]], "snap");
+          } catch (e) {
+            warn("Track In reel word: " + errText(e));
+          }
+        }
+        anim(tr(word, "ADBE Opacity"), [[a, 0], [a + 0.1, 100]], "linear");
+      } else {
+        charIn(word, a + 0.02, REEL[i][1]);
+      }
+      var n = txt(comp, (i < 9 ? "0" : "") + (i + 1) + " / 10  \u00B7  TEXT PRESET", { font: "mono", size: 26, color: C.amber, tracking: 80, pos: [CX, y - 130] });
+      span(n, a, a + slot);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Scene 01 - Hook
   // ---------------------------------------------------------------------------
@@ -1167,29 +1459,41 @@
   function buildHook(comp) {
     gradBg(comp, hex("#15171D"), C.ink);
     dotGrid(comp, C.cream, 6);
+    radialGlow(comp, [CX, 1300], 900, C.amber, 40, "Amber glow");
     var rig = camRig(comp, "CAM Hook");
-    anim(tr(rig.layer, "ADBE Position"), [[0, [CX, CY, -160]], [comp.duration, [CX, CY, 160]]], "smooth");
+    anim(tr(rig.layer, "ADBE Position"), [[0, [CX, CY, -80]], [comp.duration, [CX, CY, 220]]], "smooth");
+    anim(tr(rig.layer, "ADBE Rotate Y"), [[0, -6], [comp.duration, 4]], "smooth");
     shakeBase(rig, 2);
 
-    var pov = txt(comp, "POV:", { font: "mono", size: 46, color: C.amber, tracking: 80, pos: [CX, 600] });
-    var l1 = txt(comp, "you found the", { font: "ui", size: 86, color: C.cream, pos: [CX, 720] });
-    var l2 = txt(comp, "AFTER EFFECTS", { font: "display", size: 150, color: C.cream, maxW: 940, pos: [CX, 890] });
-    var l3 = txt(comp, "CHEAT CODE", { font: "display", size: 170, color: C.amber, maxW: 940, stroke: C.ink, strokeWidth: 10, pos: [CX, 1090] });
-    var lines = [pov, l1, l2, l3];
-    for (var i = 0; i < lines.length; i++) {
-      lines[i].threeDLayer = true;
-      lines[i].motionBlur = true;
-    }
-    charIn(pov, 0.1, { stagger: 0.04, dur: 0.15, y: 0 });
-    charIn(l1, 0.3, { words: true, stagger: 0.08, dur: 0.3, y: 70, blur: 10 });
-    slam(l2, 0.62, 180);
-    slam(l3, 1.0, 210);
-    shakeHit(rig, 0.64, 30, 2);
-    shakeHit(rig, 1.04, 55, 2);
-    anim(tr(l3, "ADBE Rotate Z"), [[1.0, -8], [1.3, -2]], "snap");
-    flash(comp, 1.0, C.white, 2, 70);
+    // Frame one is already busy: two recordings of the panel, mid-action.
+    var back = deviceCard(comp, { clip: "tools", from: 0.45, t0: 0, t1: comp.duration, pos: [CX - 250, 1440, 420], scale: 50, threeD: true, rotX: 10, rotY: 24, rotZ: -5 });
+    tr(back, "ADBE Opacity").setValue(80);
+    anim(tr(back, "ADBE Position"), [[0, [CX - 250, 1440, 420]], [comp.duration, [CX - 250, 1340, 420]]], "smooth");
+    var front = deviceCard(comp, { clip: "ease", from: 0.45, t0: 0, t1: comp.duration, pos: [CX + 190, 1400, 0], scale: 56, threeD: true, rotX: 10, rotY: -18, rotZ: 4 });
+    anim(tr(front, "ADBE Position"), [[0, [CX + 190, 1400, 0]], [comp.duration, [CX + 190, 1300, 0]]], "smooth");
 
-    pill(comp, "(not a preset pack)", { pos: [CX + 120, 1290], rot: -5, size: 40, font: "body", t0: 1.7, shadow: C.amber });
+    var pov = txt(comp, "POV:", { font: "mono", size: 46, color: C.amber, tracking: 80 });
+    var l1 = txt(comp, "you found the", { font: "ui", size: 86, color: C.cream });
+    var l2 = txt(comp, "AFTER EFFECTS", { font: "display", size: 150, color: C.cream, maxW: 940 });
+    var l3 = txt(comp, "CHEAT CODE", { font: "display", size: 170, color: C.amber, maxW: 940, stroke: C.ink, strokeWidth: 10 });
+    var lines = [[pov, 330], [l1, 440], [l2, 600], [l3, 790]];
+    for (var i = 0; i < lines.length; i++) {
+      lines[i][0].threeDLayer = true;
+      lines[i][0].motionBlur = true;
+      // In front of the panels, so the camera moves the type too.
+      setPos(lines[i][0], [CX, lines[i][1], -120]);
+    }
+    // The first two lines are already on screen at frame one.
+    charIn(pov, -0.4, { stagger: 0.04, dur: 0.15, y: 0 });
+    charIn(l1, -0.1, { words: true, stagger: 0.08, dur: 0.3, y: 70, blur: 10 });
+    slam(l2, 0.35, 180);
+    slam(l3, 0.75, 210);
+    shakeHit(rig, 0.37, 30, 2);
+    shakeHit(rig, 0.79, 55, 2);
+    anim(tr(l3, "ADBE Rotate Z"), [[0.75, -8], [1.05, -2]], "snap");
+    flash(comp, 0.75, C.white, 2, 70);
+
+    pill(comp, "(not a preset pack)", { pos: [CX + 150, 940], rot: -5, size: 40, font: "body", t0: 1.4, shadow: C.amber });
   }
 
   // ---------------------------------------------------------------------------
@@ -1198,11 +1502,7 @@
 
   function buildBrand(comp) {
     solid(comp, C.ink, "BG");
-    var halo = shape(comp, "Amber halo");
-    ellipseGroup(halo, "halo", 1100, [0, 0], C.amber, null, 0);
-    setPos(halo, [CX, 860]);
-    tr(halo, "ADBE Opacity").setValue(28);
-    blurLayer(halo, 260);
+    radialGlow(comp, [CX, 820], 820, C.amber, 45, "Amber glow");
 
     var rig = camRig(comp, "CAM Brand");
     anim(tr(rig.layer, "ADBE Position"), [[0, [CX, CY, -420]], [1.0, [CX, CY, 0]]], "snap");
@@ -1244,7 +1544,61 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Scene 03 - Anime edits
+  // Scene 03 - Inside the panel: real recordings of the panel, the graph its
+  // curve editor drives, the ten text presets and the search palette.
+  // ---------------------------------------------------------------------------
+
+  function buildPanel(comp) {
+    gradBg(comp, hex("#14161B"), C.ink);
+    dotGrid(comp, C.cream, 5);
+    radialGlow(comp, [CX, 700], 950, C.amber, 30, "Amber glow");
+    chapter(comp, "KVFX", "INSIDE THE PANEL", 0, comp.duration, C.amber);
+
+    // 1 - Ease. The recording drags the curve; the graph and the ball follow
+    // it beat for beat, then Apply to Keys lands with its toast.
+    var E1 = 5.4;
+    var EASY = [0.333, 0, 0.667, 1];
+    var DRAG = [0.165, 0.998, 0.667, 1];
+    var EXPO = [0.165, 0.998, 0.301, 0.998];
+    var BACK = [0.36, 0, 0.66, -0.56];
+    graphEditor(comp, {
+      x: CX, y: 640, t0: 0, t1: E1,
+      keys: [[0, EASY, "EASY EASE"], [0.6, EASY, "CUSTOM"], [1.4, DRAG], [1.95, DRAG], [2.6, EXPO, "EXPO OUT"], [4.05, EXPO, "BACK"], [4.2, BACK]]
+    });
+    var easeCard = deviceCard(comp, { clip: "ease", from: 0, t0: 0, t1: E1, pos: [270, 1390], scale: 44, rotZ: -4 });
+    anim(tr(easeCard, "ADBE Position"), [[0, [-320, 1390]], [0.35, [270, 1390]]], "snap");
+    anim(tr(easeCard, "ADBE Position"), [[E1 - 0.25, [270, 1390]], [E1, [-400, 1390]]], "accel");
+    easeCard.motionBlur = true;
+    chip(comp, { tab: "Ease tab", title: "Curve editor", sub: "drag it. apply it. done.", t0: 0.3, t1: E1 - 0.05, x: 480, y: 1040 });
+    pill(comp, "1 click, every selected key", { pos: [760, 1330], rot: 3, size: 32, font: "body", fill: C.amber, shadow: C.cream, t0: 5.05, t1: E1 });
+    flash(comp, E1, C.white, 2, 60);
+
+    // 2 - Text. A magnified look at the live preview, then all ten presets.
+    var T0 = E1;
+    var T1 = 9.2;
+    zoomInset(comp, { clip: "text", from: 0.2, t0: T0, t1: T1, region: [16, 810, 728, 320], zoom: 1.32, pos: [CX, 560], rot: -1.5 });
+    textReel(comp, T0 + 0.05, 0.37, 1130);
+    chip(comp, { tab: "Text tab", title: "10 text presets", sub: "hover to preview, click to apply", t0: T0 + 0.2, t1: T1 - 0.05, x: 70, y: 1300 });
+    flash(comp, T1, C.white, 2, 60);
+
+    // 3 - Search. Ctrl + Space, three letters, Enter.
+    var S0 = T1;
+    var S1 = comp.duration;
+    var cam = camRig(comp, "CAM Search", S0, S1);
+    anim(tr(cam.layer, "ADBE Position"), [[S0, [CX, CY, -200]], [S1, [CX, CY, 60]]], "smooth");
+    deviceCard(comp, { clip: "palette", from: 0, t0: S0, t1: S1, pos: [CX, 1330, 0], scale: 50, threeD: true, rotX: 12, rotY: -14, rotZ: 2, pop: true });
+    zoomInset(comp, { clip: "palette", from: 0, t0: S0 + 0.1, t1: S1, region: [16, 52, 728, 170], zoom: 1.3, pos: [CX, 470], rot: 1.5 });
+    var k1 = keycap(comp, "CTRL", CX - 170, 720, 210, S0 + 0.35);
+    var plus = txt(comp, "+", { font: "display", size: 80, color: C.cream, pos: [CX - 10, 720] });
+    var k2 = keycap(comp, "SPACE", CX + 170, 720, 320, S0 + 0.35);
+    popIn(k1[0], S0 + 0.05, 100);
+    popIn(k2[0], S0 + 0.12, 100);
+    spanAll([k1[0], k1[1], k1[2], k2[0], k2[1], k2[2], plus], S0, S1);
+    chip(comp, { tab: "Ctrl / Cmd + Space", title: "Search everything", sub: "100+ commands, 3 letters", t0: S0 + 1.0, t1: S1 - 0.05, x: 70, y: 1180 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scene 04 - Anime edits
   // ---------------------------------------------------------------------------
 
   function buildAnime(comp) {
@@ -1308,7 +1662,7 @@
     place3D(lines, [CX, CY, -450], 100);
     tr(lines, "ADBE Opacity").setValue(16);
     span(lines, C0, C1);
-    easeWidget(comp, C0 + 0.1, C1 - 0.06);
+    panelCard(comp, "ease", { clip: "ease", from: 0.5, t0: C0 + 0.1, t1: C1 - 0.06, x: W - 170, y: 990, scale: 40 });
     chip(comp, { tab: "Ease tab", title: "Curve editor", sub: "smooth speed ramps, any curve", t0: C0 + 0.15, t1: C1 - 0.06, x: 70, y: 1270 });
 
     // Shot D - impact: the leap slams in and overshoots (Add Elastic).
@@ -1373,12 +1727,8 @@
     var camF = camRig(comp, "CAM F", F0, F1);
     tr(camF.layer, "ADBE Rotate X").setValue(-12);
     anim(tr(camF.layer, "ADBE Position"), [[F0, [CX, CY, -160]], [F1, [CX, CY, 120]]], "smooth");
-    var halo = shape(comp, "Ring halo");
-    ellipseGroup(halo, "halo", 1000, [0, 0], C.amber, null, 0);
-    setPos(halo, [CX, CY]);
-    tr(halo, "ADBE Opacity").setValue(24);
-    blurLayer(halo, 220);
-    span(halo, F0, F1);
+    var halo = radialGlow(comp, [CX, CY - 60], 760, C.amber, 40, "Ring glow");
+    if (halo) span(halo, F0, F1);
     carousel(comp, F0, F1);
     chip(comp, { tab: "Generate tab", title: "3D Carousel", sub: "spin any layers on a ring", t0: F0 + 0.15, t1: F0 + 1.0, x: 70, y: 1300 });
     chip(comp, { tab: "Tools tab", title: "Sequence", sub: "stagger 40 clips in one click", t0: F0 + 1.0, t1: F1 - 0.05, x: 70, y: 1300 });
@@ -1387,25 +1737,6 @@
   }
 
   // Curve editor mock: a cubic-bezier(.16, 1, .3, 1) drawing itself.
-  // Groups are added top to bottom: handle dots, curve, handles, grid, panel.
-  function easeWidget(comp, t0, t1) {
-    var l = shape(comp, "Curve widget");
-    ellipseGroup(l, "dot out", 18, [-74.8, -110], C.cream, null, 0);
-    ellipseGroup(l, "dot in", 18, [-44, -110], C.cream, null, 0);
-    var curve = pathGroup(l, "curve", [[-110, 110], [110, -110]], false, null, C.amber, 8, [[0, 0], [-154, 0]], [[35.2, -220], [0, 0]]);
-    drawOn(l, curve, t0 + 0.1, t0 + 0.7);
-    pathGroup(l, "handle out", [[-110, 110], [-74.8, -110]], false, null, C.mute, 3);
-    pathGroup(l, "handle in", [[110, -110], [-44, -110]], false, null, C.mute, 3);
-    pathGroup(l, "grid h", [[-110, 0], [110, 0]], false, null, C.ink3, 2);
-    pathGroup(l, "grid v", [[0, -110], [0, 110]], false, null, C.ink3, 2);
-    rectGroup(l, "panel", 300, 300, 26, [0, 0], C.ink2, C.amber, 4);
-    setPos(l, [W - 230, 1000]);
-    tr(l, "ADBE Rotate Z").setValue(4);
-    popIn(l, t0, 100);
-    popOut(l, t1, 100);
-    span(l, t0, t1);
-  }
-
   // The same rig the panel's 3D Carousel builds: a hub null with Radius and
   // Spin sliders, cards placed by expression and turned to face outwards.
   function carousel(comp, t0, t1) {
@@ -1440,7 +1771,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Scene 04 - SaaS promo
+  // Scene 05 - SaaS promo
   // ---------------------------------------------------------------------------
 
   var DASH_W = 1000;
@@ -1628,12 +1959,13 @@
     chip(comp, { tab: "Anchor grid", title: "Anchor Grid", sub: "grow from any edge or corner", t0: 6.1, t1: 7.5, x: 70, y: cy0, theme: "ink" });
     chip(comp, { tab: "Tools tab", title: "Gradient Lock", sub: "gradients that stay fitted", t0: 7.5, t1: 9.0, x: 70, y: 1330, theme: "ink" });
     chip(comp, { tab: "Tools tab", title: "Duplicate Comp + Nested", sub: "new versions, nothing breaks", t0: 9.0, t1: comp.duration - 0.05, x: 70, y: 1330, theme: "ink" });
-    panelCard(comp, "generate", { t0: 1.3, t1: 2.9, x: W - 150, y: 1180, scale: 40 });
+    panelCard(comp, "generate", { clip: "generate", from: 0.4, t0: 1.3, t1: 2.9, x: W - 150, y: 1180, scale: 40 });
+    panelCard(comp, "tools", { clip: "tools", from: 0.1, t0: 2.9, t1: 4.5, x: W - 150, y: 1180, scale: 40 });
     chapter(comp, "02", "SAAS PROMOS", 1.0, comp.duration, C.amberDeep);
   }
 
   // ---------------------------------------------------------------------------
-  // Scene 05 - Everyday mograph (four tiles, then media + library)
+  // Scene 06 - Everyday mograph (four tiles, then media + library)
   // ---------------------------------------------------------------------------
 
   var TILE_W = 460;
@@ -1674,11 +2006,7 @@
 
   function buildTileExtrude(tc) {
     solid(tc, C.ink2, "BG");
-    var halo = shape(tc, "Halo");
-    ellipseGroup(halo, "halo", 380, [0, 0], C.amber, null, 0);
-    setPos(halo, [TILE_W / 2, TILE_H / 2]);
-    tr(halo, "ADBE Opacity").setValue(25);
-    blurLayer(halo, 90);
+    radialGlow(tc, [TILE_W / 2, TILE_H / 2], 300, C.amber, 40, "Glow");
     var rig = camRig(tc, "CAM Tile");
     tr(rig.layer, "ADBE Rotate X").setValue(-14);
     var spin = nul(tc, "Extrude spin", [TILE_W / 2, TILE_H / 2, 0], true);
@@ -1787,7 +2115,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Scene 06 - Feature wall
+  // Scene 07 - Feature wall
   // ---------------------------------------------------------------------------
 
   function ticker(comp, str, y, rot, bandCol, textCol, speed) {
@@ -1851,7 +2179,7 @@
       popIn(shot, T0 + 0.05 * t, 34);
       span(shot, T0, comp.duration);
     }
-    var pal = still(comp, "ui/tools-palette.png", "Search palette");
+    var pal = panelClip(comp, "palette", "tools-palette", 3.0, comp.duration, 0.6);
     place3D(pal, [CX, CY + 20, -260], 40);
     dropShadow(pal, 40, 120);
     popIn(pal, 3.0, 40);
@@ -1863,7 +2191,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Scene 07 - Call to action
+  // Scene 08 - Call to action
   // ---------------------------------------------------------------------------
 
   function buildCta(comp) {
@@ -2005,6 +2333,7 @@
     var builders = {
       hook: buildHook,
       brand: buildBrand,
+      panel: buildPanel,
       anime: buildAnime,
       saas: function (c) { buildSaas(c, dash); },
       mograph: function (c) { buildMograph(c, tiles); },

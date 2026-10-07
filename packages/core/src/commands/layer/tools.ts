@@ -69,7 +69,7 @@ function hasPrecomp(ctx: CommandContext): CommandAvailability {
  */
 export const deepDuplicateComp = simpleCommand({
   id: "kvfx.comp.deepduplicatecomp",
-  name: "Duplicate Comp (Deep)",
+  name: "Duplicate Comp + Nested Comps",
   description:
     "Duplicate the comps selected in the Project panel — or the open comp — together with every comp nested inside them, so editing the copy never changes the original",
   category: CommandCategory.Project,
@@ -85,7 +85,7 @@ export const deepDuplicateComp = simpleCommand({
 
 export const deepDuplicate = simpleCommand({
   id: "kvfx.comp.deepduplicate",
-  name: "Duplicate Precomp Layer (Deep)",
+  name: "Duplicate Precomp Layer + Nested",
   description:
     "Duplicate the selected precomp layers in the timeline, each using its own copy of the comp and everything nested inside it",
   category: CommandCategory.Project,

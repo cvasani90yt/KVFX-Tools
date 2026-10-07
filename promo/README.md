@@ -8,7 +8,8 @@ script, and all of it stays editable.
 | File | What it is |
 |---|---|
 | `KVFX-Promo-Builder.jsx` | Builds the whole project. Run it in After Effects. |
-| `assets/ui/*.png` | Screenshots of the real panel at 2× (760 × 1720), one per tab, plus the search palette. |
+| `assets/clips/*.mp4` | Recordings of the real panel in use at 2× (760 × 1720, 30 fps): the ease curve being dragged, the text presets previewing, the search palette, Tools-tab clicks and the number counter. |
+| `assets/ui/*.png` | Screenshots of every tab, used for the tab wall and as stand-ins if a recording is missing. |
 | `assets/anime/` | Key art for the anime section, included (see [Assets](#assets)). |
 | `assets/music.mp3` | Optional. If present it is placed under the edit. `.wav`, `.m4a` and `.aac` work too. |
 
@@ -29,7 +30,7 @@ script, and all of it stays editable.
 The script only **adds** things. Nothing that is already in the project
 changes, and **Edit ▸ Undo** removes the whole build in one step.
 
-## What's in the edit (45.5 s)
+## What's in the edit (58.3 s)
 
 `SCENES` at the top of the script sets every scene's length. The
 `Scenes (guide)` layer in MAIN has a marker at each cut, and the
@@ -38,13 +39,14 @@ Neither one renders.
 
 | Time | Scene | What happens | Feature on screen |
 |---|---|---|---|
-| 0–3 s | **Hook** | "POV: you found the AFTER EFFECTS CHEAT CODE" slams in word by word with camera shake. A sticker says "(not a preset pack)". | — |
+| 0–3 s | **Hook** | Frame one is already full: two recordings of the panel in use float in 3D under a warm glow, with "POV: you found the" on screen. Then "AFTER EFFECTS / CHEAT CODE" slams in with camera shake, and a "(not a preset pack)" sticker lands. | — |
 | 3–5.5 s | **Brand sting** | The KVFX mark spins in, a ring draws on, the wordmark tracks in, and the line "after effects, but make it fast." appears. | 8 tabs · 100+ commands · 1 shortcut |
-| 5.5–18.5 s | **01 Anime edits** | Rooftop push-in with rain and the hero dropping on the beat. Eye close-up with zoom punch and a chromatic glitch. 2.5D parallax orbit. Impact slam with overshoot. Lyric builds letter by letter and then explodes. 3D carousel of the stills. | Split · Add Wiggle · Curve editor · Add Elastic · Explode · 3D Carousel · Sequence |
-| 18.5–29.5 s | **02 SaaS promos** | A neo-brutalist dashboard tilts in on a 3D camera. Counters run, rows stagger in, cards snap into alignment, bars grow from their base, a cursor clicks Upgrade, a headline types on under a fitted gradient, and the dashboard splits into three versions. | Number Counter · Sequence · Align + Distribute · Anchor Grid · Gradient Lock · Duplicate Comp + Nested |
-| 29.5–37.5 s | **03 Everyday mograph** | A 2×2 grid: kinetic type, a lower third, a 3D extruded logo and label swatches. Then the Media and Library tabs in 3D, with a file dropped into the panel. | Animate presets · One-click FX · 3D Extrude · Labels · Paste + Drop · Library |
-| 37.5–42 s | **Feature wall** | Command tickers, "8 TABS. 100+ COMMANDS. 1 SHORTCUT.", Ctrl + Space keycaps, every tab fanned out in 3D, and the search palette. | Search palette · One undo per action |
-| 42–45.5 s | **CTA** | Amber end card with the logo, KVFX TOOLS, and a pulsing LINK IN BIO pill, then "save this for your next edit" and "follow for more AE tricks". | — |
+| 5.5–18.3 s | **Inside the panel** | **Ease:** the recording drags the curve handles, and a big graph editor redraws the same curve beat for beat. A playhead traces it, and a ball moves exactly as the curve says. Then Back is picked and Apply to Keys lands with its toast. **Text:** a magnified view of the live preview while presets are hovered, then all ten presets, each word animating as itself. **Search:** Ctrl + Space keycaps, "mtt" typed big, Move to Top, Enter. | Curve editor · Apply to Keys · 10 text presets · Search palette |
+| 18.3–31.3 s | **01 Anime edits** | Rooftop push-in with rain and the hero dropping on the beat. Eye close-up with zoom punch and a chromatic glitch. 2.5D parallax orbit next to the Ease tab in use. Impact slam with overshoot. Lyric builds letter by letter and then explodes. 3D carousel of the stills. | Split · Add Wiggle · Curve editor · Add Elastic · Explode · 3D Carousel · Sequence |
+| 31.3–42.3 s | **02 SaaS promos** | A neo-brutalist dashboard tilts in on a 3D camera. Counters run (with the Generate tab typing 48920 beside them), rows stagger in (with Sequence Layers being clicked), cards snap into alignment, bars grow from their base, a cursor clicks Upgrade, a headline types on under a fitted gradient, and the dashboard splits into three versions. | Number Counter · Sequence · Align + Distribute · Anchor Grid · Gradient Lock · Duplicate Comp + Nested |
+| 42.3–50.3 s | **03 Everyday mograph** | A 2×2 grid: kinetic type, a lower third, a 3D extruded logo and label swatches. Then the Media and Library tabs in 3D, with a file dropped into the panel. | Animate presets · One-click FX · 3D Extrude · Labels · Paste + Drop · Library |
+| 50.3–54.8 s | **Feature wall** | Command tickers, "8 TABS. 100+ COMMANDS. 1 SHORTCUT.", Ctrl + Space keycaps, every tab fanned out in 3D, and the search palette recording. | Search palette · One undo per action |
+| 54.8–58.3 s | **CTA** | Amber end card with the logo, KVFX TOOLS, and a pulsing LINK IN BIO pill, then "save this for your next edit" and "follow for more AE tricks". | — |
 
 Every callout chip names a real command and the tab it lives in, so a viewer
 can find it in the panel.
@@ -58,6 +60,14 @@ can find it in the panel.
 * **Text.** Letter-by-letter reveals use an expression selector (`KV In`
   animator), and the lyric explosion uses a second one (`KV Scatter`). Change
   `t0` in the expression to retime one.
+* **Panel recordings** are footage layers with time remapping: each starts
+  where the shot needs it and holds its last frame if the shot runs longer.
+  Slide a layer in time to retime a click.
+* **Graph editor.** The **Graph driver** null has two sliders. **Phase** loops
+  the playhead. **Value** solves the bezier read from the curve layer's own
+  path, so if you keyframe a different curve, the tracer and the ball follow it.
+* **Glows** are radial Gradient Ramps in Add mode. They fill the frame, so
+  they never show an edge.
 * **Feature demos use the panel's own rigs:** the carousel (Radius and Spin
   sliders on the hub), the elastic overshoot, the counter (**KVFX Counter**
   slider) and the gradient lock (Gradient Ramp ends that follow
@@ -85,16 +95,21 @@ out sharper on the camera push-ins. If only one version of a character exists,
 the script uses it in both places. Use original characters only. Clips or
 stills from existing anime need a licence before they go into a paid ad.
 
-Screenshots in `assets/ui/` come from the built panel. Regenerate them after a
-UI change:
+Screenshots in `assets/ui/` and recordings in `assets/clips/` come from the
+built panel. Regenerate them after a UI change:
 
 ```
 npm run build
 node scripts/preview.mjs --all --width 380
+node scripts/promo-capture.mjs            # or --clip ease,text
 ```
 
-Then capture each `build/preview/work/panel-<tab>.html` at 380 × 860 with a
-device scale factor of 2.
+`promo-capture.mjs` needs Playwright, Chromium and ffmpeg (see the top of the
+file for the environment variables). It fakes the page clock, so every frame
+is an exact 1/30 s step and the clips play back smoothly. Each clip's cursor
+path, clicks and typing are a short list at the top of the script. For the
+screenshots, capture each `build/preview/work/panel-<tab>.html` at 380 × 860
+with a device scale factor of 2.
 
 ## Music and sound
 
@@ -110,6 +125,39 @@ device scale factor of 2.
   on Pixabay and Mixkit.
 * **Retiming:** set `CFG.bpm` and the `SCENES` durations, then run the script
   again. Or slide keys to the beat markers by hand.
+
+### Envato Elements picks
+
+One subscription covers all of these. Check each track's page for a YouTube
+Content ID note before you upload, and clear any claim with your Envato
+licence.
+
+The edit is built as a **beat switch**: phonk from the hook through the anime
+section, then a hard cut into brighter future bass at the SaaS title.
+
+| Use | Item | Why |
+|---|---|---|
+| Hook → anime | [Brazilian Phonk](https://elements.envato.com/brazilian-phonk-G4WPT4G) (125 BPM) | Hard, current, and close to the 120 BPM grid. Set `CFG.bpm = 125`. |
+| Hook → anime (alt) | [Phonk Move](https://elements.envato.com/phonk-move-FM6JBUN) (122 BPM) | Battle energy, vocal chops. |
+| Hook → anime (alt) | [Phonk Dark Drive](https://elements.envato.com/phonk-dark-drive-A8CPT26) (109 BPM) | Darker drift phonk, loops cleanly. |
+| SaaS → CTA | [Stylish Future Bass for App Promos](https://elements.envato.com/future-tech-bass-SS8QMRM) | Made for app and tech promos, no vocals. |
+| SaaS → CTA (alt) | [Promo Beat](https://elements.envato.com/promo-beat-HSLUAPL) (118 BPM) | Stomps and claps. Comes in cut-downs from 10 s to 60 s. |
+| Every cut | [Whoosh & Swish Sound Effects Pack 1](https://elements.envato.com/swish-pack-1-USNKTZN) | Short whooshes for the whip transitions. |
+| Panel shots | [Interface Pack](https://elements.envato.com/interface-pack-JBZ9NQ4), [UI CLICK Glass Generic 01](https://elements.envato.com/ui-click-glass-generic-01-MKNL7LU) | A click on every cursor click in the recordings, a soft chime on each toast. |
+| Search shot | [Mechanical keyboard, soft typing](https://elements.envato.com/computer-mechanical-keyboard-brown-switch-burst-so-2C5A277) | Key taps under "mtt" and the Ctrl + Space press. |
+| Slams and impacts | [Cinematic Hits & Impacts Pack](https://elements.envato.com/cinematic-hits-impacts-pack-TMBZG2K) | The hook slams, the leap impact, the CTA landing. |
+| Glitches and risers | Search **cinematic glitch** and **riser hit** under Sound Effects | The eye's chromatic glitch, and a riser into the beat switch and the CTA. |
+
+Where they land, in MAIN time:
+
+* Impacts at 0.35 s and 0.75 s (the hook slams).
+* A whoosh at every scene marker.
+* Clicks at 6.1 s and 7.5 s (grabbing the curve handles), 9.6 s (Back) and
+  10.6 s (Apply to Keys, then the toast chime).
+* A key press at 15.05 s (Ctrl + Space), taps at 15.6–16.1 s ("mtt") and
+  Enter at 17.2 s.
+* A riser from 29.8 s into the beat switch at 31.3 s.
+* A riser from 53.3 s into the CTA hit at 54.8 s.
 
 ## Export
 

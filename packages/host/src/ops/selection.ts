@@ -96,7 +96,7 @@ function describePrimary(selected: AeRawLayer[]): HostJson {
 
 const MAX_PROJECT_COMPS = 20;
 
-/** Comps selected in the Project panel — what "Duplicate Comp (Deep)" acts on. */
+/** Comps selected in the Project panel — what "Duplicate Comp + Nested Comps" acts on. */
 function projectComps(env: AeEnvironment): HostJson {
   const project = env.rawProject();
   const out: HostJson[] = [];

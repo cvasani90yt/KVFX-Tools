@@ -8,10 +8,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added — promo kit
 - `promo/KVFX-Promo-Builder.jsx` builds the vertical promo (plus a 16:9
-  version) as an editable After Effects project: seven scenes, a camera rig per
+  version) as an editable After Effects project: eight scenes, a camera rig per
   shot, and a callout naming the panel feature behind each effect
-- `promo/assets/ui/` holds 2× screenshots of every tab and the search palette;
-  `promo/README.md` has the shot list, asset names, music and export settings
+- `scripts/promo-capture.mjs` records the real panel in use (curve dragging,
+  text preset previews, search, Tools and Generate clicks) frame-exactly at
+  30 fps; the promo opens on these recordings and drives a graph editor from
+  the curve being dragged
+- `promo/assets/` holds the recordings, 2× screenshots of every tab and the
+  anime key art; `promo/README.md` has the shot list, asset names, music and
+  SFX picks, and export settings
+
+### Fixed
+- The success toast for **Duplicate Comp + Nested Comps** and **Duplicate
+  Precomp Layer + Nested** used the old "(Deep)" names; the command names now
+  match their buttons everywhere, including search
 
 ### Added — duplicate a comp with everything inside
 - **Duplicate Comp + Nested Comps** (Tools tab and search): copies the comps
