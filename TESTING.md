@@ -94,66 +94,92 @@ In After Effects: **Window ▸ Extensions ▸ KVFX Tools**
 
 ## What you should see
 
-A dark panel with a green dot and your After Effects version, a search field,
-and a list of commands.
+A dark panel with an amber diamond and **KVFX** at the top left, your comp's
+name and selection beside it, a RAM meter, and search and settings buttons.
+Under that, a 3×3 grid of arrows and the create buttons; then a row of tab
+icons; and an align bar along the bottom.
+
+If the header says **Not connected**, see *If something does not work* below.
 
 ## What to check
 
-Open any project with a few layers in a composition.
+Open a project with a composition containing a few layers, including a text
+layer. Every item below should be **one** step in Edit ▸ Undo, named
+`KVFX Tools — …`. That is the single most important thing to verify: press
+`Ctrl/⌘+Z` once after each and everything that command did should revert.
 
-**1. It connects.** Green dot, correct After Effects version, round-trip time
-under ~50 ms.
+**1. Basics.** Select two layers, click the panel: the header shows
+`<comp> · 2 layers`. Click **Null**, pick a colour in the swatch and click
+**Solid**. Select a layer and click the bottom-right arrow of the grid: its
+anchor moves to the corner and the layer stays put.
 
-**2. It sees your selection.** Select two layers in the timeline, then click the
-panel. The line under the status should read `<comp name> — 2 layers selected`.
+**2. Align.** Select three layers, click **Align left**, then **Distribute
+horizontally**. Click **Auto** on the right of the align bar to cycle the
+reference to **Comp** and align again.
 
-It updates when the panel regains focus, not continuously — that is deliberate.
-After Effects provides no selection events at all, and polling for them is a
-documented way to hang large projects.
+**3. Tools.** Select two layers and try **Precomp Each** (two new comps),
+**Sequence Layers** (staggered by 5 frames), **Null Parent**, **Gradient Lock**
+on a text layer (then type more text: the gradient should stay fitted). Edit the
+**Transform** fields: on an animated property a keyframe should appear at the
+playhead.
 
-**3. Commands work.** Select a layer, click **Toggle Solo**. The solo switch
-should flip in the timeline.
+**4. Ease.** Animate a layer's position or opacity with two keyframes. Select
+both keyframes. Drag the curve's handles, click **Apply to Keys**, and open the
+Graph Editor — the curve should match. Click **⟳ Read** to read it back. Select
+a property with keyframes and click **Add Bounce**, then **Clear Expr**.
 
-**4. Undo is one step.** Select three layers, run **Move to Top**, then press
-`Ctrl/Cmd+Z` **once**. All three should return to their original positions, and
-Edit ▸ Undo should read "KVFX Tools — Move to Top". This is the single most
-important thing to verify.
+**5. Text.** Type a title and click **Create Text**. Hover the animation
+presets to preview them, select the text layer, pick **Rise** and click
+**Animate Text**, then play from the playhead. Click **Explode Text** with
+**Words**: one layer per word, in place, original hidden. In **Replace Fonts**,
+scan and replace a font (After Effects 24.5+).
 
-**5. Search works.** Click the search field and try:
+**6. FX.** Click **Glow** with a layer selected. Then **Scan Selected Layers**,
+switch an effect off, and remove one — it asks first.
 
-| Type | Expect first result |
-|---|---|
-| `null` | Create Null |
-| `mtt` | Move to Top |
-| `eye` | Toggle Visibility |
-| `3d` | Toggle 3D |
+**7. Generate.** **Create Counter** (watch it count from the playhead).
+Select one layer and **Build Carousel** — then change the **Spin** angle on the
+`KVFX Carousel` null. Select a text or logo layer and **Extrude**, then orbit
+a camera around it.
 
-Arrow keys move the selection, `Enter` runs, `Esc` clears.
+**8. Library and Media.** **Add Folder** in Library, click an image (imported
+and placed) and an `.ffx` preset with a layer selected (applied). In Media, copy
+a screenshot and press `Ctrl/⌘+V` with the panel focused: it is saved and
+placed in the comp.
 
-**6. The palette shortcut.** Click the panel, then press `Cmd+Space` (macOS) or
-`Ctrl+Space` (Windows). The search field should focus and select its contents.
+**9. Search.** Press `Ctrl/⌘+Space` with the panel focused and type `mtt`
+(Move to Top), `eye` (Toggle Visibility), `bounce`. `Enter` runs, `Esc` closes,
+☆ pins a command to the top — the pin survives closing the panel.
 
-This works **only while the panel has keyboard focus**. After Effects does not
-let a script or a CEP panel register a global shortcut, so there is no way to
-make it work while the timeline is focused. On macOS, `Cmd+Space` is also
-Spotlight — if Spotlight opens instead, macOS took it first; that is expected,
-and the shortcut will be configurable.
+On macOS `⌘Space` is also Spotlight; if Spotlight opens, macOS took the
+shortcut first. Use the search button in the header instead. The shortcut only
+works while the panel has keyboard focus — After Effects allows no global
+shortcuts from a panel.
 
-**7. Favourites persist.** Click the ☆ next to a command, close the panel,
-reopen it. The star should still be filled, and that command should be at the
-top of the list.
+**10. Nothing selected.** Deselect everything. Layer commands grey out and their
+tooltip says why ("Select a layer first."); the create buttons stay available.
 
-**8. Nothing selected.** Deselect everything. Layer commands should grey out
-with "Select a layer first." rather than disappearing — and Create Null should
-stay available.
+### Behaviour that needs a real After Effects
 
----
+The test suite runs every command against a model of After Effects, not the
+real thing. Please look closely at these, which the model cannot settle
+([details](docs/FEATURES.md#verified-so-far-and-what-still-needs-a-real-after-effects)):
+
+* **Explode**: does each piece show exactly its own letters, including on a
+  text layer with several lines?
+* **Carousel**: do the cards face outwards (front card facing the camera)?
+* **Ease** on **Scale** keyframes: does the Graph Editor match the curve?
+* **Gradient Lock**: does the gradient span the layer from edge to edge?
+* **Media**: does dragging a file from the desktop onto the drop zone import it?
 
 ## If something does not work
 
 **Panel missing from the Extensions menu** — almost always step 1 or a wrong
 folder depth. Check `manifest.xml` is exactly two levels below `extensions`, and
 that After Effects was restarted after the registry/defaults change.
+
+**Header says "Not connected"** — the host script did not load. Close and
+reopen the panel, which reloads it.
 
 **Panel opens blank** — the UI failed to load. With the panel open, browse to
 <http://localhost:8099> in Chrome or Edge for the panel's developer console.
@@ -165,9 +191,10 @@ Fuller symptom list: [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
 
 ## What to report back
 
-Anything from the checklist that did not behave as described — especially
-**item 4**, since a command that does not undo cleanly is a correctness bug
-rather than a rough edge.
+Anything from the checklist that did not behave as described — especially a
+command that does **not undo in one step**, which is a correctness bug rather
+than a rough edge — and the answers to *Behaviour that needs a real After
+Effects*. Settings ▸ Diagnostics has the version details to paste.
 
 Screenshots of the panel are useful. So is the exact After Effects version from
 **Help ▸ About After Effects**.

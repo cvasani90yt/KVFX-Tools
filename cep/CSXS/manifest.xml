@@ -7,9 +7,9 @@
   AE 22.0 is the floor because `Layer.id` and `Project.layerByID()` arrived
   there, and ADR-0004 makes them the basis of every object reference.
 
-  Node is deliberately NOT enabled. Heavy work runs in the out-of-process
-  sidecar (ADR-0005), so the panel needs no filesystem or native-module access
-  and we keep its attack surface and startup cost minimal. Revisit only with a
+  Node is deliberately NOT enabled. The panel reaches the filesystem only
+  through CEP's own cep.fs (settings, the Library, saving pasted media), which
+  keeps its attack surface and startup cost minimal. Revisit only with a
   concrete requirement.
 -->
 <ExtensionManifest

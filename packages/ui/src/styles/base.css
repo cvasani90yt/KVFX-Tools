@@ -1568,6 +1568,10 @@ select:focus-visible,
   background: rgba(6, 7, 9, 0.72);
 }
 
+.kvfx-overlay--confirm {
+  z-index: 60;
+}
+
 .kvfx-overlay--top {
   align-items: flex-start;
   padding-top: 38px;

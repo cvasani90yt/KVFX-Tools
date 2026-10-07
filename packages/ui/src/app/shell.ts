@@ -217,7 +217,8 @@ export class Shell implements Panel {
 
     this.#toast = h("div", { class: "kvfx-toast", attrs: { role: "status", "aria-live": "polite" } });
     this.#toast.hidden = true;
-    this.#modal = h("div", { class: "kvfx-overlay" });
+    // Confirmations can be raised from inside Settings, so they sit above it.
+    this.#modal = h("div", { class: "kvfx-overlay kvfx-overlay--confirm" });
     this.#modal.hidden = true;
 
     this.root = h(

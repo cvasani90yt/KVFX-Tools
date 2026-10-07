@@ -10,40 +10,41 @@ Keyboard-first. Minimal, dense, fast UI. Non-destructive. Undo-safe.
 
 ---
 
-## Project status — Phase 5 of 15 complete
+## What it does
 
-Two tabs. **Quick** is the command palette: type to search by name, keyword or
-acronym — `mtt` finds Move to Top, `eye` finds Toggle Visibility — arrow keys to
-navigate, Enter to run. Favourites, recents and usage ranking persist.
+A dense, dark panel with amber accents, built around tool tabs:
 
-**Layers** is the spatial toolset: an align grid with an Auto / Comp / Selection
-reference toggle, horizontal and vertical distribution, a 3×3 anchor-point grid
-that moves the anchor without moving the layer, plus order, switch and create
-controls.
+| | |
+|---|---|
+| **Always visible** | Active comp and selection, a RAM meter with purge, a 3×3 anchor-point grid, one-click Null / Adjustment / Solid (with colour swatch) / Text / Shape / Camera, and an align-and-distribute bar. |
+| **Tools** | Precompose each, split at playhead, deep-duplicate precomps, trim to work area, parent to new null, sequence layers, fill, gradient lock, switches, stacking order, and a live transform inspector. |
+| **Ease** | A draggable bezier curve editor with live preview, presets and saved curves that writes real After Effects easing to selected keyframes — and reads it back. Interpolation, reverse keys, elastic, bounce, wiggle and loops. |
+| **Text** | Styled text, ten animation presets with a live preview, an exploder (letters, words or lines), and project-wide font replacement. |
+| **FX** | One-click effects and an effects manager to switch off or remove what is on the selection. |
+| **Generate** | Number counter, 3D carousel, 3D extrude — each a rig you adjust afterwards with ordinary sliders. |
+| **Labels** | Sixteen label colours and select-same-label. |
+| **Library** | Your own folders of footage, `.aep` templates and `.ffx` presets, one click into the comp. |
+| **Media** | Paste or drop images and clips straight into the comp. |
 
-Alignment does the full transform maths — anchor, scale, rotation and the parent
-chain — so a layer parented to a rotated null lands where you expect. 3D layers
-and layers with animated positions are declined with a reason rather than moved
-to a plausibly wrong place.
+Every command is also in the search palette (`Ctrl/⌘+Space` while the panel has
+focus), and every one is **a single undo step**. Destructive or irreversible
+actions ask first. Full reference, including each feature's limits and what was
+deliberately left out: [`docs/FEATURES.md`](docs/FEATURES.md).
 
-Every command runs as a single undo step.
-
-`Mod+Space` focuses the search field **while the panel has keyboard focus**;
-After Effects does not allow a global shortcut from a script or CEP panel
-([ADR-0003](docs/adr/0003-command-palette-shortcut.md)).
-
-Scope was reduced by [ADR-0007](docs/adr/0007-scope-reduction.md) — the AI,
-caption, media-download, reference-board, native-helper, licensing-activation
-and update-installer modules are cut, and the local sidecar went with them. The
-product is three moving parts: a CEP panel, an ExtendScript host bundle, and
-JSON files on disk. It opens no sockets and launches no second process.
+The panel was rebuilt around this layout in
+[ADR-0008](docs/adr/0008-tools-panel-rebuild.md). Scope was reduced earlier by
+[ADR-0007](docs/adr/0007-scope-reduction.md): no AI, captions, media download,
+licence activation or auto-update, and no second process. The product is a CEP
+panel, an ExtendScript host bundle, and JSON files on disk. It opens no sockets.
 
 ```bash
-npm install && npm run verify   # typecheck + lint + 327 tests + build + guards
+npm install && npm run verify   # typecheck + lint + 550+ tests + build + guards
+npm run preview -- --all        # render every tab to build/preview/*.png, no After Effects needed
 ```
 
 | Document | What it is |
 |---|---|
+| [`docs/FEATURES.md`](docs/FEATURES.md) | **What every control does, its limits, and what is not included** |
 | [`docs/research/PLATFORM-FINDINGS.md`](docs/research/PLATFORM-FINDINGS.md) | Verified Adobe platform constraints, with sources, plus open spikes |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Architecture of record |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases, MVP scope, deferred features, risk register |

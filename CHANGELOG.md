@@ -6,6 +6,42 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — the panel rebuilt around tool tabs (ADR-0008)
+- New layout, amber theme kept: header with comp and selection, RAM meter with
+  purge, search and settings; persistent anchor grid and create buttons
+  (null, adjustment, solid with swatch, text, shape, camera); eight icon tabs;
+  an align and distribute bar with a reference toggle
+- The command palette is now an overlay (`Ctrl/⌘+Space` while the panel is focused)
+- Results appear as a toast naming anything skipped and why; raw script errors
+  are never shown
+- Purge defaults to image caches; purging everything (which clears undo) asks first
+
+### Added — tools
+- **Tools**: precompose each, split at playhead, deep duplicate with `comp()`
+  expression retargeting, trim to work area, parent to new null, sequence
+  (offset or chain), fill, gradient lock, live transform inspector
+- **Ease**: bezier curve editor with live preview, 22 presets, saved curves,
+  apply to and read back from keyframes; linear, bezier, hold, reverse keys;
+  elastic, bounce, wiggle and loop expressions; clear expressions
+- **Text**: styled text creation, ten animation presets with live preview,
+  exploder (letters, words, lines), project-wide font replacement (AE 24.5+)
+- **FX**: eleven one-click effects and controls; effects manager
+- **Generate**: number counter, 3D carousel, 3D extrude
+- **Labels**, **Library** (folders of footage, `.aep`, `.ffx`), **Media** (paste
+  or drop, saved beside the project or in app data, never overwriting)
+- Settings dialog: hide tabs, media location, diagnostics, reset
+- `docs/FEATURES.md`: every control, its limits, and what is not included
+
+### Added — engineering
+- Parameterised commands with settings-backed defaults
+- Plan-local references (`bind`, `$ref`, `at`) so plans compose generic host
+  primitives inside one undo group
+- A mock After Effects scripting DOM; every command runs end to end against it
+  in CI (probe, plan, execute through the production dispatcher)
+- Explicit plans may declare a budget of up to 30 s for bulk work
+- `npm run preview -- --all` renders every tab without After Effects
+- The ES3 guard rejects ES5 array iteration methods ExtendScript lacks
+
 ### Added — Phase 1: research and architecture
 - Verified Adobe platform findings with sources and open spikes
   (`docs/research/PLATFORM-FINDINGS.md`)
