@@ -46,7 +46,9 @@ export const memoryOperation: Operation = {
 };
 
 /**
- * Purges every cache.
+ * Purges cached data: rendered frames by default, or everything — which
+ * includes the undo history — with `target: "all"`. The panel asks before the
+ * second.
  *
  * Declared non-mutating on purpose: it changes no project data and After
  * Effects cannot undo it, so wrapping it in an undo group would put a no-op
@@ -57,7 +59,7 @@ export const purgeOperation: Operation = {
   mutates: false,
   run: function (ctx: OperationContext): HostJson {
     const before = ctx.env.memoryInUse();
-    ctx.env.purgeAllCaches();
+    ctx.env.purge(ctx.args["target"] === "all" ? "all" : "image");
     return { bytesBefore: before, bytesAfter: ctx.env.memoryInUse() };
   },
 };

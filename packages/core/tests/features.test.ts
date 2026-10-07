@@ -307,3 +307,22 @@ describe("command plans", () => {
     expect(command.canExecute(base).available).toBe(true);
   });
 });
+
+describe("outcome messages", () => {
+  it("passes host refusals through and hides raw exceptions", async () => {
+    const { userMessage, summarizeResult } = await import("../src/index.js");
+    expect(userMessage({ code: "precondition_failed", message: "Select a text layer." })).toBe("Select a text layer.");
+    const hidden = userMessage({ code: "host_exception", message: "TypeError: undefined is not an object" });
+    expect(hidden).not.toContain("TypeError");
+
+    expect(summarizeResult({ steps: [{ result: { changedCount: 2, skipped: [] } }] })).toBe("Done");
+    expect(
+      summarizeResult({
+        steps: [
+          { result: { skipped: [{ id: 1, name: "A", reason: "Layer is locked" }] } },
+          { result: { skipped: [{ id: 2, name: "B", reason: "Layer is locked" }], missingIds: [9] } },
+        ],
+      }),
+    ).toBe("Done · 2 skipped — Layer is locked · 1 no longer exist");
+  });
+});

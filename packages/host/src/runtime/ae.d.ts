@@ -256,7 +256,7 @@ declare const ImportOptions: { new (file?: AeFile): AeImportOptions };
 declare const KeyframeEase: { new (speed: number, influence: number): AeKeyframeEase };
 
 /** Enumerations, declared as the numbers After Effects actually exposes. */
-declare const PurgeTarget: { readonly ALL_CACHES: number };
+declare const PurgeTarget: { readonly ALL_CACHES: number; readonly IMAGE_CACHES: number };
 declare const KeyframeInterpolationType: {
   readonly LINEAR: number;
   readonly BEZIER: number;

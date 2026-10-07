@@ -17,7 +17,7 @@ import { repoRoot, stagedExtensionDir } from "./paths.mjs";
  * It renders the *built* bundle, not the sources, so what is captured is what
  * ships.
  *
- * Usage: node scripts/preview.mjs [--tab layers|quick] [--width 300]
+ * Usage: node scripts/preview.mjs [--tab tools|ease|…] [--all] [--open palette|settings] [--width 300,420]
  */
 
 const args = process.argv.slice(2);
@@ -32,6 +32,7 @@ const widths = flag("width", "300,420")
   .filter((value) => Number.isFinite(value) && value > 0);
 
 const CHROMIUM = process.env["KVFX_CHROMIUM"] ?? "/opt/pw-browsers/chromium";
+const PANEL_HEIGHT = Number.parseInt(flag("height", "860"), 10) || 860;
 const outDir = join(repoRoot, "build", "preview");
 const workDir = join(outDir, "work");
 
@@ -39,20 +40,23 @@ const workDir = join(outDir, "work");
  * Canned host replies.
  *
  * Shaped to exercise the interesting cases rather than the happy path: a mixed
- * selection, a parented layer, and a 3D layer the align maths declines.
+ * selection (text, footage, a parented layer, a 3D layer), an animated
+ * opacity for the inspector's keyframe marker, effects for the manager, and a
+ * small library on disk.
  */
 const STUB = `
 (function () {
   var LAYERS = [
-    { id: 11, name: "Title", index: 1, position: { x: 420, y: 300 }, parentId: null, threeD: false },
-    { id: 12, name: "Card BG", index: 2, position: { x: 900, y: 520 }, parentId: 14, threeD: false },
-    { id: 13, name: "Logo 3D", index: 3, position: { x: 1500, y: 240 }, parentId: null, threeD: true }
+    { id: 11, name: "Title", index: 1, kind: "text", label: 11, position: { x: 420, y: 300 }, parentId: null, threeD: false },
+    { id: 12, name: "Card BG", index: 2, kind: "av", label: 8, position: { x: 900, y: 520 }, parentId: 14, threeD: false },
+    { id: 13, name: "Logo 3D", index: 3, kind: "precomp", label: 9, position: { x: 1500, y: 240 }, parentId: null, threeD: true }
   ];
   function layerEntry(l) {
     return {
-      id: l.id, name: l.name, index: l.index,
+      id: l.id, name: l.name, index: l.index, kind: l.kind, label: l.label,
       enabled: true, locked: false, shy: false, isAV: true,
-      solo: l.id === 11, threeD: l.threeD, guide: false, adjustment: false
+      solo: l.id === 11, threeD: l.threeD, guide: false, adjustment: false,
+      inPoint: 0, outPoint: 8, startTime: 0, parentId: l.parentId
     };
   }
   function measureEntry(l) {
@@ -70,16 +74,48 @@ const STUB = `
       aeBuild: "Adobe After Effects 26.0.1x45", aeLanguage: "en_US",
       os: "Preview", engineVersion: "4.2.0", hostTimeMs: 0
     },
+    "kvfx.op.system.memory": { bytes: 15.8 * 1073741824 },
     "kvfx.op.selection.snapshot": {
       capturedAtMs: 0, hasProject: true,
-      comp: { id: 1, name: "MAIN_COMP", width: 1920, height: 1080, frameRate: 25, duration: 10, time: 0, layerCount: 24 },
-      layers: LAYERS.map(layerEntry)
+      comp: { id: 1, name: "MAIN_COMP", width: 1920, height: 1080, frameRate: 25, frameDuration: 0.04,
+              duration: 10, time: 1.2, workAreaStart: 0, workAreaDuration: 10, layerCount: 24 },
+      layers: LAYERS.map(layerEntry),
+      primary: {
+        id: 11,
+        anchor: { value: [160, 45, 0], animated: false, expression: false },
+        position: { value: [960, 540, 0], animated: false, expression: false },
+        positionSeparated: false,
+        scale: { value: [100, 100, 100], animated: false, expression: false },
+        rotation: { value: [0], animated: false, expression: true },
+        opacity: { value: [100], animated: true, expression: false }
+      }
     },
     "kvfx.op.layer.measure": {
       comp: { id: 1, width: 1920, height: 1080, time: 0 },
       layers: LAYERS.map(measureEntry),
       selectedIds: LAYERS.map(function (l) { return l.id; })
-    }
+    },
+    "kvfx.op.fx.list": {
+      truncated: false,
+      layers: [
+        { id: 11, name: "Title", locked: false, effects: [
+          { index: 1, name: "Glow", matchName: "ADBE Glo2", enabled: true },
+          { index: 2, name: "Drop Shadow", matchName: "ADBE Drop Shadow", enabled: false },
+          { index: 3, name: "KVFX Gradient Lock", matchName: "ADBE Ramp", enabled: true }
+        ] },
+        { id: 12, name: "Card BG", locked: true, effects: [
+          { index: 1, name: "Gaussian Blur", matchName: "ADBE Gaussian Blur 2", enabled: true }
+        ] }
+      ]
+    },
+    "kvfx.op.fonts.used": { fonts: [
+      { postScriptName: "Inter-Bold", family: "Inter", style: "Bold", uses: 6 },
+      { postScriptName: "ArialMT", family: "Arial", style: "Regular", uses: 2 }
+    ] },
+    "kvfx.op.fonts.search": { fonts: [] },
+    "kvfx.op.keys.readEase": { property: "Opacity", bezier: [0.16, 1, 0.3, 1], linear: false },
+    "kvfx.op.text.read": { id: 11, name: "Title", text: "Your title" },
+    "kvfx.op.project.info": { open: true, saved: true, folder: "/projects/promo" }
   };
   window.__adobe_cep__ = {
     getExtensionId: function () { return "com.kvfx.tools.panel"; },
@@ -95,14 +131,46 @@ const STUB = `
       }, 0);
     }
   };
-  // A read-only cep.fs, so the preview can be seeded into a given tab.
+  // A read-only cep.fs with a small fake library, so every tab can be previewed.
+  var DIRS = {
+    "/Library/Motion": ["Lower Thirds", "Transitions", "Logo Reveal.aep", "Pop In.ffx", "Whoosh.wav", "Light Leak.mov", "Grain.mov"],
+    "/Library/Motion/Lower Thirds": ["Clean.aep", "Bold.aep"]
+  };
+  function isDir(path) { return DIRS[path] !== undefined; }
   window.cep = {
+    encoding: { UTF8: "UTF-8", Base64: "Base64" },
     fs: {
       readFile: function () { return { err: 0, data: JSON.stringify(__KVFX_SEED__) }; },
       writeFile: function () { return { err: 0 }; },
-      makedir: function () { return { err: 0 }; }
+      makedir: function () { return { err: 0 }; },
+      readdir: function (path) { return DIRS[path] ? { err: 0, data: DIRS[path] } : { err: 3 }; },
+      stat: function (path) {
+        return { err: 0, data: { isDirectory: function () { return isDir(path); }, isFile: function () { return !isDir(path); } } };
+      },
+      showOpenDialog: function () { return { err: 0, data: ["/Library/Motion"] }; }
     }
   };
+  var OPEN = __KVFX_OPEN__;
+  if (OPEN) {
+    window.addEventListener("load", function () {
+      setTimeout(function () {
+        if (OPEN === "palette") document.querySelector('[aria-label="Search commands"]').click();
+        if (OPEN === "settings") document.querySelector('[aria-label="Settings"]').click();
+        if (OPEN === "library") {
+          var chip = document.querySelector(".kvfx-chip__main");
+          if (chip) chip.click();
+        }
+        if (OPEN === "fx") {
+          var scan = Array.prototype.find.call(document.querySelectorAll("button"), function (b) { return /Scan Selected/.test(b.textContent); });
+          if (scan) scan.click();
+        }
+        if (OPEN === "fonts") {
+          var fonts = Array.prototype.find.call(document.querySelectorAll("button"), function (b) { return /Scan Project Fonts/.test(b.textContent); });
+          if (fonts) fonts.click();
+        }
+      }, 400);
+    });
+  }
 })();
 `;
 
@@ -110,19 +178,36 @@ await rm(outDir, { recursive: true, force: true });
 await mkdir(workDir, { recursive: true });
 await cp(stagedExtensionDir, workDir, { recursive: true });
 
-const seed = {
-  schemaVersion: 1,
-  favourites: [],
-  recents: [],
-  usage: {},
-  shortcuts: {},
-  ui: { activeTab: flag("tab", "layers"), alignReference: "auto", collapsedGroups: [] },
-};
+const ALL_TABS = ["tools", "ease", "text", "fx", "generate", "labels", "library", "media"];
+const tabs = args.includes("--all") ? ALL_TABS : [flag("tab", "tools")];
+const open = flag("open", "");
+
+function seedFor(tab) {
+  return {
+    schemaVersion: 1,
+    favourites: [],
+    recents: [],
+    usage: {},
+    shortcuts: {},
+    ui: {
+      activeTab: tab,
+      alignReference: "auto",
+      collapsedGroups: [],
+      solidColor: "#ff8f3f",
+      libraryFolders: ["/Library/Motion"],
+      customEases: [{ name: "Snappy", bezier: [0.7, 0, 0.2, 1] }],
+    },
+  };
+}
 
 const indexPath = join(workDir, "index.html");
 const html = await readFile(indexPath, "utf8");
-const stub = `<script>var __KVFX_SEED__ = ${JSON.stringify(seed)};${STUB}</script>`;
-await writeFile(indexPath, html.replace("</head>", `${stub}</head>`), "utf8");
+for (const tab of tabs) {
+  // The tab's own "open" action, so its interesting state is what gets captured.
+  const autoOpen = open || (tab === "library" ? "library" : tab === "fx" ? "fx" : "");
+  const stub = `<script>var __KVFX_SEED__ = ${JSON.stringify(seedFor(tab))}; var __KVFX_OPEN__ = ${JSON.stringify(autoOpen)};${STUB}</script>`;
+  await writeFile(join(workDir, `panel-${tab}.html`), html.replace("</head>", `${stub}</head>`), "utf8");
+}
 
 /**
  * Serves the bundle over HTTP.
@@ -194,7 +279,7 @@ function contactSheet(widths, pageUrl) {
         <figcaption style="font:600 11px/1.6 system-ui;color:#79818e;padding:0 0 6px">
           ${String(width)}px
         </figcaption>
-        <iframe src="${pageUrl}" width="${String(width)}" height="860"
+        <iframe src="${pageUrl}" width="${String(width)}" height="${String(PANEL_HEIGHT)}"
                 style="border:1px solid #2a2e37;border-radius:4px;background:#0e0f12"></iframe>
       </figure>`,
     )
@@ -207,25 +292,27 @@ function contactSheet(widths, pageUrl) {
 }
 
 const sheetWidth = widths.reduce((total, width) => total + width + 16, 16);
-await writeFile(join(workDir, "sheet.html"), contactSheet(widths, "./index.html"), "utf8");
-
 const server = await serve(workDir);
 const { port } = server.address();
 
 try {
-  const target = join(outDir, "panel.png");
-  await run(CHROMIUM, [
-    "--headless",
-    "--disable-gpu",
-    "--no-sandbox",
-    "--hide-scrollbars",
-    "--force-device-scale-factor=2",
-    `--window-size=${String(Math.max(sheetWidth, 520))},900`,
-    "--virtual-time-budget=6000",
-    `--screenshot=${target}`,
-    `http://127.0.0.1:${String(port)}/sheet.html`,
-  ]);
-  console.log(`Rendered ${target} at ${widths.map(String).join(", ")}px`);
+  for (const tab of tabs) {
+    await writeFile(join(workDir, `sheet-${tab}.html`), contactSheet(widths, `./panel-${tab}.html`), "utf8");
+    const target = join(outDir, `${tab}${open ? `-${open}` : ""}.png`);
+    await run(CHROMIUM, [
+      "--headless",
+      "--disable-gpu",
+      "--no-sandbox",
+      "--hide-scrollbars",
+      "--force-device-scale-factor=2",
+      // Headless Chromium paints about 90px less than the window it is given.
+      `--window-size=${String(Math.max(sheetWidth, 520))},${String(PANEL_HEIGHT + 160)}`,
+      "--virtual-time-budget=6000",
+      `--screenshot=${target}`,
+      `http://127.0.0.1:${String(port)}/sheet-${tab}.html`,
+    ]);
+    console.log(`Rendered ${target} at ${widths.map(String).join(", ")}px`);
+  }
 } finally {
   server.close();
 }

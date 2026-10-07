@@ -134,7 +134,11 @@ export interface AeEnvironment {
   /** Bytes of memory After Effects has in use. */
   memoryInUse(): number;
   /** Purges every cache After Effects holds. Not undoable, and changes no project data. */
-  purgeAllCaches(): void;
+  /**
+   * Purges cached data. "image" frees rendered frames only; "all" also
+   * empties After Effects' undo history, so callers must say so to the user.
+   */
+  purge(kind: "image" | "all"): void;
   /** Runs a menu command by its exact menu text. False when the text is unknown. */
   runMenuCommand(menuText: string): boolean;
   newKeyframeEase(speed: number, influence: number): AeKeyframeEase;

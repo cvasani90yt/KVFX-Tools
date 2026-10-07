@@ -76,11 +76,15 @@
 
   --kvfx-radius-sm: 3px;
   --kvfx-radius-md: 5px;
+  /* Pills are fully rounded at their height. */
+  --kvfx-radius-pill: 12px;
 
   /* Control metrics — one place, so density stays consistent. */
   --kvfx-row-h: 22px;
   --kvfx-tool-w: 30px;
   --kvfx-tool-h: 26px;
+  --kvfx-pill-h: 24px;
+  --kvfx-wide-h: 28px;
 
   /*
    * Type.

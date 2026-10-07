@@ -8,6 +8,7 @@ import {
   type MockProject,
   PT,
   PURGE_ALL,
+  PURGE_IMAGE,
   PVT,
   createMockApp,
 } from "./mock-dom.js";
@@ -193,7 +194,7 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
       textDocument: PVT.TEXT_DOCUMENT,
     },
     leafPropertyType: PT.PROPERTY,
-    purgeAllTarget: PURGE_ALL,
+    purgeTargets: { all: PURGE_ALL, image: PURGE_IMAGE },
     nowMs: () => {
       const value = clock;
       clock += tick;

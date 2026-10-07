@@ -4,7 +4,7 @@ import { PROTOCOL_VERSION } from "../src/runtime/protocol.js";
 import { createProductionRegistry } from "../src/ops/index.js";
 import type { HostJson } from "../src/runtime/serialize.js";
 import { createMockAe, type MockAeOptions, type MockLayerSpec } from "./mock-ae.js";
-import { MockComp, PURGE_ALL, font } from "./mock-dom.js";
+import { MockComp, PURGE_ALL, PURGE_IMAGE, font } from "./mock-dom.js";
 
 /**
  * The generic primitives the core plan builders compose, run against the mock
@@ -48,11 +48,17 @@ describe("system.memory and system.purge", () => {
     expect(result(query("kvfx.op.system.memory"))["bytes"]).toBeGreaterThan(1e9);
   });
 
-  it("purges all caches without opening an undo group", () => {
+  it("purges image caches by default, without opening an undo group", () => {
     const { ae, query } = harness();
     result(query("kvfx.op.system.purge"));
-    expect(ae.app.purges).toEqual([PURGE_ALL]);
+    expect(ae.app.purges).toEqual([PURGE_IMAGE]);
     expect(ae.undoEvents).toEqual([]);
+  });
+
+  it("purges everything, undo history included, only when asked to", () => {
+    const { ae, query } = harness();
+    result(query("kvfx.op.system.purge", { target: "all" }));
+    expect(ae.app.purges).toEqual([PURGE_ALL]);
   });
 });
 

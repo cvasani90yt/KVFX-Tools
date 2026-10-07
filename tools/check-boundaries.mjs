@@ -27,7 +27,9 @@ const ALLOWED = {
 /** Modules that must never appear in `core` — it is pure logic by contract. */
 const FORBIDDEN_IN_CORE = [/^node:/, /^fs$/, /^path$/, /^os$/, /^child_process$/];
 
-const IMPORT_RE = /(?:^|\s)(?:import|export)\s[^;]*?from\s*"([^"]+)"|(?:^|\s)import\s*\(\s*"([^"]+)"/g;
+// `from` must follow whitespace or a closing brace, so a string such as
+// "from" inside an exported object literal is not mistaken for an import.
+const IMPORT_RE = /(?:^|\s)(?:import|export)\s[^;]*?[\s}]from\s*"([^"]+)"|(?:^|\s)import\s*\(\s*"([^"]+)"/g;
 
 async function* sourceFiles(dir) {
   let entries;

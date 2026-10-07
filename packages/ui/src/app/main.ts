@@ -1,19 +1,19 @@
-import {
-  DEFAULT_PALETTE_HOTKEY,
-  type Platform,
-  formatHotkey,
-  matchesHotkey,
-  parseHotkey,
-} from "@kvfx/core";
-import { Session, type SessionState } from "./session.js";
-import { render } from "./render.js";
+import { DEFAULT_PALETTE_HOTKEY, type Platform, matchesHotkey, parseHotkey } from "@kvfx/core";
+import { EaseView } from "../views/ease-view.js";
+import { FxView } from "../views/fx-view.js";
+import { GenerateView } from "../views/generate-view.js";
+import { LabelsView } from "../views/labels-view.js";
+import { LibraryView } from "../views/library-view.js";
+import { MediaView } from "../views/media-view.js";
+import { TextView } from "../views/text-view.js";
+import { ToolsView } from "../views/tools-view.js";
+import { Session } from "./session.js";
+import { Shell } from "./shell.js";
 
 const root = document.getElementById("kvfx-root");
 if (root === null) {
   throw new Error("KVFX Tools: panel root element is missing from index.html");
 }
-
-const panel = root;
 
 /**
  * Platform detection for shortcut display and matching.
@@ -22,99 +22,43 @@ const panel = root;
  * Chromium 99 — `userAgentData` is not available there (F3).
  */
 const platform: Platform = /mac/i.test(navigator.platform) ? "mac" : "other";
-
 const paletteHotkey = parseHotkey(DEFAULT_PALETTE_HOTKEY);
-const paletteHotkeyLabel =
-  paletteHotkey === undefined ? DEFAULT_PALETTE_HOTKEY : formatHotkey(paletteHotkey, platform);
 
-let searchInput: HTMLInputElement | undefined;
-let restoreFocus = false;
+/**
+ * How often the RAM meter refreshes while the panel is visible.
+ *
+ * Reading `app.memoryInUse` is one property read whose cost does not grow with
+ * the project, which is what makes a timer acceptable here when ADR-0002 rules
+ * out polling the selection.
+ */
+const MEMORY_REFRESH_MS = 15_000;
 
-const session = new Session((state: SessionState) => {
-  const hadFocus = restoreFocus || document.activeElement === searchInput;
-  const caret = searchInput?.selectionStart ?? null;
+// The session reports changes before the shell exists; those are simply
+// rendered by the shell's first update below.
+const holder: { shell?: Shell } = {};
+const session = new Session((state) => holder.shell?.update(state));
+const shell = new Shell(session, platform, (panel) => [
+  new ToolsView(panel),
+  new EaseView(panel),
+  new TextView(panel),
+  new FxView(panel),
+  new GenerateView(panel),
+  new LabelsView(panel),
+  new LibraryView(panel),
+  new MediaView(panel),
+]);
+holder.shell = shell;
+root.append(shell.root);
+shell.update(session.state);
 
-  const availability = session.availability();
-
-  const result = render(panel, state, {
-    entries: session.entries(),
-    platform,
-    paletteHotkeyLabel,
-    availableIds: availability.ids,
-    reasons: availability.reasons,
-    onRefresh: () => void session.refreshSelection(),
-    onSelectTab: (tabId) => session.setActiveTab(tabId),
-    onReferenceChange: (reference) => session.setAlignReference(reference),
-    onToggleGroup: (groupId) => session.toggleGroup(groupId),
-    onQueryChange: (query) => session.setQuery(query),
-    onSelect: (index) => {
-      // Re-rendering on hover would fight the mouse, so selection is stored
-      // without a full redraw; the next real change picks it up.
-      selectWithoutRedraw(index);
-    },
-    onToggleFavourite: (commandId) => session.toggleFavourite(commandId),
-    onRun: (commandId) => {
-      const command = session.registryGet(commandId);
-      if (command !== undefined) void session.run(command);
-    },
-  });
-
-  searchInput = result.input;
-  restoreFocus = false;
-
-  // Rebuilding the DOM drops focus, which would make typing in the search field
-  // impossible. Restore it, caret included.
-  if (hadFocus && searchInput !== undefined) {
-    searchInput.focus();
-    if (caret !== null) searchInput.setSelectionRange(caret, caret);
-  }
-});
-
-let pendingIndex: number | undefined;
-function selectWithoutRedraw(index: number): void {
-  pendingIndex = index;
-}
-
-function commitPendingSelection(): void {
-  if (pendingIndex === undefined) return;
-  const target = pendingIndex;
-  pendingIndex = undefined;
-  session.setSelectedIndex(target);
-}
-
-document.addEventListener("keydown", (domEvent: KeyboardEvent) => {
-  if (paletteHotkey !== undefined && matchesHotkey(paletteHotkey, domEvent, platform)) {
-    domEvent.preventDefault();
-    restoreFocus = true;
-    searchInput?.focus();
-    searchInput?.select();
+document.addEventListener("keydown", (event: KeyboardEvent) => {
+  if (paletteHotkey !== undefined && matchesHotkey(paletteHotkey, event, platform)) {
+    event.preventDefault();
+    if (shell.paletteOpen) shell.closeOverlays();
+    else shell.openPalette();
     return;
   }
-
-  switch (domEvent.key) {
-    case "ArrowDown":
-      domEvent.preventDefault();
-      restoreFocus = document.activeElement === searchInput;
-      session.moveSelection(1);
-      return;
-    case "ArrowUp":
-      domEvent.preventDefault();
-      restoreFocus = document.activeElement === searchInput;
-      session.moveSelection(-1);
-      return;
-    case "Enter":
-      domEvent.preventDefault();
-      commitPendingSelection();
-      restoreFocus = document.activeElement === searchInput;
-      void session.runSelected();
-      return;
-    case "Escape":
-      domEvent.preventDefault();
-      restoreFocus = document.activeElement === searchInput;
-      session.setQuery("");
-      return;
-    default:
-  }
+  if (event.key === "Escape" && shell.closeOverlays()) event.preventDefault();
 });
 
 void session.connect();
@@ -123,7 +67,12 @@ void session.connect();
 // poll, because AE emits no events at all (F4, ADR-0002).
 window.addEventListener("focus", () => {
   void session.refreshSelection();
+  void session.refreshMemory();
 });
+
+setInterval(() => {
+  if (!document.hidden) void session.refreshMemory();
+}, MEMORY_REFRESH_MS);
 
 // Settings writes are debounced, so flush whenever the panel might stop running.
 window.addEventListener("blur", () => session.flushSettings());

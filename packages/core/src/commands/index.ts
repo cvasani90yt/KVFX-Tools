@@ -16,6 +16,7 @@ export * from "./availability.js";
 export * from "./decode.js";
 export * from "./decode-measurement.js";
 export * from "./define.js";
+export * from "./outcome.js";
 export * from "./layer/align.js";
 export * from "./layer/tools.js";
 export * from "./fx/index.js";

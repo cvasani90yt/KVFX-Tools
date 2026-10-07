@@ -33,6 +33,7 @@ export const PVT = {
 
 export const INTERP = { linear: 6612, bezier: 6613, hold: 6614 } as const;
 export const PURGE_ALL = 1;
+export const PURGE_IMAGE = 4;
 
 // ---------------------------------------------------------------------------
 // Property definitions

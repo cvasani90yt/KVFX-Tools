@@ -32,8 +32,23 @@ export interface AdobeCepHost {
  */
 export interface AdobeCepFs {
   readFile(path: string): { data?: string; err: number };
-  writeFile(path: string, data: string): { err: number };
+  /** `encoding` is a value from `cep.encoding`; UTF-8 when omitted. */
+  writeFile(path: string, data: string, encoding?: string): { err: number };
   makedir(path: string): { err: number };
+  readdir(path: string): { data?: string[]; err: number };
+  stat(path: string): { data?: { isFile(): boolean; isDirectory(): boolean; mtime?: Date }; err: number };
+  showOpenDialog(
+    allowMultipleSelection: boolean,
+    chooseDirectory: boolean,
+    title: string,
+    initialPath: string,
+    fileTypes?: string[],
+  ): { data?: string[]; err: number };
+}
+
+export interface AdobeCepEncoding {
+  readonly UTF8: string;
+  readonly Base64: string;
 }
 
 export interface AdobeCepUtil {
@@ -49,7 +64,7 @@ export const SYSTEM_PATH_USER_DATA = "userData";
 declare global {
   interface Window {
     __adobe_cep__?: AdobeCepHost;
-    cep?: { fs?: AdobeCepFs; util?: AdobeCepUtil };
+    cep?: { fs?: AdobeCepFs; util?: AdobeCepUtil; encoding?: AdobeCepEncoding };
   }
 }
 

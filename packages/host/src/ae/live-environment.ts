@@ -250,7 +250,7 @@ export interface HostGlobals {
   readonly interpolation: InterpolationTypes;
   readonly valueTypes: ValueTypes;
   readonly leafPropertyType: number;
-  readonly purgeAllTarget: number;
+  readonly purgeTargets: { readonly all: number; readonly image: number };
   readonly nowMs: () => number;
 }
 
@@ -305,8 +305,8 @@ export function createEnvironment(g: HostGlobals): AeEnvironment {
     memoryInUse: function (): number {
       return host.memoryInUse;
     },
-    purgeAllCaches: function (): void {
-      host.purge(g.purgeAllTarget);
+    purge: function (kind: "image" | "all"): void {
+      host.purge(kind === "all" ? g.purgeTargets.all : g.purgeTargets.image);
     },
     runMenuCommand: function (menuText: string): boolean {
       const id = host.findMenuCommandId(menuText);
@@ -382,7 +382,7 @@ export function createLiveEnvironment(): AeEnvironment {
       textDocument: PropertyValueType.TEXT_DOCUMENT,
     },
     leafPropertyType: PropertyType.PROPERTY,
-    purgeAllTarget: PurgeTarget.ALL_CACHES,
+    purgeTargets: { all: PurgeTarget.ALL_CACHES, image: PurgeTarget.IMAGE_CACHES },
     nowMs: nowMs,
   });
 }

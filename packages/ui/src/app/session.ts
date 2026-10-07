@@ -5,35 +5,46 @@ import {
   type HostTransport,
 } from "@kvfx/bridge";
 import {
+  type AlignReference,
   type Command,
   type CommandContext,
   EMPTY_SNAPSHOT,
+  type JsonObject,
+  type JsonValue,
   type KvfxError,
   type KvfxSettings,
   type PaletteEntry,
+  type PlanStep,
   type SelectionSnapshot,
+  type UiSettings,
   buildPalette,
   createProductionCommandRegistry,
   decodeSnapshot,
+  defaultSettings,
+  deleteEase,
   migrateSettings,
   pruneUnknownCommands,
   recordUsage,
+  saveEase,
+  setToolParams,
   setUiSetting,
+  summarizeResult,
   toggleFavourite,
   toggleGroupCollapsed,
-  type AlignReference,
+  toggleListEntry,
+  userMessage,
 } from "@kvfx/core";
 import { createCepTransport, isRunningInCep } from "./cep/cep-transport.js";
 import { type SettingsStore, createMemoryStore, createSettingsStore } from "./cep/settings-store.js";
 
 /**
- * Owns the connection to After Effects, the user's settings, and the palette
- * state derived from both.
+ * Owns the connection to After Effects, the user's settings, and every call
+ * the panel makes to the host.
  *
  * The panel never assumes it knows the selection: it refreshes on focus, after
  * every command, and on request, because After Effects emits no events
- * (ADR-0002). Commands target the live selection, so a briefly stale display
- * can never cause the wrong layers to be modified.
+ * (ADR-0002). Commands target the live selection or ids from a fresh probe, so
+ * a briefly stale display can never cause the wrong layers to be modified.
  */
 
 export interface HostFacts {
@@ -51,34 +62,39 @@ export type ConnectionState =
   | { readonly status: "connected"; readonly facts: HostFacts; readonly roundTripMs: number }
   | { readonly status: "failed"; readonly error: KvfxError };
 
-export interface CommandOutcome {
-  readonly commandName: string;
+export interface Outcome {
+  readonly title: string;
   readonly ok: boolean;
   readonly message: string;
+  /** Lets the toast restart its timer when the same message repeats. */
+  readonly serial: number;
 }
 
 export interface SessionState {
   readonly connection: ConnectionState;
   readonly snapshot: SelectionSnapshot;
   readonly settings: KvfxSettings;
-  readonly query: string;
-  readonly selectedIndex: number;
-  readonly lastOutcome: CommandOutcome | undefined;
   readonly busy: boolean;
+  readonly lastOutcome: Outcome | undefined;
+  /** Bytes After Effects reported in use at the last refresh. */
+  readonly memoryBytes: number | undefined;
   /** Settings-load notes, shown in diagnostics rather than as an error. */
   readonly notices: readonly string[];
 }
 
+export type QueryResult = { readonly ok: true; readonly value: JsonValue } | { readonly ok: false; readonly message: string };
+
 /**
  * How long to wait before writing settings.
  *
- * Favourites and usage change on every command, and `cep.fs` writes are
- * synchronous. Debouncing keeps a burst of commands from becoming a burst of
- * file writes; a flush on blur and on panel unload means nothing is lost.
+ * Favourites, usage and tool parameters change constantly, and `cep.fs`
+ * writes are synchronous. Debouncing keeps a burst of changes from becoming a
+ * burst of file writes; a flush on blur and on panel unload means nothing is lost.
  */
 const PERSIST_DELAY_MS = 800;
 
 const registry = createProductionCommandRegistry();
+const GIB = 1_073_741_824;
 
 function asString(value: unknown, fallback = "unknown"): string {
   return typeof value === "string" ? value : fallback;
@@ -90,6 +106,7 @@ export class Session {
   readonly #onChange: (state: SessionState) => void;
   #persistTimer: ReturnType<typeof setTimeout> | undefined;
   #settingsWritable = true;
+  #serial = 0;
   #state: SessionState;
 
   constructor(onChange: (state: SessionState) => void, store?: SettingsStore) {
@@ -106,10 +123,9 @@ export class Session {
       connection: { status: "checking" },
       snapshot: EMPTY_SNAPSHOT,
       settings: pruned,
-      query: "",
-      selectedIndex: 0,
-      lastOutcome: undefined,
       busy: false,
+      lastOutcome: undefined,
+      memoryBytes: undefined,
       notices: loaded.warnings,
     };
   }
@@ -122,39 +138,54 @@ export class Session {
     return this.#store.location();
   }
 
-  context(): CommandContext {
-    const facts = this.#state.connection.status === "connected" ? this.#state.connection.facts : undefined;
-    return { snapshot: this.#state.snapshot, aeVersion: facts?.aeVersion ?? "0" };
+  get connected(): boolean {
+    return this.#client !== undefined && this.#state.connection.status === "connected";
   }
 
-  /** The ranked palette for the current query, selection and settings. */
-  entries(): readonly PaletteEntry[] {
+  context(params?: JsonObject): CommandContext {
+    const facts = this.#state.connection.status === "connected" ? this.#state.connection.facts : undefined;
+    return {
+      snapshot: this.#state.snapshot,
+      aeVersion: facts?.aeVersion ?? "0",
+      ...(params === undefined ? {} : { params }),
+    };
+  }
+
+  command(commandId: string): Command | undefined {
+    return registry.get(commandId);
+  }
+
+  /** The ranked palette for a query against the current selection and settings. */
+  entries(query: string): readonly PaletteEntry[] {
     return buildPalette({
       registry,
       context: this.context(),
       settings: this.#state.settings,
-      query: this.#state.query,
+      query,
       nowMs: Date.now(),
     });
   }
 
-  registryGet(commandId: string): Command | undefined {
-    return registry.get(commandId);
-  }
-
-  setSelectedIndex(index: number): void {
-    if (index === this.#state.selectedIndex) return;
-    this.#set({ selectedIndex: index });
-  }
-
-  selectedEntry(): PaletteEntry | undefined {
-    const list = this.entries();
-    return list[Math.min(this.#state.selectedIndex, list.length - 1)];
+  /** Availability for every command, so each button can enable honestly. */
+  availability(): { ids: Set<string>; reasons: Map<string, string> } {
+    const ids = new Set<string>();
+    const reasons = new Map<string, string>();
+    for (const entry of registry.resolve(this.context())) {
+      if (entry.available) ids.add(entry.command.id);
+      else if (entry.reason !== undefined) reasons.set(entry.command.id, entry.reason);
+    }
+    return { ids, reasons };
   }
 
   #set(patch: Partial<SessionState>): void {
     this.#state = { ...this.#state, ...patch };
     this.#onChange(this.#state);
+  }
+
+  /** Shows a one-line result to the user. */
+  report(title: string, ok: boolean, message: string): void {
+    this.#serial += 1;
+    this.#set({ lastOutcome: { title, ok, message, serial: this.#serial } });
   }
 
   // -------------------------------------------------------------------------
@@ -186,55 +217,50 @@ export class Session {
     }
   }
 
-  toggleFavourite(commandId: string): void {
-    this.#updateSettings(toggleFavourite(this.#state.settings, commandId));
+  setUi<K extends keyof UiSettings>(key: K, value: UiSettings[K]): void {
+    if (this.#state.settings.ui[key] === value) return;
+    this.#updateSettings(setUiSetting(this.#state.settings, key, value));
   }
 
   setActiveTab(tabId: string): void {
-    if (tabId === this.#state.settings.ui.activeTab) return;
-    this.#updateSettings(setUiSetting(this.#state.settings, "activeTab", tabId));
+    this.setUi("activeTab", tabId);
+  }
+
+  setAlignReference(reference: AlignReference): void {
+    this.setUi("alignReference", reference);
   }
 
   toggleGroup(groupId: string): void {
     this.#updateSettings(toggleGroupCollapsed(this.#state.settings, groupId));
   }
 
-  setAlignReference(reference: AlignReference): void {
-    if (reference === this.#state.settings.ui.alignReference) return;
-    this.#updateSettings(setUiSetting(this.#state.settings, "alignReference", reference));
+  toggleFavourite(commandId: string): void {
+    this.#updateSettings(toggleFavourite(this.#state.settings, commandId));
   }
 
-  /**
-   * Availability for every command, including the ones hidden from the palette.
-   *
-   * The align grid drives hidden variants, so it cannot rely on the palette's
-   * filtered list to know whether a button should be enabled.
-   */
-  availability(): { ids: Set<string>; reasons: Map<string, string> } {
-    const ids = new Set<string>();
-    const reasons = new Map<string, string>();
-
-    for (const entry of registry.resolve(this.context())) {
-      if (entry.available) ids.add(entry.command.id);
-      else if (entry.reason !== undefined) reasons.set(entry.command.id, entry.reason);
-    }
-
-    return { ids, reasons };
+  toggleHiddenTab(tabId: string): void {
+    this.setUi("hiddenTabs", toggleListEntry(this.#state.settings.ui.hiddenTabs, tabId));
   }
 
-  // -------------------------------------------------------------------------
-  // Palette interaction
-  // -------------------------------------------------------------------------
-
-  setQuery(query: string): void {
-    this.#set({ query, selectedIndex: 0 });
+  toolParams(toolId: string): JsonObject {
+    return this.#state.settings.ui.toolParams[toolId] ?? {};
   }
 
-  moveSelection(delta: number): void {
-    const count = this.entries().length;
-    if (count === 0) return;
-    const next = (this.#state.selectedIndex + delta + count) % count;
-    this.#set({ selectedIndex: next });
+  setToolParams(toolId: string, params: JsonObject): void {
+    this.#updateSettings(setToolParams(this.#state.settings, toolId, params));
+  }
+
+  saveEase(name: string, bezier: readonly [number, number, number, number]): void {
+    this.#updateSettings(saveEase(this.#state.settings, name, bezier));
+  }
+
+  deleteEase(name: string): void {
+    this.#updateSettings(deleteEase(this.#state.settings, name));
+  }
+
+  /** Restores every preference to its default. Usage history goes too. */
+  resetSettings(): void {
+    this.#updateSettings(defaultSettings());
   }
 
   // -------------------------------------------------------------------------
@@ -298,93 +324,122 @@ export class Session {
     });
 
     await this.refreshSelection();
+    await this.refreshMemory();
     this.#set({ busy: false });
   }
 
   async refreshSelection(): Promise<void> {
-    const client = this.#client;
-    if (client === undefined || this.#state.connection.status !== "connected") return;
-
-    const result = await client.send({ kind: "query", op: "kvfx.op.selection.snapshot" });
+    if (!this.connected) return;
+    const result = await this.query("kvfx.op.selection.snapshot");
     if (result.ok) this.#set({ snapshot: decodeSnapshot(result.value) });
   }
 
-  /**
-   * Runs a command: build its plan, send it as one request, re-read selection.
-   *
-   * The whole plan crosses the bridge once and executes inside one undo group,
-   * so the user gets exactly one entry in Edit ▸ Undo however many operations
-   * the command needed (ADR-0006).
-   */
-  async run(command: Command): Promise<void> {
+  async refreshMemory(): Promise<void> {
+    if (!this.connected) return;
+    const result = await this.query("kvfx.op.system.memory");
+    if (!result.ok) return;
+    const bytes = (result.value as { bytes?: unknown } | null)?.bytes;
+    if (typeof bytes === "number" && bytes !== this.#state.memoryBytes) this.#set({ memoryBytes: bytes });
+  }
+
+  async purge(target: "image" | "all"): Promise<void> {
+    const result = await this.query("kvfx.op.system.purge", { target });
+    if (!result.ok) {
+      this.report("Purge", false, result.message);
+      return;
+    }
+    const value = result.value as { bytesBefore?: number; bytesAfter?: number } | null;
+    const freed = (value?.bytesBefore ?? 0) - (value?.bytesAfter ?? 0);
+    this.report(
+      "Purge",
+      true,
+      freed > 0 ? `Freed ${(freed / GIB).toFixed(1)} GB` : "Caches purged",
+    );
+    if (typeof value?.bytesAfter === "number") this.#set({ memoryBytes: value.bytesAfter });
+  }
+
+  /** A read-only call. Never opens an undo group. */
+  async query(op: string, args: JsonObject = {}, budgetMs?: number): Promise<QueryResult> {
     const client = this.#client;
-    if (client === undefined || this.#state.busy) return;
+    if (client === undefined) return { ok: false, message: "Not connected to After Effects." };
+    const result = await client.send({ kind: "query", op, args, ...(budgetMs === undefined ? {} : { budgetMs }) });
+    return result.ok ? { ok: true, value: result.value ?? null } : { ok: false, message: userMessage(result.error) };
+  }
 
-    const availability = command.canExecute(this.context());
-    if (!availability.available) {
-      this.#set({
-        lastOutcome: { commandName: command.name, ok: false, message: availability.reason },
-      });
-      return;
+  /**
+   * Runs steps as one plan: one round trip, one undo group, one entry in
+   * Edit ▸ Undo however many operations it took (ADR-0006).
+   */
+  async runPlan(title: string, steps: readonly PlanStep[], budgetMs?: number): Promise<JsonValue | undefined> {
+    const client = this.#client;
+    if (client === undefined || this.#state.busy) return undefined;
+    if (steps.length === 0) {
+      this.report(title, true, "Nothing to change");
+      return undefined;
     }
 
-    this.#set({ busy: true, lastOutcome: undefined });
-
-    // A measured command reads real geometry out of After Effects before it can
-    // decide anything. The probe is read-only and opens no undo group; the plan
-    // built from it addresses layers by id and carries explicit values, so a
-    // selection change between the two steps cannot misplace anything.
-    let plan;
-    if (command.kind === "measured") {
-      const probe = command.probe(this.context());
-      const measured = await client.send({ kind: "query", op: probe.op, args: probe.args });
-      if (!measured.ok) {
-        this.#set({
-          busy: false,
-          lastOutcome: { commandName: command.name, ok: false, message: measured.error.message },
-        });
-        return;
-      }
-      plan = command.plan(this.context(), measured.value);
-    } else {
-      plan = command.plan(this.context());
-    }
-
-    // Nothing to do is a real outcome, not a failure: aligning one layer that
-    // is already in place, or distributing fewer than three layers.
-    if (plan.steps.length === 0) {
-      this.#set({
-        busy: false,
-        lastOutcome: { commandName: command.name, ok: true, message: "Nothing to change" },
-      });
-      return;
-    }
-
+    this.#set({ busy: true });
     const result = await client.send({
       kind: "plan",
       op: PLAN_OPERATION_ID,
-      args: { steps: plan.steps.map((step) => ({ op: step.op, args: step.args })) },
-      undoGroup: plan.undoGroup,
+      args: {
+        steps: steps.map((step) =>
+          step.bind === undefined ? { op: step.op, args: step.args } : { op: step.op, args: step.args, bind: step.bind },
+        ),
+      },
+      undoGroup: `KVFX Tools — ${title}`,
+      ...(budgetMs === undefined ? {} : { budgetMs }),
     });
 
-    this.#set({
-      lastOutcome: {
-        commandName: command.name,
-        ok: result.ok,
-        message: result.ok ? "Done" : result.error.message,
-      },
-    });
+    this.report(title, result.ok, result.ok ? summarizeResult(result.value ?? null) : userMessage(result.error));
+    this.#set({ busy: false });
+    await this.refreshSelection();
+    return result.ok ? (result.value ?? null) : undefined;
+  }
+
+  /**
+   * Runs a command: resolve parameters, probe if it must, plan, execute as one
+   * plan, then re-read the selection.
+   *
+   * Parameters are the command's defaults from settings, overlaid by whatever
+   * the invoking control supplied.
+   */
+  async run(commandOrId: Command | string, params?: JsonObject): Promise<boolean> {
+    const command = typeof commandOrId === "string" ? registry.get(commandOrId) : commandOrId;
+    if (command === undefined || this.#client === undefined || this.#state.busy) return false;
+
+    const merged: JsonObject = { ...(command.defaultParams?.(this.#state.settings.ui) ?? {}), ...(params ?? {}) };
+    const ctx = this.context(merged);
+
+    const availability = command.canExecute(ctx);
+    if (!availability.available) {
+      this.report(command.name, false, availability.reason);
+      return false;
+    }
+
+    let plan;
+    if (command.kind === "measured") {
+      // The probe is read-only and opens no undo group; the plan built from it
+      // addresses layers by id, so a selection change in between cannot
+      // misplace anything.
+      const probe = command.probe(ctx);
+      const measured = await this.query(probe.op, probe.args);
+      if (!measured.ok) {
+        this.report(command.name, false, measured.message);
+        return false;
+      }
+      plan = command.plan(ctx, measured.value);
+    } else {
+      plan = command.plan(ctx);
+    }
+
+    const before = this.#serial;
+    const value = await this.runPlan(command.name, plan.steps, plan.budgetMs);
+    const ok = value !== undefined || (plan.steps.length === 0 && this.#serial > before);
 
     // Usage is recorded only on success, so a command that failed because of a
     // precondition does not climb the rankings.
-    if (result.ok) this.#updateSettings(recordUsage(this.#state.settings, command.id, Date.now()));
-
-    await this.refreshSelection();
-    this.#set({ busy: false });
-  }
-
-  async runSelected(): Promise<void> {
-    const entry = this.selectedEntry();
-    if (entry !== undefined && entry.available) await this.run(entry.command);
+    if (value !== undefined) this.#updateSettings(recordUsage(this.#state.settings, command.id, Date.now()));
+    return ok;
   }
 }
