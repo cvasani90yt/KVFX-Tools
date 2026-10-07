@@ -11,7 +11,8 @@ script, and all of it stays editable.
 | `assets/clips/*.mp4` | Recordings of the real panel in use at 2× (760 × 1720, 30 fps): the ease curve being dragged, the text presets previewing, the search palette, Tools-tab clicks and the number counter. |
 | `assets/ui/*.png` | Screenshots of every tab, used for the tab wall and as stand-ins if a recording is missing. |
 | `assets/anime/` | Key art for the anime section, included (see [Assets](#assets)). |
-| `assets/music.mp3` | Optional. If present it is placed under the edit. `.wav`, `.m4a` and `.aac` work too. |
+| `KVFX-Promo-Add-Sound.jsx` | Adds the music and every sound effect to MAIN, each on its frame, and snaps the cuts to the beat. Runs by itself after a build. Run it on its own to add sound to a promo you already built. |
+| `assets/music/`, `assets/sfx/` | The licensed track and sound effects. They come in your kit zip and are not kept in the repository. |
 
 ## Build it
 
@@ -112,6 +113,44 @@ screenshots, capture each `build/preview/work/panel-<tab>.html` at 380 × 860
 with a device scale factor of 2.
 
 ## Music and sound
+
+### Adding the sound
+
+* **To a new build:** keep `assets/music` and `assets/sfx` next to the
+  builder. The sound goes in automatically after the build.
+* **To a promo you already built:** open its project and choose
+  **File ▸ Scripts ▸ Run Script File…**, then pick `KVFX-Promo-Add-Sound.jsx`.
+  The script finds `KVFX Promo · MAIN 9x16` (the open one, or the newest) and
+  asks two things:
+  1. **Replace earlier sound layers?** This only appears on a second run.
+  2. **Snap the cuts to the beat?** Each scene cut moves earlier by up to one
+     beat (about 0.25 s) so it lands on the beat of the track. The flash,
+     whip and guide markers at each cut move with it. Choose No to keep your
+     cuts exactly as they are; the sound still follows each scene.
+
+What it does:
+
+* **Music.** *Phonk Move* starts 7.37 s into the track, so its first drop
+  lands on the CHEAT CODE slam. Its breakdown carries the feature wall, and
+  the second drop hits on the end card under a riser. It plays at -10 dB and
+  fades out over the last 0.6 s.
+* **Sound effects.** About 130 layers, each named for its moment (for example
+  `SFX · Apply to Keys` or `SFX · types m`). They are timed from the scene
+  they belong to, so they follow the scene if you move it. Whooshes are
+  placed so their peak sits on the cut, and risers so their hit lands on the
+  title.
+* **Layer colours.** Red for impacts, purple for risers, cyan for whooshes,
+  yellow for UI sounds, blue for keys and green for the music. Labels ▸
+  Select Label Group selects one family at a time to rebalance it.
+* **Levels** are set on each layer's Audio Levels and leave headroom for the
+  music, which is mastered loud.
+* **Undo.** One Edit ▸ Undo removes everything the run did.
+
+The cue list sits at the top of `KVFX-Promo-Add-Sound.jsx`: one line per
+sound, each with its scene, its time in seconds into that scene, its file and
+its level.
+
+### Choosing audio
 
 * **Reels and TikTok:** export **without** music and add a trending sound in
   the app. In-app sounds are licensed for that platform, and trending audio

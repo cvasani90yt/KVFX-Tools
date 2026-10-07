@@ -18,6 +18,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   anime key art; `promo/README.md` has the shot list, asset names, music and
   SFX picks, and export settings
 
+- `promo/KVFX-Promo-Add-Sound.jsx` puts the music and about 130 sound effects
+  on the frames where their moments happen, snaps the scene cuts to the beat
+  (moving the flashes, whips and guide markers with them), and works on an
+  already-built promo; the builder runs it automatically. The licensed audio
+  itself is kept out of the repository
+
 ### Fixed
 - The success toast for **Duplicate Comp + Nested Comps** and **Duplicate
   Precomp Layer + Nested** used the old "(Deep)" names; the command names now

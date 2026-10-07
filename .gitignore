@@ -42,3 +42,7 @@ logs/
 .cache/
 dist-types/
 build/preview/
+
+# Licensed promo audio (Envato) - shipped in the promo kit zip, never committed
+promo/assets/sfx/
+promo/assets/music/

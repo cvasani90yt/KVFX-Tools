@@ -2233,14 +2233,6 @@
     for (var i = 0; i < SCENES.length; i++) total += SCENES[i].dur;
     var main = newComp("KVFX Promo \u00B7 MAIN 9x16", total, FOLDERS.root, C.ink);
 
-    var music = null;
-    var exts = ["mp3", "wav", "m4a", "aac"];
-    for (var m = 0; m < exts.length && !music; m++) music = footage("music." + exts[m]);
-    if (music) {
-      var ml = main.layers.add(music);
-      ml.name = "Music";
-    }
-
     var cuts = [];
     var t = 0;
     for (var s = 0; s < SCENES.length; s++) {
@@ -2349,12 +2341,41 @@
 
     var main = buildMain(sceneComps);
     if (CFG.youtubeVersion) buildYoutube(main);
+    addSound(main);
     main.openInViewer();
     return main;
   }
 
+  // Music and sound effects come from KVFX-Promo-Add-Sound.jsx, which also
+  // works on an existing project. It runs here when the script and the
+  // assets it needs (assets/music, assets/sfx) are next to this file.
+  var SOUND_NOTE = null;
+  function addSound(main) {
+    var script = null;
+    try {
+      script = new File(new File($.fileName).parent.fsName + "/KVFX-Promo-Add-Sound.jsx");
+    } catch (e) {
+      script = null;
+    }
+    if (!script || !script.exists || !ASSET_DIR) return;
+    if (!new Folder(ASSET_DIR.fsName + "/sfx").exists && !new Folder(ASSET_DIR.fsName + "/music").exists) return;
+    $.global.__kvfxSound = { comp: main, assetDir: ASSET_DIR, auto: true, result: null };
+    try {
+      $.evalFile(script);
+      SOUND_NOTE = $.global.__kvfxSound.result;
+    } catch (e2) {
+      warn("Sound: " + errText(e2));
+    } finally {
+      $.global.__kvfxSound = null;
+    }
+  }
+
   function report(main) {
     var lines = ["KVFX promo built: " + main.name + " (" + main.duration + " s, " + W + "x" + H + ")."];
+    if (SOUND_NOTE) {
+      lines.push("");
+      lines.push(SOUND_NOTE);
+    }
     if (MISSING.length) {
       lines.push("");
       lines.push("Missing assets (placeholders used - see promo/README.md):");
