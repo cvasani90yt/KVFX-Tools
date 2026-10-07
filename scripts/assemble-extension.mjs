@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { cp, mkdir, rm, writeFile, readFile, access, readdir } from "node:fs/promises";
 import { basename, join, relative } from "node:path";
 import { repoRoot, stagedExtensionDir } from "./paths.mjs";
