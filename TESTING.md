@@ -3,10 +3,31 @@
 No build tools required. You need After Effects (22.0 or newer; 26.x is the
 development target) and about five minutes.
 
-A ready-to-install `KVFX-Tools-v0.1.0-dev.zip` is produced by `npm run build`
-and lands in `build/`. If you were sent the zip directly, skip to step 2.
+`npm run build` produces `build/KVFX-Tools-v<version>.zip`. If you were sent
+the zip, start here.
 
----
+## The quick way — double-click the installer
+
+1. **Quit After Effects.**
+2. **Unzip** the download anywhere (your Downloads folder is fine). Running the
+   installer from inside the zip will not work: unzip first.
+3. In the unzipped `KVFX Tools …` folder, double-click:
+   * **Windows** — `Install KVFX Tools (Windows).cmd`
+   * **macOS** — `Install KVFX Tools (macOS).command`
+4. Open After Effects ▸ **Window ▸ Extensions ▸ KVFX Tools**.
+
+The installers are not code-signed yet, so the first run is blocked once:
+
+* **Windows** — "Windows protected your PC": click **More info ▸ Run anyway**.
+* **macOS** — "cannot be opened": **right-click ▸ Open ▸ Open**.
+
+What the installer does, for your user account only and without
+administrator rights: it sets Adobe's `PlayerDebugMode` so After Effects loads
+an unsigned extension, and copies `com.kvfx.tools` into your CEP extensions
+folder. If KVFX Tools is already installed it asks before replacing it; your
+settings are kept either way. `Uninstall KVFX Tools …` removes it again.
+
+If you would rather do it by hand, steps 1–3 below are the same thing.
 
 ## Step 1 — Enable CEP debug mode (one time per machine)
 

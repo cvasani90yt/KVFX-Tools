@@ -1,0 +1,27 @@
+KVFX Tools {{VERSION}}
+========================
+
+INSTALL
+  1. Quit After Effects.
+  2. Double-click the installer for your computer:
+       Windows: "Install KVFX Tools (Windows).cmd"
+       macOS:   "Install KVFX Tools (macOS).command"
+  3. Open After Effects and choose  Window > Extensions > KVFX Tools
+
+  Windows may show "Windows protected your PC": click "More info", then "Run anyway".
+  macOS may say the file "cannot be opened": right-click it, choose Open, then Open.
+  Both happen because the installer is not code-signed yet.
+
+WHAT THE INSTALLER DOES (your user account only, no admin rights)
+  - Lets After Effects load unsigned extensions (Adobe's PlayerDebugMode setting).
+  - Copies the com.kvfx.tools folder into your Adobe CEP extensions folder.
+  Nothing else. Your projects are never touched.
+
+INSTALL BY HAND INSTEAD
+  Copy the com.kvfx.tools folder into:
+    Windows: %APPDATA%\Adobe\CEP\extensions\
+    macOS:   ~/Library/Application Support/Adobe/CEP/extensions/
+  then enable PlayerDebugMode (see TESTING.md in the source, step 1).
+
+REMOVE
+  Double-click the matching "Uninstall KVFX Tools" file.

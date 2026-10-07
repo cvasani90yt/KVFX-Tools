@@ -13,6 +13,11 @@ rights, and each `enable` script has a matching `disable`.
 | Windows | `windows/enable-cep-debug.reg` | `windows/disable-cep-debug.reg` |
 | macOS | `macos/enable-cep-debug.command` | `macos/disable-cep-debug.command` |
 
+The full installers — debug mode **and** copying the panel into place — are
+`windows/install-kvfx-tools.cmd` and `macos/install-kvfx-tools.command`, with
+matching uninstallers. `npm run build` puts them in the release zip, renamed
+"Install KVFX Tools (Windows).cmd" and so on, beside `READ-ME-FIRST.txt`.
+
 ## What it actually changes
 
 `PlayerDebugMode` is Adobe's documented developer switch. With it set, After

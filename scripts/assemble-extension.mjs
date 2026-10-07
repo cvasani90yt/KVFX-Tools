@@ -1,6 +1,7 @@
-import { cp, mkdir, rm, writeFile, readFile, access } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { cp, mkdir, rm, writeFile, readFile, access, readdir } from "node:fs/promises";
+import { basename, join, relative } from "node:path";
 import { repoRoot, stagedExtensionDir } from "./paths.mjs";
+import { createZip } from "./zip.mjs";
 
 /**
  * Assembles the loadable CEP extension from the per-package build output.
@@ -75,3 +76,57 @@ if (isRelease) {
 }
 
 console.log(`Assembled extension at ${stagedExtensionDir}`);
+
+// ---------------------------------------------------------------------------
+// The download a tester or user receives:
+//
+//   KVFX Tools <version>/
+//     READ ME FIRST.txt
+//     Install KVFX Tools (Windows).cmd      Install KVFX Tools (macOS).command
+//     Uninstall KVFX Tools (Windows).cmd    Uninstall KVFX Tools (macOS).command
+//     com.kvfx.tools/                       the extension itself
+//
+// Source maps stay out of it: they are for development, not for users.
+// ---------------------------------------------------------------------------
+
+// The read-me is a template beside the installers, so the paths it quotes for
+// users live in a text file rather than in code.
+const README = (await readFile(join(repoRoot, "scripts", "setup", "READ-ME-FIRST.txt"), "utf8"))
+  .replaceAll("{{VERSION}}", version)
+  .replace(/\r?\n/g, "\r\n");
+
+async function* walk(dir) {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      yield { full, isDir: true };
+      yield* walk(full);
+    } else {
+      yield { full, isDir: false };
+    }
+  }
+}
+
+const top = `KVFX Tools ${version}/`;
+const entries = [{ name: top }, { name: `${top}READ ME FIRST.txt`, data: Buffer.from(README, "utf8") }];
+const setup = join(repoRoot, "scripts", "setup");
+for (const [file, name, executable] of [
+  [join(setup, "windows", "install-kvfx-tools.cmd"), "Install KVFX Tools (Windows).cmd", false],
+  [join(setup, "windows", "uninstall-kvfx-tools.cmd"), "Uninstall KVFX Tools (Windows).cmd", false],
+  [join(setup, "macos", "install-kvfx-tools.command"), "Install KVFX Tools (macOS).command", true],
+  [join(setup, "macos", "uninstall-kvfx-tools.command"), "Uninstall KVFX Tools (macOS).command", true],
+]) {
+  entries.push({ name: `${top}${name}`, data: await readFile(file), executable });
+}
+
+const extensionRoot = `${top}${basename(stagedExtensionDir)}/`;
+entries.push({ name: extensionRoot });
+for await (const item of walk(stagedExtensionDir)) {
+  if (item.full.endsWith(".map")) continue;
+  const path = relative(stagedExtensionDir, item.full).split(/[\\/]/).join("/");
+  entries.push(item.isDir ? { name: `${extensionRoot}${path}/` } : { name: `${extensionRoot}${path}`, data: await readFile(item.full) });
+}
+
+const zipPath = join(repoRoot, "build", `KVFX-Tools-v${version}.zip`);
+await writeFile(zipPath, createZip(entries));
+console.log(`Packaged ${zipPath}`);
