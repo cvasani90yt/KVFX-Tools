@@ -5,6 +5,8 @@ import {
   type MeasuredCommand,
   type SelectedLayer,
   createProductionCommandRegistry,
+  ACTIVE_COMP_DEFAULTS,
+  SELECTED_LAYER_DEFAULTS,
 } from "../src/index.js";
 
 /**
@@ -25,6 +27,7 @@ function measured(id: string): MeasuredCommand {
 
 function selectedLayer(id: number): SelectedLayer {
   return {
+    ...SELECTED_LAYER_DEFAULTS,
     id,
     name: `Layer ${String(id)}`,
     index: id,
@@ -46,6 +49,7 @@ function ctx(count: number): CommandContext {
       ...EMPTY_SNAPSHOT,
       hasProject: true,
       comp: {
+        ...ACTIVE_COMP_DEFAULTS,
         id: 1,
         name: "Comp 1",
         width: 1920,
@@ -111,9 +115,9 @@ describe("probe", () => {
     expect(probe.args).toEqual({ target: "selection" });
   });
 
-  it("is the same probe for every measured command", () => {
+  it("is the same probe for every geometry command", () => {
     for (const command of registry.all()) {
-      if (command.kind !== "measured") continue;
+      if (command.kind !== "measured" || !/^kvfx\.(align|distribute|anchor)\./.test(command.id)) continue;
       expect(command.probe(ctx(1)).op).toBe("kvfx.op.layer.measure");
     }
   });

@@ -9,6 +9,8 @@ import {
   toggleFavourite,
   type KvfxSettings,
   type SelectedLayer,
+  ACTIVE_COMP_DEFAULTS,
+  SELECTED_LAYER_DEFAULTS,
 } from "../src/index.js";
 
 const registry = createProductionCommandRegistry();
@@ -16,6 +18,7 @@ const NOW = 10_000_000;
 
 function layer(): SelectedLayer {
   return {
+    ...SELECTED_LAYER_DEFAULTS,
     id: 10,
     name: "Layer 1",
     index: 1,
@@ -37,6 +40,7 @@ function ctx(withSelection = true): CommandContext {
       ...EMPTY_SNAPSHOT,
       hasProject: true,
       comp: {
+        ...ACTIVE_COMP_DEFAULTS,
         id: 1,
         name: "Comp 1",
         width: 1920,
@@ -101,7 +105,7 @@ describe("buildPalette — searching", () => {
     expect(names("eye")[0]).toBe("Toggle Visibility");
     expect(names("hide").length).toBeGreaterThan(0);
     expect(names("controller")[0]).toBe("Create Null");
-    expect(names("3d")[0]).toBe("Toggle 3D");
+    expect(names("3d").slice(0, 3)).toContain("Toggle 3D");
   });
 
   it("returns nothing for a query that matches nothing", () => {

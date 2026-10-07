@@ -49,6 +49,17 @@ const WEIGHT_CATEGORY = 0.5;
 const WEIGHT_DESCRIPTION = 0.4;
 
 /** Personal weighting. Deliberately far below the tier gap in `fuzzy.ts`. */
+/**
+ * Matches scoring below this fraction of the best match are dropped.
+ *
+ * Fuzzy matching finds "solo" scattered through "Hold keyframes, toggle,
+ * constant…" as readily as in "Toggle Solo". With a hundred commands those
+ * stray hits are many, and because available commands sort first they could
+ * bury the one exact hit that happens to be unavailable. The floor is relative
+ * so a short or unusual query, whose best match is weak, still finds things.
+ */
+const RELEVANCE_FLOOR = 0.45;
+
 const FAVOURITE_BONUS = 150;
 const FREQUENCY_BONUS = 8;
 const MAX_COUNTED_USES = 10;
@@ -145,6 +156,7 @@ export function buildPalette(options: PaletteOptions): readonly PaletteEntry[] {
   const resolved = registry.resolve(context);
 
   const entries: PaletteEntry[] = [];
+  const matchScores = new Map<string, number>();
 
   for (const { command, available, reason } of resolved) {
     if (command.metadata.hidden === true) continue;
@@ -177,6 +189,7 @@ export function buildPalette(options: PaletteOptions): readonly PaletteEntry[] {
     const match = bestFieldMatch(query, command);
     if (match === undefined) continue;
 
+    matchScores.set(command.id, match.score);
     entries.push({
       command,
       available,
@@ -191,9 +204,15 @@ export function buildPalette(options: PaletteOptions): readonly PaletteEntry[] {
     });
   }
 
-  entries.sort((a, b) => compare(a, b, query.length === 0, settings));
+  let relevant = entries;
+  if (query.length > 0) {
+    const best = Math.max(0, ...matchScores.values());
+    relevant = entries.filter((entry) => (matchScores.get(entry.command.id) ?? 0) >= best * RELEVANCE_FLOOR);
+  }
 
-  return options.limit === undefined ? entries : entries.slice(0, options.limit);
+  relevant.sort((a, b) => compare(a, b, query.length === 0, settings));
+
+  return options.limit === undefined ? relevant : relevant.slice(0, options.limit);
 }
 
 function compare(

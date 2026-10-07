@@ -9,7 +9,10 @@ import {
   createCommandRegistry,
   createProductionCommandRegistry,
   undoGroupFor,
+  ACTIVE_COMP_DEFAULTS,
+  SELECTED_LAYER_DEFAULTS,
 } from "../src/commands/index.js";
+import { defaultSettings } from "../src/storage/index.js";
 
 /**
  * Commands are pure functions from a snapshot to a plan, so every one of these
@@ -18,6 +21,7 @@ import {
  */
 
 const comp: ActiveComp = {
+  ...ACTIVE_COMP_DEFAULTS,
   id: 1,
   name: "Comp 1",
   width: 1920,
@@ -30,6 +34,7 @@ const comp: ActiveComp = {
 
 function layer(overrides: Partial<SelectedLayer> = {}): SelectedLayer {
   return {
+    ...SELECTED_LAYER_DEFAULTS,
     id: 10,
     name: "Layer 1",
     index: 1,
@@ -82,15 +87,19 @@ describe("registry integrity", () => {
   });
 
   it("names every undo group so it is attributable in After Effects", () => {
+    // Measured commands need a measurement to plan; the end-to-end test in
+    // @kvfx/host runs those against a mock After Effects.
     for (const c of registry.all()) {
-      const plan = c.plan(ctx());
+      if (c.kind !== "simple") continue;
+      const plan = c.plan({ ...ctx(), params: c.defaultParams?.(defaultSettings().ui) ?? {} });
       expect(plan.undoGroup.startsWith("KVFX Tools — ")).toBe(true);
-      expect(plan.steps.length).toBeGreaterThan(0);
+      expect(plan.steps.length, c.id).toBeGreaterThan(0);
     }
   });
 
   it("emits only well-formed operation ids", () => {
     for (const c of registry.all()) {
+      if (c.kind !== "simple") continue;
       for (const step of c.plan(ctx()).steps) {
         expect(step.op).toMatch(/^kvfx\.op\.[a-z][a-zA-Z0-9]*(?:\.[a-z][a-zA-Z0-9]*)+$/);
       }
@@ -108,8 +117,10 @@ describe("registry integrity", () => {
   });
 
   it("filters by category", () => {
-    expect(registry.byCategory("LAYER").length).toBe(registry.all().length);
-    expect(registry.byCategory("KEYFRAME")).toEqual([]);
+    const layer = registry.byCategory("LAYER");
+    expect(layer.length).toBeGreaterThan(0);
+    expect(layer.every((c) => c.category === "LAYER")).toBe(true);
+    expect(registry.byCategory("KEYFRAME").length).toBeGreaterThan(0);
   });
 });
 

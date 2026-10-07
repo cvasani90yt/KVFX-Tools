@@ -100,6 +100,7 @@ function addAnimator(layer: AeRawLayer, spec: Args, timeOffset: number): void {
     setIfPresent(advanced, "ADBE Text Selector Max Amount", sel["amount"]);
     setIfPresent(advanced, "ADBE Text Levels Max Ease", sel["easeHigh"]);
     setIfPresent(advanced, "ADBE Text Levels Min Ease", sel["easeLow"]);
+    setIfPresent(advanced, "ADBE Text Selector Smoothness", sel["smoothness"]);
 
     const start = byIndex ? "ADBE Text Index Start" : "ADBE Text Percent Start";
     const end = byIndex ? "ADBE Text Index End" : "ADBE Text Percent End";

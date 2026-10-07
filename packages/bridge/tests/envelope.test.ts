@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_BUDGET_MS,
   MAX_BUDGET_MS,
+  MAX_PLAN_BUDGET_MS,
   PROTOCOL_VERSION,
   buildRequest,
   parseResponse,
@@ -26,6 +27,15 @@ describe("buildRequest", () => {
     // responsiveness guarantee rather than a tunable.
     expect(() =>
       buildRequest({ id: "r1", kind: "op", op: "kvfx.op.system.ping", budgetMs: MAX_BUDGET_MS + 1 }),
+    ).toThrow(/Budget/);
+  });
+
+  it("lets an explicit plan run longer, up to its own ceiling", () => {
+    const plan = { id: "r1", kind: "plan" as const, op: "kvfx.op.core.plan", undoGroup: "KVFX Tools — Test" };
+    expect(() => buildRequest({ ...plan, budgetMs: 20_000 })).not.toThrow();
+    expect(() => buildRequest({ ...plan, budgetMs: MAX_PLAN_BUDGET_MS + 1 })).toThrow(/Budget/);
+    expect(() =>
+      buildRequest({ id: "r1", kind: "query", op: "kvfx.op.system.ping", budgetMs: 20_000 }),
     ).toThrow(/Budget/);
   });
 

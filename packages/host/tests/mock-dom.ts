@@ -102,6 +102,7 @@ const EFFECT_PARAMS: Readonly<Record<string, readonly LeafDef[]>> = {
   "ADBE Drop Shadow": [leaf("ADBE Drop Shadow-0001", "Shadow Color", PVT.COLOR, [0, 0, 0, 1])],
   "ADBE Glo2": [leaf("ADBE Glo2-0001", "Glow Based On", PVT.OneD, 1)],
   "ADBE Tint": [leaf("ADBE Tint-0001", "Map Black To", PVT.COLOR, [0, 0, 0, 1])],
+  "ADBE Bevel Alpha": [leaf("ADBE Bevel Alpha-0001", "Edge Thickness", PVT.OneD, 2)],
 };
 
 function effectDef(matchName: string): GroupDef | undefined {

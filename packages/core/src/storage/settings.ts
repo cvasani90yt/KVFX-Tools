@@ -1,3 +1,4 @@
+import type { JsonObject } from "../types/json.js";
 /**
  * User settings: schema, defaults and migration.
  *
@@ -32,12 +33,48 @@ export interface UiSettings {
    * should not be hidden from them by an old settings file.
    */
   readonly collapsedGroups: readonly string[];
+  /** Colour of the Solid button's swatch, "#rrggbb". */
+  readonly solidColor: string;
+  /** The curve in the easing editor — what "Apply Ease" applies from the palette too. */
+  readonly ease: readonly [number, number, number, number];
+  /** Curves the user saved, newest last. */
+  readonly customEases: readonly SavedEase[];
+  /** Tabs the user switched off in Settings ▸ Layout. */
+  readonly hiddenTabs: readonly string[];
+  /** Folders shown in the Library tab. */
+  readonly libraryFolders: readonly string[];
+  /** Where pasted media is saved: beside the project, or in KVFX's app data. */
+  readonly mediaTarget: "project" | "appData";
+  /**
+   * Last-used parameters per tool — the counter's range, the carousel's card
+   * count — so each tool opens the way the user left it. Values are plain
+   * JSON and each tool validates its own on read.
+   */
+  readonly toolParams: Readonly<Record<string, JsonObject>>;
 }
 
+export interface SavedEase {
+  readonly name: string;
+  readonly bezier: readonly [number, number, number, number];
+}
+
+export const MAX_CUSTOM_EASES = 24;
+export const MAX_LIBRARY_FOLDERS = 12;
+
 export const DEFAULT_UI_SETTINGS: UiSettings = {
-  activeTab: "quick",
+  activeTab: "tools",
   alignReference: "auto",
   collapsedGroups: [],
+  solidColor: "#ffffff",
+  // After Effects' Easy Ease; duplicated from animation/easing.ts to keep
+  // storage free of feature imports.
+  // eslint-disable-next-line no-magic-numbers
+  ease: [0.333, 0, 0.667, 1],
+  customEases: [],
+  hiddenTabs: [],
+  libraryFolders: [],
+  mediaTarget: "project",
+  toolParams: {},
 };
 
 export interface KvfxSettings {
@@ -156,10 +193,43 @@ export function migrateSettings(raw: unknown): MigrationResult {
   return { settings: readFields(raw), writable: true, warnings };
 }
 
+function bezierOf(value: unknown): readonly [number, number, number, number] | undefined {
+  // eslint-disable-next-line no-magic-numbers -- four bezier coordinates
+  if (!Array.isArray(value) || value.length !== 4) return undefined;
+  if (!value.every((n) => typeof n === "number" && Number.isFinite(n))) return undefined;
+  const [x1, y1, x2, y2] = value as number[];
+  if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) return undefined;
+  if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1) return undefined;
+  return [x1, y1, x2, y2];
+}
+
+function savedEases(value: unknown): SavedEase[] {
+  if (!Array.isArray(value)) return [];
+  const out: SavedEase[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const name = entry["name"];
+    const bezier = bezierOf(entry["bezier"]);
+    if (typeof name === "string" && name.length > 0 && bezier !== undefined) out.push({ name, bezier });
+    if (out.length >= MAX_CUSTOM_EASES) break;
+  }
+  return out;
+}
+
+function toolParams(value: unknown): Record<string, JsonObject> {
+  if (!isRecord(value)) return {};
+  const out: Record<string, JsonObject> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (isRecord(entry)) out[key] = entry as JsonObject;
+  }
+  return out;
+}
+
 function uiSettings(value: unknown): UiSettings {
   if (!isRecord(value)) return DEFAULT_UI_SETTINGS;
   const activeTab = value["activeTab"];
   const alignReference = value["alignReference"];
+  const solidColor = value["solidColor"];
   return {
     activeTab: typeof activeTab === "string" && activeTab.length > 0 ? activeTab : DEFAULT_UI_SETTINGS.activeTab,
     alignReference:
@@ -167,7 +237,47 @@ function uiSettings(value: unknown): UiSettings {
         ? alignReference
         : DEFAULT_UI_SETTINGS.alignReference,
     collapsedGroups: stringList(value["collapsedGroups"]),
+    solidColor:
+      typeof solidColor === "string" && /^#[0-9a-f]{6}$/i.test(solidColor)
+        ? solidColor.toLowerCase()
+        : DEFAULT_UI_SETTINGS.solidColor,
+    ease: bezierOf(value["ease"]) ?? DEFAULT_UI_SETTINGS.ease,
+    customEases: savedEases(value["customEases"]),
+    hiddenTabs: stringList(value["hiddenTabs"]),
+    libraryFolders: stringList(value["libraryFolders"], MAX_LIBRARY_FOLDERS),
+    mediaTarget: value["mediaTarget"] === "appData" ? "appData" : "project",
+    toolParams: toolParams(value["toolParams"]),
   };
+}
+
+/** Remembers a tool's parameters, merged over what was stored before. */
+export function setToolParams(settings: KvfxSettings, toolId: string, params: JsonObject): KvfxSettings {
+  const previous = settings.ui.toolParams[toolId] ?? {};
+  return setUiSetting(settings, "toolParams", {
+    ...settings.ui.toolParams,
+    [toolId]: { ...previous, ...params },
+  });
+}
+
+/** Saves a named curve, replacing one with the same name. */
+export function saveEase(settings: KvfxSettings, name: string, bezier: readonly [number, number, number, number]): KvfxSettings {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return settings;
+  const others = settings.ui.customEases.filter((e) => e.name !== trimmed);
+  const next = [...others, { name: trimmed, bezier }].slice(-MAX_CUSTOM_EASES);
+  return setUiSetting(settings, "customEases", next);
+}
+
+export function deleteEase(settings: KvfxSettings, name: string): KvfxSettings {
+  return setUiSetting(
+    settings,
+    "customEases",
+    settings.ui.customEases.filter((e) => e.name !== name),
+  );
+}
+
+export function toggleListEntry(list: readonly string[], entry: string): string[] {
+  return list.includes(entry) ? list.filter((e) => e !== entry) : [...list, entry];
 }
 
 export function toggleGroupCollapsed(settings: KvfxSettings, groupId: string): KvfxSettings {

@@ -22,6 +22,15 @@ export const DEFAULT_BUDGET_MS = 250;
  */
 export const MAX_BUDGET_MS = 1000;
 
+/**
+ * Ceiling for a plan the user explicitly started that is bulk by nature — a
+ * layer per character, a stack of extrusion slices. After Effects' own
+ * equivalents freeze it just as long; what matters is that only an explicit
+ * click can ask for it, which is why queries and single operations keep the
+ * one-second ceiling.
+ */
+export const MAX_PLAN_BUDGET_MS = 30_000;
+
 /** How much of an unparseable host reply we quote back in the error. */
 const ERROR_EXCERPT_CHARS = 200;
 
@@ -110,10 +119,11 @@ export function buildRequest(input: BuildRequestInput): HostRequest {
   }
 
   const budgetMs = input.budgetMs ?? DEFAULT_BUDGET_MS;
-  if (!Number.isFinite(budgetMs) || budgetMs <= 0 || budgetMs > MAX_BUDGET_MS) {
+  const ceiling = input.kind === "plan" ? MAX_PLAN_BUDGET_MS : MAX_BUDGET_MS;
+  if (!Number.isFinite(budgetMs) || budgetMs <= 0 || budgetMs > ceiling) {
     throw new ProtocolError(
       "invalid_request",
-      `Budget must be within (0, ${MAX_BUDGET_MS}] ms, received ${String(budgetMs)}`,
+      `Budget must be within (0, ${String(ceiling)}] ms, received ${String(budgetMs)}`,
     );
   }
 

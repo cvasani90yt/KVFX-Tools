@@ -182,7 +182,7 @@ describe("UI settings", () => {
       schemaVersion: 1,
       ui: { activeTab: "layers", alignReference: "selection", collapsedGroups: ["anchor"] },
     });
-    expect(result.settings.ui).toEqual({
+    expect(result.settings.ui).toMatchObject({
       activeTab: "layers",
       alignReference: "selection",
       collapsedGroups: ["anchor"],

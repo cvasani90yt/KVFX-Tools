@@ -17,3 +17,7 @@ export * from "./search/index.js";
 export * from "./storage/index.js";
 export * from "./input/index.js";
 export * from "./geometry/index.js";
+export * from "./animation/easing.js";
+export * from "./expressions/index.js";
+export * from "./text/index.js";
+export * from "./color/index.js";
