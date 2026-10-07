@@ -6,6 +6,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — promo kit
+- `promo/KVFX-Promo-Builder.jsx` builds the vertical promo (plus a 16:9
+  version) as an editable After Effects project: seven scenes, a camera rig per
+  shot, and a callout naming the panel feature behind each effect
+- `promo/assets/ui/` holds 2× screenshots of every tab and the search palette;
+  `promo/README.md` has the shot list, asset names, music and export settings
+
 ### Added — duplicate a comp with everything inside
 - **Duplicate Comp + Nested Comps** (Tools tab and search): copies the comps
   selected in the Project panel, or the open comp, together with every comp
