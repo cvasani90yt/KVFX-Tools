@@ -6,6 +6,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — duplicate a comp with everything inside
+- **Duplicate Comp + Nested Comps** (Tools tab and search): copies the comps
+  selected in the Project panel, or the open comp, together with every comp
+  nested inside them; the panel shows what it will copy before you click
+- The precomp-layer variant is renamed **Duplicate Precomp Layer + Nested**
+- Result messages name the comps created and any expressions that could not be
+  retargeted
+
 ### Changed — the panel rebuilt around tool tabs (ADR-0008)
 - New layout, amber theme kept: header with comp and selection, RAM meter with
   purge, search and settings; persistent anchor grid and create buttons

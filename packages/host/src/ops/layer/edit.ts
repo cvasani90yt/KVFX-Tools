@@ -229,15 +229,76 @@ export const splitLayerOperation: Operation = {
   },
 };
 
+interface DeepCopier {
+  /** Copies a comp and, recursively, every comp nested in it. One copy per source. */
+  copy(source: AeRawComp): AeRawComp;
+  /** Retargets literal comp("…") references in every copy; call once, at the end. */
+  finish(): { compCount: number; rewritten: number; dynamic: number };
+}
+
 /**
- * Duplicates precomp layers together with every composition nested inside them.
+ * The shared engine of both deep-duplicate operations.
  *
- * Plain duplication shares the nested comps, so editing the copy edits the
- * original — the classic template trap. Each source comp is copied once
- * (a memo keeps shared precomps shared within the copy), and expressions in the
- * copies that name a copied comp with a literal `comp("…")` are pointed at the
- * copy. Expressions that build a comp name dynamically are left alone and
- * counted, because rewriting them would be guessing.
+ * Plain duplication shares nested comps, so editing the copy edits the
+ * original — the classic template trap. Here each nested source comp is copied
+ * once (a memo keeps shared precomps shared within the copy), and expressions
+ * in the copies that name a copied comp with a literal `comp("…")` are pointed
+ * at the copy. Expressions that build a comp name at runtime are left alone
+ * and counted, because rewriting them would be guessing. Footage and solids
+ * are shared, not copied: they are media, not structure.
+ */
+function createDeepCopier(env: OperationContext["env"]): DeepCopier {
+  const memo: { [id: string]: AeRawComp } = {};
+  const renamed: { from: string; to: string }[] = [];
+
+  function copy(source: AeRawComp, depth: number): AeRawComp {
+    const key = String(source.id);
+    const existing = memo[key];
+    if (existing) return existing;
+    if (depth > MAX_NESTING) throw hostError(ErrorCode.PreconditionFailed, "Compositions are nested too deeply.");
+
+    // Named before duplicating: After Effects gives the copy a "… 2" name of
+    // its own, which would otherwise count as taken.
+    const name = uniqueCompName(env, source.name);
+    const duplicate = source.duplicate();
+    duplicate.name = name;
+    memo[key] = duplicate;
+    renamed[renamed.length] = { from: source.name, to: duplicate.name };
+
+    for (let i = 1; i <= duplicate.numLayers; i += 1) {
+      const inner = duplicate.layer(i);
+      const nested = inner.source;
+      if (nested && env.isComp(nested) && typeof inner.replaceSource === "function") {
+        inner.replaceSource(copy(nested as AeRawComp, depth + 1), false);
+      }
+    }
+    return duplicate;
+  }
+
+  return {
+    copy: function (source: AeRawComp): AeRawComp {
+      return copy(source, 0);
+    },
+    finish: function (): { compCount: number; rewritten: number; dynamic: number } {
+      let rewritten = 0;
+      let dynamic = 0;
+      for (const key in memo) {
+        if (!Object.prototype.hasOwnProperty.call(memo, key)) continue;
+        const duplicate = memo[key] as AeRawComp;
+        for (let i = 1; i <= duplicate.numLayers; i += 1) {
+          const counts = rewriteExpressions(duplicate.layer(i), renamed, env.leafPropertyType(), 0);
+          rewritten += counts.rewritten;
+          dynamic += counts.dynamic;
+        }
+      }
+      return { compCount: renamed.length, rewritten: rewritten, dynamic: dynamic };
+    },
+  };
+}
+
+/**
+ * Duplicates precomp layers in the open comp, each pointing at a deep copy of
+ * its composition. The copy lands directly above the original layer.
  */
 export const deepDuplicateOperation: Operation = {
   id: "kvfx.op.comp.deepDuplicate",
@@ -246,35 +307,10 @@ export const deepDuplicateOperation: Operation = {
     const comp = requireComp(ctx);
     const resolved = targets(comp, ctx.args);
     const env = ctx.env;
-
-    const memo: { [id: string]: AeRawComp } = {};
-    const renamed: { from: string; to: string }[] = [];
+    const copier = createDeepCopier(env);
     const created: number[] = [];
+    const names: string[] = [];
     const skips: HostJson[] = [];
-
-    function copyComp(source: AeRawComp, depth: number): AeRawComp {
-      const key = String(source.id);
-      const existing = memo[key];
-      if (existing) return existing;
-      if (depth > MAX_NESTING) throw hostError(ErrorCode.PreconditionFailed, "Compositions are nested too deeply.");
-
-      // Named before duplicating: After Effects gives the copy a "… 2" name of
-      // its own, which would otherwise count as taken.
-      const name = uniqueCompName(env, source.name);
-      const copy = source.duplicate();
-      copy.name = name;
-      memo[key] = copy;
-      renamed[renamed.length] = { from: source.name, to: copy.name };
-
-      for (let i = 1; i <= copy.numLayers; i += 1) {
-        const inner = copy.layer(i);
-        const nested = inner.source;
-        if (nested && env.isComp(nested) && typeof inner.replaceSource === "function") {
-          inner.replaceSource(copyComp(nested as AeRawComp, depth + 1), false);
-        }
-      }
-      return copy;
-    }
 
     for (let i = 0; i < resolved.layers.length; i += 1) {
       const layer = resolved.layers[i] as AeRawLayer;
@@ -288,29 +324,85 @@ export const deepDuplicateOperation: Operation = {
         continue;
       }
       const duplicate = layer.duplicate();
-      (duplicate.replaceSource as NonNullable<AeRawLayer["replaceSource"]>)(copyComp(source as AeRawComp, 0), false);
+      const copy = copier.copy(source as AeRawComp);
+      (duplicate.replaceSource as NonNullable<AeRawLayer["replaceSource"]>)(copy, false);
       created[created.length] = duplicate.id;
+      names[names.length] = copy.name;
     }
 
-    let rewritten = 0;
-    let dynamic = 0;
-    for (const key in memo) {
-      if (!Object.prototype.hasOwnProperty.call(memo, key)) continue;
-      const copy = memo[key] as AeRawComp;
-      for (let i = 1; i <= copy.numLayers; i += 1) {
-        const counts = rewriteExpressions(copy.layer(i), renamed, env.leafPropertyType(), 0);
-        rewritten += counts.rewritten;
-        dynamic += counts.dynamic;
-      }
-    }
-
+    const stats = copier.finish();
     return {
       ids: created as unknown as HostJson,
-      compCount: renamed.length,
-      rewrittenExpressions: rewritten,
-      dynamicExpressions: dynamic,
+      createdNames: names as unknown as HostJson,
+      compCount: stats.compCount,
+      rewrittenExpressions: stats.rewritten,
+      dynamicExpressions: stats.dynamic,
       skipped: skips as unknown as HostJson,
       missingIds: resolved.missing as unknown as HostJson,
+    };
+  },
+};
+
+/**
+ * Duplicates whole compositions, with everything nested inside them.
+ *
+ * Acts on the comps selected in the Project panel; with none selected there,
+ * on the comp open in the viewer. Read live at execution, like every other
+ * selection-driven operation (ADR-0002). The copies are new project items in
+ * the same folder as their originals; nothing is placed in any timeline.
+ */
+export const deepDuplicateCompsOperation: Operation = {
+  id: "kvfx.op.comp.deepDuplicateComps",
+  mutates: true,
+  run: function (ctx: OperationContext): HostJson {
+    const env = ctx.env;
+    const project = env.rawProject();
+    if (!project) throw hostError(ErrorCode.PreconditionFailed, "Open a project first.");
+
+    const sources: AeRawComp[] = [];
+    const seen: { [id: string]: boolean } = {};
+    const selection = isArray(project.selection) ? project.selection : [];
+    for (let i = 0; i < selection.length; i += 1) {
+      const item = selection[i];
+      if (item && env.isComp(item) && !seen[String(item.id)]) {
+        seen[String(item.id)] = true;
+        sources[sources.length] = item as AeRawComp;
+      }
+    }
+    let from = "project";
+    if (sources.length === 0) {
+      const active = env.rawComp();
+      if (active) {
+        sources[0] = active;
+        from = "viewer";
+      }
+    }
+    if (sources.length === 0) {
+      throw hostError(ErrorCode.PreconditionFailed, "Select a comp in the Project panel, or open one.");
+    }
+
+    const copier = createDeepCopier(env);
+    const created: number[] = [];
+    const names: string[] = [];
+    const made: { [id: string]: boolean } = {};
+    for (let i = 0; i < sources.length; i += 1) {
+      const copy = copier.copy(sources[i] as AeRawComp);
+      // Selecting a comp and a comp nested inside it yields one copy of each,
+      // not two of the inner one.
+      if (made[String(copy.id)]) continue;
+      made[String(copy.id)] = true;
+      created[created.length] = copy.id;
+      names[names.length] = copy.name;
+    }
+
+    const stats = copier.finish();
+    return {
+      ids: created as unknown as HostJson,
+      createdNames: names as unknown as HostJson,
+      from: from,
+      compCount: stats.compCount,
+      rewrittenExpressions: stats.rewritten,
+      dynamicExpressions: stats.dynamic,
     };
   },
 };
@@ -393,4 +485,5 @@ export const layerEditOperations: Operation[] = [
   precomposeEachOperation,
   splitLayerOperation,
   deepDuplicateOperation,
+  deepDuplicateCompsOperation,
 ];

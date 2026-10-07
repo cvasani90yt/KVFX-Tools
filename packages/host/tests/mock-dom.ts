@@ -558,6 +558,8 @@ export class MockItem {
   comment = "";
   label = 0;
   parentFolder: MockItem | null = null;
+  /** Selected in the Project panel. */
+  selected = false;
   readonly typeName: string;
   constructor(name: string, typeName: string) {
     this.name = name;
@@ -806,7 +808,7 @@ export class MockComp extends MockItem {
       addText: (text) => comp.addLayer({ name: text ?? "Text", kind: "text", text: text ?? "" }) as unknown as AeRawLayer,
       addShape: () => comp.addLayer({ name: "Shape Layer 1", kind: "shape" }) as unknown as AeRawLayer,
       addCamera: (name) => comp.addLayer({ name, kind: "camera" }) as unknown as AeRawLayer,
-      add: (item) => comp.addLayer({ name: item.name, kind: "precomp", source: item }) as unknown as AeRawLayer,
+      add: (item) => comp.addLayer({ name: item.name, kind: "precomp", source: item as unknown as MockItem }) as unknown as AeRawLayer,
       precompose: (indices, name) => {
         const moved = indices.map((i) => comp.layer(i));
         const top = Math.min(...indices);
@@ -855,6 +857,10 @@ export class MockProject {
 
   get numItems(): number {
     return this.items.length;
+  }
+
+  get selection(): MockItem[] {
+    return this.items.filter((item) => item.selected);
   }
 
   item(index: number): MockItem {

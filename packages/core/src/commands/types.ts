@@ -148,6 +148,13 @@ export interface SelectionSnapshot {
   readonly comp: ActiveComp | undefined;
   readonly layers: readonly SelectedLayer[];
   readonly primary: PrimaryTransform | undefined;
+  /** Comps selected in the Project panel, as opposed to layers in a timeline. */
+  readonly projectComps: readonly ProjectComp[];
+}
+
+export interface ProjectComp {
+  readonly id: number;
+  readonly name: string;
 }
 
 export const EMPTY_SNAPSHOT: SelectionSnapshot = {
@@ -156,6 +163,7 @@ export const EMPTY_SNAPSHOT: SelectionSnapshot = {
   comp: undefined,
   layers: [],
   primary: undefined,
+  projectComps: [],
 };
 
 // ---------------------------------------------------------------------------

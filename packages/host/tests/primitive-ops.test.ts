@@ -402,6 +402,71 @@ describe("comp.deepDuplicate", () => {
   });
 });
 
+describe("comp.deepDuplicateComps", () => {
+  function project() {
+    const h = harness([{ name: "Layer" }]);
+    const p = h.ae.project!;
+    const leaf = p.addComp("Leaf");
+    leaf.addLayer({ name: "Dot" });
+    const inner = p.addComp("Inner");
+    inner.addLayer({ name: "Leaf", kind: "precomp", source: leaf });
+    const main = p.addComp("Main");
+    main.addLayer({ name: "Inner", kind: "precomp", source: inner });
+    main.addLayer({ name: "Inner again", kind: "precomp", source: inner });
+    return { ...h, leaf, inner, main };
+  }
+
+  it("copies comps selected in the Project panel with everything nested inside", () => {
+    const { ae, command, main, inner, leaf } = project();
+    main.selected = true;
+    const out = result(command("kvfx.op.comp.deepDuplicateComps"));
+    expect(out["from"]).toBe("project");
+    expect(out["createdNames"]).toEqual(["Main 2"]);
+    expect(out["compCount"]).toBe(3);
+
+    const copy = ae.project!.items.find((i) => i.name === "Main 2") as MockComp;
+    const innerCopy = copy.stack[0]!.source as MockComp;
+    expect(innerCopy.name).toBe("Inner 2");
+    // Shared inside the original, shared inside the copy — but never with the original.
+    expect(copy.stack[1]!.source).toBe(innerCopy);
+    expect(innerCopy).not.toBe(inner);
+    expect((innerCopy.stack[0]!.source as MockComp).name).toBe("Leaf 2");
+    expect(main.stack[0]!.source).toBe(inner);
+    expect(inner.stack[0]!.source).toBe(leaf);
+  });
+
+  it("makes one copy of a nested comp even when it is selected too", () => {
+    const { ae, command, main, inner } = project();
+    main.selected = true;
+    inner.selected = true;
+    const out = result(command("kvfx.op.comp.deepDuplicateComps"));
+    expect([...(out["createdNames"] as string[])].sort()).toEqual(["Inner 2", "Main 2"]);
+    expect(ae.project!.items.filter((i) => i.name.startsWith("Inner")).length).toBe(2);
+  });
+
+  it("falls back to the open comp when nothing is selected in the Project panel", () => {
+    const { command } = project();
+    const out = result(command("kvfx.op.comp.deepDuplicateComps"));
+    expect(out["from"]).toBe("viewer");
+    expect(out["createdNames"]).toEqual(["Comp 1 2"]);
+  });
+
+  it("explains what to select when there is nothing to duplicate", () => {
+    const { ae, command } = project();
+    ae.project!.activeItem = null;
+    expect(command("kvfx.op.comp.deepDuplicateComps").error?.message).toBe(
+      "Select a comp in the Project panel, or open one.",
+    );
+  });
+
+  it("is reported in the selection snapshot", () => {
+    const { query, main } = project();
+    main.selected = true;
+    const snapshot = result(query("kvfx.op.selection.snapshot"));
+    expect(snapshot["projectComps"]).toEqual([{ id: main.id, name: "Main" }]);
+  });
+});
+
 describe("fx.list, fx.setEnabled, fx.remove", () => {
   function withEffects() {
     const h = harness([{ name: "A", selected: true }]);

@@ -62,10 +62,32 @@ function hasPrecomp(ctx: CommandContext): CommandAvailability {
     : unavailable("Select a precomp layer.");
 }
 
+/**
+ * Duplicates whole comps — the ones selected in the Project panel, or the open
+ * one — with every comp nested inside them copied too. The host decides which
+ * at the moment of the click, from After Effects' live selection.
+ */
+export const deepDuplicateComp = simpleCommand({
+  id: "kvfx.comp.deepduplicatecomp",
+  name: "Duplicate Comp (Deep)",
+  description:
+    "Duplicate the comps selected in the Project panel — or the open comp — together with every comp nested inside them, so editing the copy never changes the original",
+  category: CommandCategory.Project,
+  keywords: ["duplicate", "comp", "composition", "deep", "nested", "inside", "everything", "unique", "independent", "copy", "template", "version"],
+  icon: "duplicate",
+  metadata: { destructive: false, minLayers: 0, requiresComp: false },
+  check: (ctx) =>
+    ctx.snapshot.projectComps.length > 0 || ctx.snapshot.comp !== undefined
+      ? AVAILABLE
+      : unavailable("Select a comp in the Project panel, or open one."),
+  steps: () => [{ op: "kvfx.op.comp.deepDuplicateComps", args: {} }],
+});
+
 export const deepDuplicate = simpleCommand({
   id: "kvfx.comp.deepduplicate",
-  name: "Duplicate Precomp Deeply",
-  description: "Duplicate the selected precomps with independent copies of every nested composition",
+  name: "Duplicate Precomp Layer (Deep)",
+  description:
+    "Duplicate the selected precomp layers in the timeline, each using its own copy of the comp and everything nested inside it",
   category: CommandCategory.Project,
   keywords: ["duplicate", "deep", "unique", "independent", "precomp", "nested", "template", "copy"],
   icon: "duplicate",
@@ -214,6 +236,7 @@ export const gradientLock = simpleCommand({
 export const toolCommands: readonly Command[] = [
   precomposeEach,
   splitLayers,
+  deepDuplicateComp,
   deepDuplicate,
   trimToWorkArea,
   sequenceLayers,

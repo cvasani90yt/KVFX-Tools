@@ -138,7 +138,10 @@ anchor moves to the corner and the layer stays put.
 horizontally**. Click **Auto** on the right of the align bar to cycle the
 reference to **Comp** and align again.
 
-**3. Tools.** Select two layers and try **Precomp Each** (two new comps),
+**3. Tools.** Select a comp that contains precomps in the Project panel, click
+the panel, and press **Duplicate Comp + Nested Comps**: you get `Name 2` plus a
+copy of every comp inside it — change something in a nested copy and the
+original stays as it was. Then select two layers and try **Precomp Each** (two new comps),
 **Sequence Layers** (staggered by 5 frames), **Null Parent**, **Gradient Lock**
 on a text layer (then type more text: the gradient should stay fitted). Edit the
 **Transform** fields: on an animated property a keyframe should appear at the

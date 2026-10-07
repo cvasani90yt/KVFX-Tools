@@ -2,7 +2,7 @@ import type { JsonObject, PrimaryTransform, TransformChannel } from "@kvfx/core"
 import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
-import { CommandButtons, Section, colorField, numberField, pillGrid, row, segmented } from "../ui/controls.js";
+import { CommandButtons, Section, colorField, hint, numberField, pillGrid, row, segmented } from "../ui/controls.js";
 import { h, setEnabled, setText, toggleClass } from "../ui/dom.js";
 
 /**
@@ -14,6 +14,8 @@ const TRANSFORM = "ADBE Transform Group";
 const ROUNDING = 100;
 const SEQUENCE_FRAMES = 5;
 const FINE_STEP = 0.1;
+/** Comp names listed under Duplicate Comp before "+N more". */
+const NAMES_SHOWN = 3;
 
 type ChannelKey = "anchor" | "position" | "scale" | "rotation" | "opacity";
 
@@ -43,6 +45,7 @@ export class ToolsView implements View {
   readonly #inspectorEmpty: HTMLElement;
   readonly #linkScale: HTMLInputElement;
   #primary: PrimaryTransform | undefined;
+  readonly #duplicateTarget: HTMLElement;
 
   constructor(panel: Panel) {
     this.#panel = panel;
@@ -56,11 +59,27 @@ export class ToolsView implements View {
       pillGrid(
         b.button("kvfx.layer.precomposeeach", { label: "Precomp Each", icon: "precompose" }),
         b.button("kvfx.layer.split", { label: "Split", icon: "split" }),
-        b.button("kvfx.comp.deepduplicate", { label: "Deep Dupe", icon: "duplicate" }),
         b.button("kvfx.layer.trimworkarea", { label: "Trim to WA", icon: "trim" }),
         b.button("kvfx.layer.nullparent", { label: "Null Parent", icon: "link" }),
         b.button("kvfx.label.selectsame", { label: "Same Label", icon: "select" }),
       ),
+    );
+
+    // --- Duplicate ---------------------------------------------------------
+    // Its own section, spelled out: "duplicate with everything inside" is the
+    // feature people look for by name, and a "Deep Dupe" pill hid it.
+    this.#duplicateTarget = h("p", { class: "kvfx-hint kvfx-target" });
+    const duplicate = this.#section("tools.duplicate", "Duplicate Comp", "with everything inside");
+    duplicate.body.append(
+      b.button("kvfx.comp.deepduplicatecomp", {
+        label: "Duplicate Comp + Nested Comps",
+        icon: "duplicate",
+        variant: "wide",
+        className: "kvfx-primary",
+      }),
+      this.#duplicateTarget,
+      b.button("kvfx.comp.deepduplicate", { label: "Duplicate Precomp Layer + Nested", icon: "precompose", variant: "wide" }),
+      hint("For a precomp layer selected in this timeline: the copy sits above it and uses its own comps."),
     );
 
     // --- Sequence ----------------------------------------------------------
@@ -231,6 +250,23 @@ export class ToolsView implements View {
     for (const section of this.#sections) section.update(state);
     this.#buttons.update(state, availability);
     this.#updateInspector(state);
+    this.#updateDuplicateTarget(state);
+  }
+
+  /** Says what "Duplicate Comp" will copy, so the Project-panel rule is visible. */
+  #updateDuplicateTarget(state: SessionState): void {
+    const { projectComps, comp } = state.snapshot;
+    let text: string;
+    if (projectComps.length > 0) {
+      const names = projectComps.slice(0, NAMES_SHOWN).map((c) => c.name).join(", ");
+      const more = projectComps.length > NAMES_SHOWN ? ` +${String(projectComps.length - NAMES_SHOWN)} more` : "";
+      text = `Will copy: ${names}${more} — selected in the Project panel.`;
+    } else if (comp !== undefined) {
+      text = `Will copy: ${comp.name} — the open comp. Select comps in the Project panel to copy those instead.`;
+    } else {
+      text = "Select a comp in the Project panel, or open one.";
+    }
+    setText(this.#duplicateTarget, text);
   }
 
   #updateInspector(state: SessionState): void {

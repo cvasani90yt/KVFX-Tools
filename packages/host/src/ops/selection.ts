@@ -1,4 +1,5 @@
 import type { AeEnvironment } from "../ae/environment.js";
+import { isArray } from "../runtime/es3.js";
 import type { Operation, OperationContext } from "../runtime/registry.js";
 import type { HostJson } from "../runtime/serialize.js";
 
@@ -93,6 +94,21 @@ function describePrimary(selected: AeRawLayer[]): HostJson {
   return null;
 }
 
+const MAX_PROJECT_COMPS = 20;
+
+/** Comps selected in the Project panel — what "Duplicate Comp (Deep)" acts on. */
+function projectComps(env: AeEnvironment): HostJson {
+  const project = env.rawProject();
+  const out: HostJson[] = [];
+  if (!project || !isArray(project.selection)) return out;
+  const selection = project.selection;
+  for (let i = 0; i < selection.length && out.length < MAX_PROJECT_COMPS; i += 1) {
+    const item = selection[i];
+    if (item && env.isComp(item)) out[out.length] = { id: item.id, name: item.name };
+  }
+  return out;
+}
+
 export function readSnapshot(env: AeEnvironment): HostJson {
   if (!env.hasProject()) {
     return { capturedAtMs: env.nowMs(), hasProject: false, comp: null, layers: [], primary: null };
@@ -100,7 +116,14 @@ export function readSnapshot(env: AeEnvironment): HostJson {
 
   const comp = env.rawComp();
   if (!comp) {
-    return { capturedAtMs: env.nowMs(), hasProject: true, comp: null, layers: [], primary: null };
+    return {
+      capturedAtMs: env.nowMs(),
+      hasProject: true,
+      comp: null,
+      layers: [],
+      primary: null,
+      projectComps: projectComps(env),
+    };
   }
 
   const selected = comp.selectedLayers;
@@ -116,6 +139,7 @@ export function readSnapshot(env: AeEnvironment): HostJson {
     comp: describeComp(comp),
     layers: layers,
     primary: describePrimary(selected),
+    projectComps: projectComps(env),
   };
 }
 

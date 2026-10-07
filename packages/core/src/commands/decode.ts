@@ -5,6 +5,7 @@ import {
   type ActiveComp,
   type LayerKind,
   type PrimaryTransform,
+  type ProjectComp,
   type SelectedLayer,
   type SelectionSnapshot,
   type TransformChannel,
@@ -96,6 +97,15 @@ function decodeChannel(value: JsonValue | undefined): TransformChannel | undefin
   return { value: numbers, animated: bool(value["animated"]), expression: bool(value["expression"]) };
 }
 
+function decodeProjectComps(value: JsonValue | undefined): ProjectComp[] {
+  if (!Array.isArray(value)) return [];
+  const out: ProjectComp[] = [];
+  for (const entry of value) {
+    if (isRecord(entry) && typeof entry["id"] === "number") out.push({ id: entry["id"], name: str(entry["name"], "Comp") });
+  }
+  return out;
+}
+
 function decodePrimary(value: JsonValue | undefined): PrimaryTransform | undefined {
   if (!isRecord(value) || typeof value["id"] !== "number") return undefined;
   const anchor = decodeChannel(value["anchor"]);
@@ -133,5 +143,6 @@ export function decodeSnapshot(value: JsonValue): SelectionSnapshot {
     comp: decodeComp(value["comp"]),
     layers,
     primary: decodePrimary(value["primary"]),
+    projectComps: decodeProjectComps(value["projectComps"]),
   };
 }

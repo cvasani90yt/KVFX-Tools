@@ -34,7 +34,18 @@ interface Skip {
   readonly reason: string;
 }
 
-function collect(value: JsonValue, skips: Skip[], counts: { changed: number; missing: number; failures: number }): void {
+interface Counts {
+  changed: number;
+  missing: number;
+  failures: number;
+  /** Comps a deep duplicate made, including nested ones. */
+  comps: number;
+  /** Expressions naming a comp at runtime, which a deep duplicate cannot retarget. */
+  dynamic: number;
+  created: string[];
+}
+
+function collect(value: JsonValue, skips: Skip[], counts: Counts): void {
   if (Array.isArray(value)) {
     for (const entry of value) collect(entry, skips, counts);
     return;
@@ -54,6 +65,12 @@ function collect(value: JsonValue, skips: Skip[], counts: { changed: number; mis
       counts.failures += entry.length;
     } else if (key === "changedCount" && typeof entry === "number") {
       counts.changed += entry;
+    } else if (key === "compCount" && typeof entry === "number") {
+      counts.comps += entry;
+    } else if (key === "dynamicExpressions" && typeof entry === "number") {
+      counts.dynamic += entry;
+    } else if (key === "createdNames" && Array.isArray(entry)) {
+      for (const name of entry) if (typeof name === "string") counts.created.push(name);
     } else if (typeof entry === "object" && entry !== null) {
       collect(entry, skips, counts);
     }
@@ -68,10 +85,22 @@ function collect(value: JsonValue, skips: Skip[], counts: { changed: number; mis
  */
 export function summarizeResult(result: JsonValue): string {
   const skips: Skip[] = [];
-  const counts = { changed: 0, missing: 0, failures: 0 };
+  const counts: Counts = { changed: 0, missing: 0, failures: 0, comps: 0, dynamic: 0, created: [] };
   collect(result, skips, counts);
 
   const notes: string[] = [];
+  if (counts.created.length > 0) {
+    const shown = counts.created.slice(0, 2).join(", ");
+    const more = counts.created.length > 2 ? ` and ${String(counts.created.length - 2)} more` : "";
+    const nested = counts.comps - counts.created.length;
+    notes.push(`created ${shown}${more}${nested > 0 ? ` (+${String(nested)} nested)` : ""}`);
+  }
+  if (counts.dynamic > 0) {
+    const one = counts.dynamic === 1;
+    notes.push(
+      `${String(counts.dynamic)} expression${one ? " names" : "s name"} a comp at runtime and still point${one ? "s" : ""} at the original`,
+    );
+  }
   if (skips.length > 0) {
     const reasons = [...new Set(skips.map((s) => s.reason))];
     const shown = reasons.slice(0, 2).join("; ");

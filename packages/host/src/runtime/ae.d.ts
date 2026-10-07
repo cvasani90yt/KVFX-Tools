@@ -202,6 +202,8 @@ interface AeFontsObject {
 interface AeRawProject {
   readonly numItems: number;
   readonly activeItem: unknown;
+  /** Items selected in the Project panel. */
+  readonly selection: AeRawItem[];
   readonly file: AeFile | null;
   readonly usedFonts?: AeUsedFont[];
   item(index: number): AeRawItem;

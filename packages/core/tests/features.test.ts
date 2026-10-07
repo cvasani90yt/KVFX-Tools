@@ -326,3 +326,28 @@ describe("outcome messages", () => {
     ).toBe("Done · 2 skipped — Layer is locked · 1 no longer exist");
   });
 });
+
+describe("deep duplicate of whole comps", () => {
+  it("is available with a comp selected in the Project panel even when none is open", async () => {
+    const { createProductionCommandRegistry, EMPTY_SNAPSHOT, decodeSnapshot } = await import("../src/index.js");
+    const command = createProductionCommandRegistry().get("kvfx.comp.deepduplicatecomp")!;
+    const base = { ...EMPTY_SNAPSHOT, hasProject: true };
+    expect(command.canExecute({ aeVersion: "26.0", snapshot: base })).toEqual({
+      available: false,
+      reason: "Select a comp in the Project panel, or open one.",
+    });
+    const selected = decodeSnapshot({ hasProject: true, comp: null, layers: [], projectComps: [{ id: 7, name: "Main" }] });
+    expect(selected.projectComps).toEqual([{ id: 7, name: "Main" }]);
+    expect(command.canExecute({ aeVersion: "26.0", snapshot: selected }).available).toBe(true);
+  });
+
+  it("says what it created, and what it could not retarget", async () => {
+    const { summarizeResult } = await import("../src/index.js");
+    expect(
+      summarizeResult({ steps: [{ result: { createdNames: ["Main 2"], compCount: 3, dynamicExpressions: 0 } }] }),
+    ).toBe("Done · created Main 2 (+2 nested)");
+    expect(
+      summarizeResult({ steps: [{ result: { createdNames: ["A 2", "B 2", "C 2"], compCount: 3, dynamicExpressions: 1 } }] }),
+    ).toBe("Done · created A 2, B 2 and 1 more · 1 expression names a comp at runtime and still points at the original");
+  });
+});
