@@ -409,6 +409,8 @@ export const setTextStyleOperation: Operation = {
         doc.fillColor = readColor(args, "fillColor", [1, 1, 1]);
       }
       if (typeof args["tracking"] === "number") doc.tracking = args["tracking"];
+      const align = args["justification"];
+      if (align === "left" || align === "center" || align === "right") doc.justification = ctx.env.justifications()[align];
       source.setValue(doc);
       changed += 1;
     }

@@ -3,7 +3,10 @@ import type {
   AeCompHandle,
   AeEnvironment,
   AeLayerHandle,
+  BlendingModes,
   InterpolationTypes,
+  Justifications,
+  TrackMatteTypes,
   LayerFlag,
   ValueTypes,
   LayerGeometry,
@@ -252,6 +255,10 @@ export interface HostGlobals {
   readonly leafPropertyType: number;
   readonly purgeTargets: { readonly all: number; readonly image: number };
   readonly nowMs: () => number;
+  readonly newShape: (vertices: number[][], inTangents: number[][], outTangents: number[][], closed: boolean) => unknown;
+  readonly trackMatteTypes: TrackMatteTypes;
+  readonly blendingModes: BlendingModes;
+  readonly justifications: Justifications;
 }
 
 export function createEnvironment(g: HostGlobals): AeEnvironment {
@@ -345,6 +352,16 @@ export function createEnvironment(g: HostGlobals): AeEnvironment {
       }
       layer.applyPreset(g.newFile(path));
     },
+    newShape: g.newShape,
+    trackMatteTypes: function (): TrackMatteTypes {
+      return g.trackMatteTypes;
+    },
+    blendingModes: function (): BlendingModes {
+      return g.blendingModes;
+    },
+    justifications: function (): Justifications {
+      return g.justifications;
+    },
   };
 }
 
@@ -384,5 +401,33 @@ export function createLiveEnvironment(): AeEnvironment {
     leafPropertyType: PropertyType.PROPERTY,
     purgeTargets: { all: PurgeTarget.ALL_CACHES, image: PurgeTarget.IMAGE_CACHES },
     nowMs: nowMs,
+    newShape: function (vertices: number[][], inTangents: number[][], outTangents: number[][], closed: boolean): unknown {
+      const shape = new Shape();
+      shape.vertices = vertices;
+      shape.inTangents = inTangents;
+      shape.outTangents = outTangents;
+      shape.closed = closed;
+      return shape;
+    },
+    trackMatteTypes: {
+      none: TrackMatteType.NO_TRACK_MATTE,
+      alpha: TrackMatteType.ALPHA,
+      alphaInverted: TrackMatteType.ALPHA_INVERTED,
+      luma: TrackMatteType.LUMA,
+      lumaInverted: TrackMatteType.LUMA_INVERTED,
+    },
+    blendingModes: {
+      normal: BlendingMode.NORMAL,
+      add: BlendingMode.ADD,
+      screen: BlendingMode.SCREEN,
+      multiply: BlendingMode.MULTIPLY,
+      overlay: BlendingMode.OVERLAY,
+      softLight: BlendingMode.SOFT_LIGHT,
+    },
+    justifications: {
+      left: ParagraphJustification.LEFT_JUSTIFY,
+      center: ParagraphJustification.CENTER_JUSTIFY,
+      right: ParagraphJustification.RIGHT_JUSTIFY,
+    },
   });
 }

@@ -8,6 +8,7 @@ import { flagCommands } from "./layer/flags.js";
 import { orderCommands } from "./layer/order.js";
 import { toolCommands } from "./layer/tools.js";
 import { rigCommands } from "./rig/index.js";
+import { uiMotionCommands } from "./rig/ui-motion.js";
 import { textCommands } from "./text/index.js";
 
 export * from "./types.js";
@@ -21,6 +22,7 @@ export * from "./layer/align.js";
 export * from "./layer/tools.js";
 export * from "./fx/index.js";
 export * from "./rig/index.js";
+export * from "./rig/ui-motion.js";
 export * from "./text/index.js";
 export * from "./keyframe/index.js";
 export * from "./color/labels.js";
@@ -47,6 +49,7 @@ export function createProductionCommandRegistry(): CommandRegistry {
     ...textCommands,
     ...quickEffectCommands,
     ...rigCommands,
+    ...uiMotionCommands,
     ...labelCommands,
     selectSameLabel,
   ]);

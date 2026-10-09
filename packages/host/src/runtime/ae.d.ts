@@ -142,6 +142,13 @@ interface AeRawLayer {
   remove(): void;
   setParentWithJump?(newParent: AeRawLayer | null): void;
   applyPreset?(file: AeFile): void;
+  /** AVLayer: how a track matte applies, and (AE 23+) which layer is the matte. */
+  trackMatteType?: number;
+  setTrackMatte?(trackMatteLayer: AeRawLayer, trackMatteType: number): void;
+  blendingMode?: number;
+  /** AVLayer source dimensions. */
+  readonly width?: number;
+  readonly height?: number;
 }
 
 interface AeRawLayerCollection {
@@ -257,7 +264,35 @@ declare const File: { new (path: string): AeFile };
 declare const ImportOptions: { new (file?: AeFile): AeImportOptions };
 declare const KeyframeEase: { new (speed: number, influence: number): AeKeyframeEase };
 
+interface AeShapeValue {
+  vertices: number[][];
+  inTangents: number[][];
+  outTangents: number[][];
+  closed: boolean;
+}
+declare const Shape: { new (): AeShapeValue };
+
 /** Enumerations, declared as the numbers After Effects actually exposes. */
+declare const TrackMatteType: {
+  readonly NO_TRACK_MATTE: number;
+  readonly ALPHA: number;
+  readonly ALPHA_INVERTED: number;
+  readonly LUMA: number;
+  readonly LUMA_INVERTED: number;
+};
+declare const BlendingMode: {
+  readonly NORMAL: number;
+  readonly ADD: number;
+  readonly SCREEN: number;
+  readonly MULTIPLY: number;
+  readonly OVERLAY: number;
+  readonly SOFT_LIGHT: number;
+};
+declare const ParagraphJustification: {
+  readonly LEFT_JUSTIFY: number;
+  readonly CENTER_JUSTIFY: number;
+  readonly RIGHT_JUSTIFY: number;
+};
 declare const PurgeTarget: { readonly ALL_CACHES: number; readonly IMAGE_CACHES: number };
 declare const KeyframeInterpolationType: {
   readonly LINEAR: number;

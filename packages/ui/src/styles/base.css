@@ -1929,3 +1929,10 @@ select:focus-visible,
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* A backdrop palette, drawn as the gradient it will make. */
+.kvfx-palette-strip {
+  height: 10px;
+  border-radius: var(--kvfx-radius-pill);
+  border: 1px solid var(--kvfx-border);
+}

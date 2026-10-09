@@ -3,6 +3,7 @@ import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { CommandButtons, Section, colorField, hint, numberField, row, selectField, textField } from "../ui/controls.js";
 import { h, setText } from "../ui/dom.js";
+import { buildUiMotionSections } from "./ui-motion-sections.js";
 
 /**
  * GENERATE: rigs built in one undo step.
@@ -10,6 +11,8 @@ import { h, setText } from "../ui/dom.js";
  *   Number Counter — a text layer counting between two numbers, eased.
  *   3D Carousel    — the selected layers (or copies of one) on a spinning ring.
  *   3D Extrude     — depth from stacked, parented slices.
+ *   UI Motion      — staggered reveals, a clicking cursor, a focus carousel
+ *                    and animated backdrops, for interface promos.
  */
 
 const COUNTER_PREVIEW_MS = 1800;
@@ -145,11 +148,13 @@ export class GenerateView implements View {
       hint("Works best on text, shapes and logos. Change the depth later with the KVFX Extrude slider on the face layer."),
     );
 
+    buildUiMotionSections(panel, this.#buttons, (id, title, hintText) => this.#section(id, title, hintText));
+
     this.root = h("div", { class: "kvfx-tab" }, ...this.#sections.map((s) => s.root));
   }
 
-  #section(id: string, title: string): Section {
-    const section = new Section(this.#panel, id, title);
+  #section(id: string, title: string, hintText?: string): Section {
+    const section = new Section(this.#panel, id, title, hintText);
     this.#sections.push(section);
     return section;
   }

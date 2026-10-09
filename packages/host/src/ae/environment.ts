@@ -154,4 +154,35 @@ export interface AeEnvironment {
   importFile(path: string): AeRawItem;
   /** Applies an Animation Preset (.ffx) to a layer. */
   applyPreset(layer: AeRawLayer, path: string): void;
+  /** A Shape value for a path property: vertices and tangents in layer space. */
+  newShape(vertices: number[][], inTangents: number[][], outTangents: number[][], closed: boolean): unknown;
+  /** TrackMatteType constants. */
+  trackMatteTypes(): TrackMatteTypes;
+  /** BlendingMode constants for the modes plans may ask for. */
+  blendingModes(): BlendingModes;
+  /** ParagraphJustification constants. */
+  justifications(): Justifications;
+}
+
+export interface TrackMatteTypes {
+  readonly none: number;
+  readonly alpha: number;
+  readonly alphaInverted: number;
+  readonly luma: number;
+  readonly lumaInverted: number;
+}
+
+export interface BlendingModes {
+  readonly normal: number;
+  readonly add: number;
+  readonly screen: number;
+  readonly multiply: number;
+  readonly overlay: number;
+  readonly softLight: number;
+}
+
+export interface Justifications {
+  readonly left: number;
+  readonly center: number;
+  readonly right: number;
 }

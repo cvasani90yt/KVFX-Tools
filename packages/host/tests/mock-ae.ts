@@ -10,6 +10,9 @@ import {
   PURGE_ALL,
   PURGE_IMAGE,
   PVT,
+  BLEND,
+  JUSTIFY,
+  TRACK_MATTE,
   createMockApp,
 } from "./mock-dom.js";
 
@@ -195,6 +198,10 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
     },
     leafPropertyType: PT.PROPERTY,
     purgeTargets: { all: PURGE_ALL, image: PURGE_IMAGE },
+    newShape: (vertices, inTangents, outTangents, closed) => ({ vertices, inTangents, outTangents, closed }),
+    trackMatteTypes: TRACK_MATTE,
+    blendingModes: BLEND,
+    justifications: JUSTIFY,
     nowMs: () => {
       const value = clock;
       clock += tick;

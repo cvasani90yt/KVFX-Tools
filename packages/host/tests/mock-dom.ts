@@ -32,6 +32,9 @@ export const PVT = {
 } as const;
 
 export const INTERP = { linear: 6612, bezier: 6613, hold: 6614 } as const;
+export const TRACK_MATTE = { none: 5012, alpha: 5013, alphaInverted: 5014, luma: 5015, lumaInverted: 5016 } as const;
+export const BLEND = { normal: 5212, add: 5220, screen: 5219, multiply: 5216, overlay: 5225, softLight: 5226 } as const;
+export const JUSTIFY = { left: 7413, center: 7415, right: 7414 } as const;
 export const PURGE_ALL = 1;
 export const PURGE_IMAGE = 4;
 
@@ -101,11 +104,123 @@ const EFFECT_PARAMS: Readonly<Record<string, readonly LeafDef[]>> = {
     leaf("ADBE Gaussian Blur 2-0002", "Blur Dimensions", PVT.OneD, 1),
     leaf("ADBE Gaussian Blur 2-0003", "Repeat Edge Pixels", PVT.OneD, 0),
   ],
-  "ADBE Drop Shadow": [leaf("ADBE Drop Shadow-0001", "Shadow Color", PVT.COLOR, [0, 0, 0, 1])],
-  "ADBE Glo2": [leaf("ADBE Glo2-0001", "Glow Based On", PVT.OneD, 1)],
+  "ADBE Drop Shadow": [
+    leaf("ADBE Drop Shadow-0001", "Shadow Color", PVT.COLOR, [0, 0, 0, 1]),
+    leaf("ADBE Drop Shadow-0002", "Opacity", PVT.OneD, 127.5),
+    leaf("ADBE Drop Shadow-0003", "Direction", PVT.OneD, 135),
+    leaf("ADBE Drop Shadow-0004", "Distance", PVT.OneD, 5),
+    leaf("ADBE Drop Shadow-0005", "Softness", PVT.OneD, 0),
+    leaf("ADBE Drop Shadow-0006", "Shadow Only", PVT.OneD, 0),
+  ],
+  "ADBE 4ColorGradient": [
+    leaf("ADBE 4ColorGradient-0001", "Point 1", PVT.TwoD_SPATIAL, [0, 0], true),
+    leaf("ADBE 4ColorGradient-0002", "Color 1", PVT.COLOR, [1, 1, 0, 1]),
+    leaf("ADBE 4ColorGradient-0003", "Point 2", PVT.TwoD_SPATIAL, [100, 0], true),
+    leaf("ADBE 4ColorGradient-0004", "Color 2", PVT.COLOR, [0, 1, 0, 1]),
+    leaf("ADBE 4ColorGradient-0005", "Point 3", PVT.TwoD_SPATIAL, [0, 100], true),
+    leaf("ADBE 4ColorGradient-0006", "Color 3", PVT.COLOR, [1, 0, 1, 1]),
+    leaf("ADBE 4ColorGradient-0007", "Point 4", PVT.TwoD_SPATIAL, [100, 100], true),
+    leaf("ADBE 4ColorGradient-0008", "Color 4", PVT.COLOR, [0, 0, 1, 1]),
+    leaf("ADBE 4ColorGradient-0009", "Blend", PVT.OneD, 100),
+    leaf("ADBE 4ColorGradient-0010", "Jitter", PVT.OneD, 0),
+    leaf("ADBE 4ColorGradient-0011", "Opacity", PVT.OneD, 100),
+  ],
+  "ADBE Noise": [
+    leaf("ADBE Noise-0001", "Amount of Noise", PVT.OneD, 0),
+    leaf("ADBE Noise-0002", "Noise Type", PVT.OneD, 1),
+    leaf("ADBE Noise-0003", "Clipping", PVT.OneD, 1),
+  ],
+  "ADBE Fast Box Blur": [
+    leaf("ADBE Fast Box Blur-0001", "Blur Radius", PVT.OneD, 0),
+    leaf("ADBE Fast Box Blur-0002", "Iterations", PVT.OneD, 1),
+  ],
+  "ADBE Linear Wipe": [
+    leaf("ADBE Linear Wipe-0001", "Transition Completion", PVT.OneD, 0),
+    leaf("ADBE Linear Wipe-0002", "Wipe Angle", PVT.OneD, 90),
+    leaf("ADBE Linear Wipe-0003", "Feather", PVT.OneD, 0),
+  ],
   "ADBE Tint": [leaf("ADBE Tint-0001", "Map Black To", PVT.COLOR, [0, 0, 0, 1])],
+  "ADBE Glo2": [leaf("ADBE Glo2-0001", "Glow Based On", PVT.OneD, 1)],
   "ADBE Bevel Alpha": [leaf("ADBE Bevel Alpha-0001", "Edge Thickness", PVT.OneD, 2)],
 };
+
+/** Shape layer contents: what each vector item holds, in After Effects' order. */
+const SHAPE_ITEMS: Readonly<Record<string, readonly Def[]>> = {
+  "ADBE Vector Shape - Rect": [
+    leaf("ADBE Vector Shape Direction", "Shape Direction", PVT.OneD, 1),
+    leaf("ADBE Vector Rect Size", "Size", PVT.TwoD, [100, 100]),
+    leaf("ADBE Vector Rect Position", "Position", PVT.TwoD_SPATIAL, [0, 0], true),
+    leaf("ADBE Vector Rect Roundness", "Roundness", PVT.OneD, 0),
+  ],
+  "ADBE Vector Shape - Ellipse": [
+    leaf("ADBE Vector Shape Direction", "Shape Direction", PVT.OneD, 1),
+    leaf("ADBE Vector Ellipse Size", "Size", PVT.TwoD, [100, 100]),
+    leaf("ADBE Vector Ellipse Position", "Position", PVT.TwoD_SPATIAL, [0, 0], true),
+  ],
+  "ADBE Vector Shape - Group": [
+    leaf("ADBE Vector Shape Direction", "Shape Direction", PVT.OneD, 1),
+    leaf("ADBE Vector Shape", "Path", PVT.SHAPE, null),
+  ],
+  "ADBE Vector Graphic - Fill": [
+    leaf("ADBE Vector Fill Color", "Color", PVT.COLOR, [1, 0, 0, 1]),
+    leaf("ADBE Vector Fill Opacity", "Opacity", PVT.OneD, 100),
+  ],
+  "ADBE Vector Graphic - Stroke": [
+    leaf("ADBE Vector Stroke Color", "Color", PVT.COLOR, [1, 1, 1, 1]),
+    leaf("ADBE Vector Stroke Opacity", "Opacity", PVT.OneD, 100),
+    leaf("ADBE Vector Stroke Width", "Stroke Width", PVT.OneD, 2),
+  ],
+  "ADBE Vector Filter - Repeater": [
+    leaf("ADBE Vector Repeater Copies", "Copies", PVT.OneD, 3),
+    leaf("ADBE Vector Repeater Offset", "Offset", PVT.OneD, 0),
+    {
+      kind: "group",
+      matchName: "ADBE Vector Repeater Transform",
+      name: "Transform",
+      children: [
+        leaf("ADBE Vector Repeater Anchor", "Anchor Point", PVT.TwoD_SPATIAL, [0, 0], true),
+        leaf("ADBE Vector Repeater Position", "Position", PVT.TwoD_SPATIAL, [100, 0], true),
+        leaf("ADBE Vector Repeater Scale", "Scale", PVT.TwoD, [100, 100]),
+        leaf("ADBE Vector Repeater Rotation", "Rotation", PVT.OneD, 0),
+        leaf("ADBE Vector Repeater Opacity 1", "Start Opacity", PVT.OneD, 100),
+        leaf("ADBE Vector Repeater Opacity 2", "End Opacity", PVT.OneD, 100),
+      ],
+    },
+  ],
+};
+
+function shapeGroupDef(): GroupDef {
+  return {
+    kind: "group",
+    matchName: "ADBE Vector Group",
+    name: "Group 1",
+    children: [
+      {
+        kind: "group",
+        matchName: "ADBE Vectors Group",
+        name: "Contents",
+        indexed: true,
+        accepts: (m) => {
+          if (m === "ADBE Vector Group") return shapeGroupDef();
+          const children = SHAPE_ITEMS[m];
+          return children === undefined ? undefined : { kind: "group", matchName: m, name: m.replace(/^ADBE Vector (Shape|Graphic|Filter) - /, ""), children };
+        },
+      },
+      {
+        kind: "group",
+        matchName: "ADBE Vector Transform Group",
+        name: "Transform",
+        children: [
+          leaf("ADBE Vector Anchor", "Anchor Point", PVT.TwoD_SPATIAL, [0, 0], true),
+          leaf("ADBE Vector Position", "Position", PVT.TwoD_SPATIAL, [0, 0], true),
+          leaf("ADBE Vector Scale", "Scale", PVT.TwoD, [100, 100]),
+          leaf("ADBE Vector Rotation", "Rotation", PVT.OneD, 0),
+          leaf("ADBE Vector Group Opacity", "Opacity", PVT.OneD, 100),
+        ],
+      },
+    ],
+  };
+}
 
 function effectDef(matchName: string): GroupDef | undefined {
   const params = EFFECT_PARAMS[matchName];
@@ -620,6 +735,10 @@ export class MockLayer {
   appliedPresets: string[] = [];
   /** AVLayer.nullLayer — true only for nulls. */
   nullLayer?: boolean;
+  trackMatteType = TRACK_MATTE.none;
+  /** The matte set with setTrackMatte (AE 23+), when one was. */
+  trackMatteLayer: MockLayer | null = null;
+  blendingMode = BLEND.normal;
 
   constructor(comp: MockComp, options: MockLayerOptions) {
     this.containingComp = comp;
@@ -650,7 +769,13 @@ export class MockLayer {
     }
     if (this.kind === "text") groups.push(textDef(options.text ?? "Text"));
     if (this.kind === "shape") {
-      groups.push({ kind: "group", matchName: "ADBE Root Vectors Group", name: "Contents", indexed: true });
+      groups.push({
+        kind: "group",
+        matchName: "ADBE Root Vectors Group",
+        name: "Contents",
+        indexed: true,
+        accepts: (m) => (m === "ADBE Vector Group" ? shapeGroupDef() : undefined),
+      });
     }
     this.root = new MockProp({ kind: "group", matchName: "ADBE AV Layer", name: this.name, children: groups }, null, this);
   }
@@ -683,6 +808,11 @@ export class MockLayer {
     return (file: AeFile) => {
       this.appliedPresets.push(file.fsName);
     };
+  }
+
+  setTrackMatte(matte: MockLayer, type: number): void {
+    this.trackMatteLayer = matte;
+    this.trackMatteType = type;
   }
 
   replaceSource(newSource: MockComp | MockItem): void {

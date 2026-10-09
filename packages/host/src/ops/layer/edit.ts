@@ -99,6 +99,10 @@ export const setLayerAttributesOperation: Operation = {
       if (typeof args["motionBlur"] === "boolean" && layer.motionBlur !== undefined) {
         layer.motionBlur = args["motionBlur"];
       }
+      if (typeof args["blendingMode"] === "string" && layer.blendingMode !== undefined) {
+        const mode = (ctx.env.blendingModes() as unknown as { [name: string]: number })[args["blendingMode"]];
+        if (typeof mode === "number") layer.blendingMode = mode;
+      }
       if (parent !== undefined) {
         // With jump: the layer keeps its place on screen, as when the user
         // drags the pick whip. Without it the layer would leap.

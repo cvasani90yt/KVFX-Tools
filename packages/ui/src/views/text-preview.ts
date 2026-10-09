@@ -104,7 +104,8 @@ export class TextPreview {
     const units: Unit[] = [];
     if (options.unit === "characters") {
       for (const ch of Array.from(text)) {
-        const node = h("span", { class: "kvfx-stage__char", text: ch === " " ? " " : ch });
+        // An en space: a plain one between bold inline-blocks reads as no gap at all.
+        const node = h("span", { class: "kvfx-stage__char", text: ch === " " ? "\u2002" : ch });
         this.#stage.append(node);
         // Spaces do not take a turn, as in After Effects' "characters excluding spaces".
         if (ch !== " ") units.push({ node, text: ch, rank: 0 });
@@ -113,7 +114,7 @@ export class TextPreview {
       text.split(/(\s+)/).forEach((part) => {
         if (part.length === 0) return;
         if (/^\s+$/.test(part)) {
-          this.#stage.append(h("span", { text: " " }));
+          this.#stage.append(h("span", { text: "\u2002" }));
           return;
         }
         const node = h("span", { class: "kvfx-stage__char", text: part });
@@ -223,7 +224,7 @@ export class TextPreview {
       if (options.mode === "inOut" && t > deleteAt) shown = Math.max(0, text.length - Math.floor((t - deleteAt) / perChar));
       const blink = Math.floor(t / (MS / 2)) % 2 === 0;
       const busy = shown > 0 && shown < text.length;
-      node.textContent = text.slice(0, shown) + (busy || blink ? "|" : " ");
+      node.textContent = text.slice(0, shown) + (busy || blink ? "|" : "\u00a0");
       const end = options.mode === "inOut" ? deleteAt + typeEnd : typeEnd;
       if (t < end + HOLD_MS * 2) this.#frame = requestAnimationFrame(draw);
       else this.#timer = setTimeout(() => this.play(text, options), PAUSE_MS);

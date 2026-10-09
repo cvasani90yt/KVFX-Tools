@@ -85,6 +85,12 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   // Follow: a leader and a trailing copy joined by a dashed path.
   follow: [bar(9.5, 2.5, 5, 5), box(1.5, 8.5, 5, 5), line("M6.5 9.5 Q8.5 9 9.5 7.5")],
 
+  // UI Motion.
+  "ui-stagger": [bar(1.5, 2, 6, 3), bar(4.5, 6.5, 6, 3), bar(7.5, 11, 6, 3), tri("14.5,4 12,2.5 12,5.5")],
+  cursor: [solid("M3 1.5 L3 13 L6 10.4 L8 14.6 L10.2 13.6 L8.2 9.4 L12.2 9.4 Z")],
+  "card-carousel": [box(0.8, 5, 3.4, 6), bar(5, 3, 6, 10), box(11.8, 5, 3.4, 6)],
+  backdrop: [box(1.5, 2.5, 13, 11), solid("M1.5 13.5 Q5 7.5 8.5 10 T14.5 8 V13.5 Z"), dot(11.5, 5.5, 1.3)],
+
   // Order: an arrow for direction, plus a rule for the "all the way" variants.
   // Bars alone cannot distinguish up from down — an earlier set drew move-up and
   // move-down identically.

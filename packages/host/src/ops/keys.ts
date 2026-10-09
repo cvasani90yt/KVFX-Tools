@@ -397,7 +397,13 @@ export const setKeyframesOperation: Operation = {
         }
         prop.setValueAtTime(offset + (spec["time"]), spec["value"]);
       }
-      if (bezier) {
+      if (ctx.args["interpolation"] === "hold") {
+        const hold = ctx.env.interpolation().hold;
+        for (let k = 0; k < keyList.length; k += 1) {
+          const index = nearestKey(prop, offset + ((keyList[k] as Args)["time"] as number));
+          prop.setInterpolationTypeAtKey(index, hold, hold);
+        }
+      } else if (bezier) {
         // Indices are only stable once every key exists.
         for (let k = 0; k < keyList.length; k += 1) {
           const time = offset + ((keyList[k] as Args)["time"] as number);
