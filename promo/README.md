@@ -89,8 +89,22 @@ can find it in the panel.
 | `anime/leap.jpg` | Original character mid-leap, swinging a glowing orange blade. |
 | `anime/leap-cutout.png` | The same frame on a transparent background, with the blade, its arc and the sparks kept in the matte. |
 | `anime/eye.jpg` | Extreme close-up of an amber eye reflecting neon. |
+| `anime/alley.png` | Narrow neon alley in the rain. The far background of the parallax orbit. |
+| `anime/subway.png` | Empty subway platform with a train rushing past. The footage behind the lower-third tile. |
+| `anime/skyview.png` | A neon city from high above. Behind the leap. |
+| `anime/moon.png` | A lone figure on a rooftop edge against a giant orange moon. Behind the lyric, and a carousel card. |
+| `anime/blade.png` | Close-up of a gloved hand gripping a glowing blade. An insert in the eye shot, and a carousel card. |
+| `anime/splash.png` | A sneaker stomping into a neon puddle. An insert just before the hero lands. |
+| `anime/bike.png` | A motorcycle on a neon highway. An insert after the leap, and a carousel card. |
+| `anime/silver.png` | Original character: silver hair and headphones, side profile. A carousel card. |
+| `anime/silver-cutout.png` | The same character on a transparent background. The parallax orbit's subject. |
 
-All six are 1125 × 2000. The script sizes the characters by on-screen height,
+The first six are 1125 × 2000. The nine below them are optional: until a
+file is there, its shot falls back to the city and the hero, its insert is
+skipped, and the carousel has four cards instead of eight. Their sounds wait
+for them too.
+
+The script sizes the characters by on-screen height,
 so a higher-resolution version with the same name drops straight in and comes
 out sharper on the camera push-ins. If only one version of a character exists,
 the script uses it in both places. Use original characters only. Clips or

@@ -409,6 +409,13 @@
     return ph;
   }
 
+  // True when at least one of the candidate files is in assets/.
+  function hasAsset(rels) {
+    var list = rels instanceof Array ? rels : [rels];
+    for (var i = 0; i < list.length; i++) if (assetFile(list[i])) return true;
+    return false;
+  }
+
   function srcSize(l) {
     return l.source ? [l.source.width, l.source.height] : [W, H];
   }
@@ -423,6 +430,18 @@
   // resolution of the file that was dropped in.
   function heightPct(l, px) {
     return px / srcSize(l)[1] * 100;
+  }
+
+  // An AMV insert: a full-frame still for a few frames, punching in. Skipped
+  // (rather than shown as a placeholder) when the file is not there.
+  function insertCut(comp, rels, t, frames, name) {
+    if (!hasAsset(rels)) return null;
+    var l = still(comp, rels, name);
+    var s = coverPct(l, 1.06);
+    setPos(l, [CX, CY]);
+    anim(tr(l, "ADBE Scale"), [[t, [s * 1.14, s * 1.14, s * 1.14]], [t + frames * FD, [s, s, s]]], "snap");
+    span(l, t, t + frames * FD);
+    return l;
   }
 
   function place3D(l, pos, scalePct) {
@@ -1623,6 +1642,7 @@
     heroA.motionBlur = true;
     span(heroA, 2.0, A1);
     rain(comp, A0, A1);
+    insertCut(comp, ["anime/splash.png"], 1.82, 4, "Insert - splash");
     flash(comp, 2.0, C.white, 2, 85);
     shakeHit(camA, 2.0, 45, 3);
     chip(comp, { tab: "Tools tab", title: "Split", sub: "cut on the beat in one click", t0: A0 + 0.25, t1: A1 - 0.06, x: 70, y: 1270 });
@@ -1640,6 +1660,7 @@
     anim(tr(eye, "ADBE Scale"), [[B0, [es * 1.4, es * 1.4, es * 1.4]], [B0 + 0.25, [es, es, es]]], "snap");
     span(eye, B0, B1);
     chroma(comp, eye, B0, B0 + 0.7, 26);
+    insertCut(comp, ["anime/blade.png"], B0 + 0.85, 3, "Insert - blade");
     flash(comp, B0, C.amber, 1, 70);
     chip(comp, { tab: "Ease tab", title: "Add Wiggle", sub: "instant camera shake", t0: B0 + 0.15, t1: B1 - 0.06, x: 70, y: 1270 });
 
@@ -1650,11 +1671,11 @@
     anim(tr(camC.layer, "ADBE Rotate Y"), [[C0, -14], [C1, 10]], "smooth");
     anim(tr(camC.layer, "ADBE Position"), [[C0, [CX, CY, 0]], [C1, [CX, CY, 220]]], "smooth");
     shakeBase(camC, 2);
-    var cityC = still(comp, "anime/city.png", "City - far");
+    var cityC = still(comp, ["anime/alley.png", "anime/city.png"], "Alley - far");
     place3D(cityC, [CX, CY, 1400], coverPct(cityC, depthK(1400) * 1.35));
     blurLayer(cityC, 10);
     span(cityC, C0, C1);
-    var heroC = still(comp, ["anime/hero-cutout.png", "anime/hero.png"], "Hero - parallax");
+    var heroC = still(comp, ["anime/silver-cutout.png", "anime/silver.png", "anime/hero-cutout.png", "anime/hero.png"], "Character - parallax");
     place3D(heroC, [CX + 40, CY + 330, 0], heightPct(heroC, 2300));
     glow(heroC, 70, 0.9);
     span(heroC, C0, C1);
@@ -1673,7 +1694,7 @@
     anim(tr(camD.layer, "ADBE Position"), [[D0, [CX, CY, 0]], [D1, [CX, CY, 140]]], "smooth");
     shakeBase(camD, 4);
     shakeHit(camD, D0 + 0.25, 60, 4);
-    var cityD = still(comp, "anime/city.png", "City - impact");
+    var cityD = still(comp, ["anime/skyview.png", "anime/city.png"], "City from above - impact");
     place3D(cityD, [CX, CY, 1000], coverPct(cityD, depthK(1000) * 1.2));
     blurLayer(cityD, 4);
     fx(cityD, "ADBE Tint", "Teal grade", [[1, rgba(C.ink)], [2, rgba(C.teal)], [3, 35]]);
@@ -1693,6 +1714,7 @@
     anim(tr(ring, "ADBE Scale"), [[D0 + 0.25, [20, 20, 20]], [D0 + 0.6, [600, 600, 600]]], "snap");
     anim(tr(ring, "ADBE Opacity"), [[D0 + 0.25, 100], [D0 + 0.6, 0]], "smooth");
     span(ring, D0 + 0.25, D0 + 0.62);
+    insertCut(comp, ["anime/bike.png"], D0 + 1.45, 4, "Insert - bike");
     flash(comp, D0, C.white, 2, 85);
     flash(comp, D0 + 0.25, C.amber, 1, 80);
     chip(comp, { tab: "Ease tab", title: "Add Elastic", sub: "impact overshoot, no graph editor", t0: D0 + 0.15, t1: D1 - 0.06, x: 70, y: 1270 });
@@ -1705,9 +1727,10 @@
     anim(tr(camE.layer, "ADBE Rotate Z"), [[E0, -1.5], [E1, 1.5]], "smooth");
     shakeBase(camE, 2);
     shakeHit(camE, E0 + 1.35, 40, 2);
-    var cityE = still(comp, "anime/city.png", "City - lyric bg");
+    var moonE = hasAsset(["anime/moon.png"]);
+    var cityE = still(comp, moonE ? ["anime/moon.png"] : ["anime/city.png"], moonE ? "Moon - lyric bg" : "City - lyric bg");
     place3D(cityE, [CX, CY, 600], coverPct(cityE, depthK(600) * 1.15));
-    blurLayer(cityE, 36);
+    blurLayer(cityE, moonE ? 14 : 36);
     span(cityE, E0, E1);
     var dim = solid(comp, C.ink, "Dim");
     tr(dim, "ADBE Opacity").setValue(55);
@@ -1724,12 +1747,14 @@
     // Shot F - the stills on a spinning 3D ring.
     var F0 = 11.0;
     var F1 = 13.0;
+    var cards = carouselCards();
+    var wide = cards.length > 4;
     var camF = camRig(comp, "CAM F", F0, F1);
     tr(camF.layer, "ADBE Rotate X").setValue(-12);
-    anim(tr(camF.layer, "ADBE Position"), [[F0, [CX, CY, -160]], [F1, [CX, CY, 120]]], "smooth");
+    anim(tr(camF.layer, "ADBE Position"), [[F0, [CX, CY, wide ? -520 : -160]], [F1, [CX, CY, wide ? -160 : 120]]], "smooth");
     var halo = radialGlow(comp, [CX, CY - 60], 760, C.amber, 40, "Ring glow");
     if (halo) span(halo, F0, F1);
-    carousel(comp, F0, F1);
+    carousel(comp, F0, F1, cards);
     chip(comp, { tab: "Generate tab", title: "3D Carousel", sub: "spin any layers on a ring", t0: F0 + 0.15, t1: F0 + 1.0, x: 70, y: 1300 });
     chip(comp, { tab: "Tools tab", title: "Sequence", sub: "stagger 40 clips in one click", t0: F0 + 1.0, t1: F1 - 0.05, x: 70, y: 1300 });
 
@@ -1739,14 +1764,28 @@
   // Curve editor mock: a cubic-bezier(.16, 1, .3, 1) drawing itself.
   // The same rig the panel's 3D Carousel builds: a hub null with Radius and
   // Spin sliders, cards placed by expression and turned to face outwards.
-  function carousel(comp, t0, t1) {
+  // Every still in assets/anime gets a card, ordered so neighbours differ.
+  // The first four always exist (or show as placeholders); the rest are
+  // added only when their file is there.
+  function carouselCards() {
+    var all = [
+      ["anime/city.png"], ["anime/silver.png", "anime/silver-cutout.png"], ["anime/leap.png", "anime/leap-cutout.png"],
+      ["anime/moon.png"], ["anime/eye.png"], ["anime/bike.png"], ["anime/hero.png", "anime/hero-cutout.png"], ["anime/blade.png"]
+    ];
+    var core = { 0: true, 2: true, 4: true, 6: true };
+    var out = [];
+    for (var i = 0; i < all.length; i++) if (core[i] || hasAsset(all[i])) out.push(all[i]);
+    return out;
+  }
+
+  function carousel(comp, t0, t1, files) {
     var hub = nul(comp, "KVFX Carousel", [CX, CY - 60, 0], true);
-    var radiusIdx = slider(hub, "Radius", 470);
+    // Room for every card: about 76 px of radius per 9:16 card at this size.
+    var radiusIdx = slider(hub, "Radius", Math.max(470, Math.round(files.length * 76)));
     var spinIdx = slider(hub, "Spin", 0);
     anim(fxProp(hub, spinIdx, 1), [[t0, -40], [t1, 150]], "smooth");
     if (!radiusIdx) warn("Carousel radius slider missing");
     span(hub, t0, t1);
-    var files = [["anime/city.png"], ["anime/hero.png", "anime/hero-cutout.png"], ["anime/leap.png", "anime/leap-cutout.png"], ["anime/eye.png"]];
     var count = files.length;
     for (var i = 0; i < count; i++) {
       var card = still(comp, files[i], "Card " + (i + 1));
@@ -1982,7 +2021,7 @@
   }
 
   function buildTileLowerThird(tc) {
-    var bgl = still(tc, "anime/city.png", "Footage");
+    var bgl = still(tc, ["anime/subway.png", "anime/city.png"], "Footage");
     setScale(bgl, coverPct(bgl, 1.1, TILE_W, TILE_H));
     setPos(bgl, [TILE_W / 2, TILE_H / 2]);
     blurLayer(bgl, 18);

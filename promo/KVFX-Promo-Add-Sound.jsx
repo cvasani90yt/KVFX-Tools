@@ -60,10 +60,12 @@
     "key-tap-1.wav": 0.01, "key-tap-2.wav": 0.01, "key-tap-3.wav": 0.01, "key-press.wav": 0.01
   };
 
-  // [scene, seconds into the scene, file, dB, what it is]
+  // [scene, seconds into the scene, file, dB, what it is, needs]
+  // `needs` names a layer that must exist in that scene for the cue to play:
+  // an insert or a carousel card that only exists when its image does.
   var CUES = [];
-  function cue(scene, at, file, db, what) {
-    CUES.push([scene, at, file, db, what]);
+  function cue(scene, at, file, db, what, needs) {
+    CUES.push([scene, at, file, db, what, needs || null]);
   }
   var i;
 
@@ -106,20 +108,23 @@
   cue(ANIME, 0, "riser-hit-2.wav", -12, "riser into ANIME EDITS");
   cue(ANIME, 0.85, "whoosh-02.wav", -10, "title whips up");
   cue(ANIME, 1.25, "ui-08.wav", -10, "chip");
+  cue(ANIME, 1.82, "whoosh-10.wav", -12, "splash insert", "Insert - splash");
   cue(ANIME, 2.0, "hit-bass.wav", -8, "hero drops");
   cue(ANIME, 3.5, "hit-laser.wav", -10, "eye punch");
   cue(ANIME, 3.5, "ui-12.wav", -15, "chromatic glitch");
   cue(ANIME, 3.65, "ui-09.wav", -12, "chip");
+  cue(ANIME, 4.35, "whoosh-03.wav", -12, "blade insert", "Insert - blade");
   cue(ANIME, 5.0, "whoosh-06.wav", -10, "camera orbit");
   cue(ANIME, 5.15, "ui-08.wav", -12, "chip");
   cue(ANIME, 5.25, "whoosh-07.wav", -13, "Ease tab slides in");
   cue(ANIME, 7.18, "whoosh-05.wav", -6, "leap");
   cue(ANIME, 7.25, "hit-laser-explosion.wav", -8, "impact");
+  cue(ANIME, 8.45, "whoosh-09.wav", -12, "bike insert", "Insert - bike");
   cue(ANIME, 9.15, "whoosh-03.wav", -12, "lyric builds");
   cue(ANIME, 9.2, "ui-08.wav", -12, "chip");
   cue(ANIME, 10.35, "riser-noise.wav", -12, "lyric explodes");
   cue(ANIME, 10.35, "boom-low.wav", -14, "explosion low end");
-  for (i = 0; i < 4; i++) cue(ANIME, 11.0 + i * 0.1, "ui-03.wav", -13, "carousel card " + (i + 1));
+  for (i = 0; i < 8; i++) cue(ANIME, 11.0 + i * 0.1, "ui-03.wav", -13, "carousel card " + (i + 1), "Card " + (i + 1));
   cue(ANIME, 11.15, "ui-09.wav", -12, "chip");
   cue(ANIME, 11.3, "whoosh-08.wav", -10, "carousel spins");
   cue(ANIME, 12.0, "ui-08.wav", -12, "chip");
@@ -404,11 +409,19 @@
     }
 
     var musicStart = dropVideo - SOUND.drop;
-    function sceneStart(name) {
-      for (var n = 0; n < scenes.length; n++) {
-        if (sceneKey(scenes[n].name) === name.toLowerCase()) return [scenes[n].inPoint, scenes[n].outPoint - scenes[n].inPoint];
-      }
+    function sceneLayer(name) {
+      for (var n = 0; n < scenes.length; n++) if (sceneKey(scenes[n].name) === name.toLowerCase()) return scenes[n];
       return null;
+    }
+    function sceneStart(name) {
+      var sl = sceneLayer(name);
+      return sl ? [sl.inPoint, sl.outPoint - sl.inPoint] : null;
+    }
+    function sceneHas(name, layerName) {
+      var sl = sceneLayer(name);
+      if (!sl) return false;
+      for (var n = 1; n <= sl.source.numLayers; n++) if (sl.source.layer(n).name === layerName) return true;
+      return false;
     }
 
     function place(file, t, db, what) {
@@ -440,6 +453,8 @@
           skipped++;
           continue;
         }
+        // Inserts and extra carousel cards exist only when their image did.
+        if (cu[5] && !sceneHas(cu[0], cu[5])) continue;
         t = info[0] + cu[1];
       }
       if (t < 0 || t > main.duration) {
