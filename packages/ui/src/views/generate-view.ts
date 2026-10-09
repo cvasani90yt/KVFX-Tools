@@ -3,6 +3,7 @@ import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { CommandButtons, Section, colorField, hint, numberField, row, selectField, textField } from "../ui/controls.js";
 import { h, setText, toggleClass } from "../ui/dom.js";
+import { buildLayoutsSection } from "./layouts-section.js";
 import { buildUiKitSections } from "./ui-kit-sections.js";
 import { buildUiMotionSections } from "./ui-motion-sections.js";
 
@@ -22,12 +23,14 @@ const COUNTER_PAUSE_MS = 700;
 /** Generator groups, for the chips at the top of the tab. */
 const FILTERS: readonly (readonly [string, string])[] = [
   ["all", "All"],
+  ["layout", "Layouts"],
   ["ui", "UI Motion"],
   ["scene", "Scenes"],
   ["build", "Builders"],
 ];
-const GROUP_ORDER = ["ui", "scene", "build"];
+const GROUP_ORDER = ["layout", "ui", "scene", "build"];
 const SECTION_GROUP: Readonly<Record<string, string>> = {
+  "gen.layouts": "layout",
   "gen.uistagger": "ui",
   "gen.cursor": "ui",
   "gen.hover": "ui",
@@ -171,6 +174,7 @@ export class GenerateView implements View {
     );
 
     const make = (id: string, title: string, hintText?: string): Section => this.#section(id, title, hintText);
+    buildLayoutsSection(panel, this.#buttons, make);
     buildUiMotionSections(panel, this.#buttons, make);
     buildUiKitSections(panel, this.#buttons, make);
 

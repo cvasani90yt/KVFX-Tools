@@ -220,6 +220,7 @@ interface AeRawProject {
   readonly file: AeFile | null;
   readonly usedFonts?: AeUsedFont[];
   item(index: number): AeRawItem;
+  readonly items?: { addComp(name: string, width: number, height: number, pixelAspect: number, duration: number, frameRate: number): AeRawComp };
   importFile(options: AeImportOptions): AeRawItem;
   replaceFont?(fromFont: AeFont, toFont: AeFont, noFontLocking?: boolean): boolean;
 }

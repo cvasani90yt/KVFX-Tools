@@ -45,7 +45,7 @@ export function parseRevealStyle(value: unknown): RevealStyle {
 }
 
 /** Shared head: progress from the reveal slider, eased. */
-function revealHead(ease: Exclude<TextEase, "preset">, overshoot: number, bezier: Bezier): string {
+export function revealHead(ease: Exclude<TextEase, "preset">, overshoot: number, bezier: Bezier): string {
   return [
     `${TAG} — reveal`,
     easeExpression(ease, overshoot, bezier),
@@ -500,3 +500,31 @@ export const FLICKER_EXPRESSION = [
 
 /** The placeholder shows until typing starts. */
 export const PLACEHOLDER_EXPRESSION = [`${TAG} — input placeholder`, "time < __KVFX_NOW__ ? value : 0;"].join("\n");
+
+// ---------------------------------------------------------------------------
+// Layout reveals
+// ---------------------------------------------------------------------------
+
+/** Grows the layer from nothing along one axis — bars from their base, rules from their middle. */
+export function growExpression(axis: "x" | "y", ease: Exclude<TextEase, "preset">, overshoot: number, bezier: Bezier): string {
+  return [
+    revealHead(ease, overshoot, bezier),
+    "var out = []; for (var i = 0; i < value.length; i++) out[i] = value[i];",
+    `out[${axis === "x" ? "0" : "1"}] = value[${axis === "x" ? "0" : "1"}] * Math.max(0, e);`,
+    "out;",
+  ].join("\n");
+}
+
+/** Draws a stroke on by its Trim Paths end, up to `end` percent. */
+export function trimDrawExpression(end: number, ease: Exclude<TextEase, "preset">, overshoot: number, bezier: Bezier): string {
+  return [revealHead(ease, overshoot, bezier), `${n(end)} * Math.max(0, Math.min(1, e));`].join("\n");
+}
+
+/** One dot of a typing indicator, bobbing a little after the one before it. */
+export function typingDotExpression(index: number, height: number): string {
+  return [
+    `${TAG} — typing dots`,
+    `var lift = Math.max(0, Math.sin(time * 6 - ${String(index)} * 0.9));`,
+    `[value[0], value[1] - ${n(height)} * lift];`,
+  ].join("\n");
+}

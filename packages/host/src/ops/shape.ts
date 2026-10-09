@@ -27,6 +27,7 @@ import { type Args, layerById, readColor, requireComp, resolvePath } from "./raw
  *            { type: "fill", name, color, opacity }
  *            { type: "stroke", name, color, width, opacity }
  *            { type: "repeater", name, copies, offset, position, scale, endOpacity }
+ *            { type: "trim", name, start, end, offset }
  */
 
 const ROOT = "ADBE Root Vectors Group";
@@ -44,6 +45,7 @@ const ITEM_MATCH_NAMES: { [type: string]: string } = {
   fill: "ADBE Vector Graphic - Fill",
   stroke: "ADBE Vector Graphic - Stroke",
   repeater: "ADBE Vector Filter - Repeater",
+  trim: "ADBE Vector Filter - Trim",
 };
 
 function groupAt(layer: AeRawLayer, index: number): AeRawProp {
@@ -118,6 +120,10 @@ function addItem(ctx: OperationContext, layer: AeRawLayer, groupIndex: number, i
     set(fresh(), "ADBE Vector Stroke Color", [rgb[0], rgb[1], rgb[2], OPAQUE]);
     set(fresh(), "ADBE Vector Stroke Width", item["width"]);
     set(fresh(), "ADBE Vector Stroke Opacity", item["opacity"]);
+  } else if (type === "trim") {
+    set(fresh(), "ADBE Vector Trim Start", item["start"]);
+    set(fresh(), "ADBE Vector Trim End", item["end"]);
+    set(fresh(), "ADBE Vector Trim Offset", item["offset"]);
   } else {
     set(fresh(), "ADBE Vector Repeater Copies", item["copies"]);
     set(fresh(), "ADBE Vector Repeater Offset", item["offset"]);

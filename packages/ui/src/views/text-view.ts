@@ -25,6 +25,7 @@ import {
   textField,
 } from "../ui/controls.js";
 import { clear, h, setText, toggleClass } from "../ui/dom.js";
+import { buildKineticSection } from "./kinetic-section.js";
 import { TextPreview } from "./text-preview.js";
 
 /**
@@ -282,6 +283,9 @@ export class TextView implements View {
       }),
       hint("Stagger is the gap between units starting; Each is how long one unit takes. Accent colours Colour Typing and Highlight."),
     );
+
+    // --- kinetic title -----------------------------------------------------
+    buildKineticSection(panel, this.#buttons, (id, title, hintText) => this.#section(id, title, hintText));
 
     // --- explode ------------------------------------------------------------
     this.#explodeMode = typeof explode["mode"] === "string" ? explode["mode"] : "characters";

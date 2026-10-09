@@ -1976,3 +1976,65 @@ select:focus-visible,
 .kvfx-section[hidden] {
   display: none;
 }
+
+/* Layout gallery: thumbnails drawn from the templates themselves. */
+.kvfx-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  max-height: 236px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.kvfx-thumb {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-md);
+  background: var(--kvfx-surface-base);
+  color: var(--kvfx-text-secondary);
+  font-size: var(--kvfx-text-xxs);
+  text-align: left;
+}
+
+.kvfx-thumb[hidden] {
+  display: none;
+}
+
+.kvfx-thumb:hover {
+  border-color: var(--kvfx-accent-edge);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-thumb--on {
+  border-color: var(--kvfx-accent);
+  color: var(--kvfx-accent);
+}
+
+.kvfx-thumb__art {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  height: 54px;
+  border-radius: var(--kvfx-radius-sm);
+  background: #0c0d10;
+  overflow: hidden;
+}
+
+.kvfx-thumb__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kvfx-thumb__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

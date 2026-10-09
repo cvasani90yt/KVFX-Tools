@@ -181,6 +181,11 @@ const SHAPE_ITEMS: Readonly<Record<string, readonly Def[]>> = {
     leaf("ADBE Vector Stroke Opacity", "Opacity", PVT.OneD, 100),
     leaf("ADBE Vector Stroke Width", "Stroke Width", PVT.OneD, 2),
   ],
+  "ADBE Vector Filter - Trim": [
+    leaf("ADBE Vector Trim Start", "Start", PVT.OneD, 0),
+    leaf("ADBE Vector Trim End", "End", PVT.OneD, 100),
+    leaf("ADBE Vector Trim Offset", "Offset", PVT.OneD, 0),
+  ],
   "ADBE Vector Filter - Repeater": [
     leaf("ADBE Vector Repeater Copies", "Copies", PVT.OneD, 3),
     leaf("ADBE Vector Repeater Offset", "Offset", PVT.OneD, 0),
@@ -1024,11 +1029,21 @@ export class MockComp extends MockItem {
     return copy;
   }
 
-  openInViewer(): void {}
+  openInViewer(): void {
+    this.project.activeItem = this;
+  }
 }
 
 export class MockProject {
-  items: MockItem[] = [];
+  readonly items: MockItem[] & {
+    addComp?: (name: string, width: number, height: number, pixelAspect: number, duration: number, frameRate: number) => MockComp;
+  } = [];
+
+  constructor() {
+    // ItemCollection.addComp, on the same array the mock keeps its items in.
+    this.items.addComp = (name, width, height, _pixelAspect, duration, frameRate) => this.addComp(name, width, height, frameRate, duration);
+  }
+
   activeItem: unknown = null;
   file: AeFile | null = null;
   usedFonts: AeUsedFont[] = [];

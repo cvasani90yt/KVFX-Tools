@@ -184,6 +184,8 @@ export interface TextMotionOptions {
   readonly engine: TextEngine;
   /** For colour presets. */
   readonly accent: Rgb;
+  /** Seconds after the playhead before this starts; kinetic titles stagger their lines with it. */
+  readonly delay?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -388,13 +390,18 @@ function liveHead(options: TextMotionOptions): string {
     `var stagger = ${n(Math.max(0, options.stagger))};`,
     `var dur = ${n(Math.max(1e-3, options.duration))};`,
     "// The playhead when the animation was added.",
-    "var start = __KVFX_NOW__;",
+    `var start = __KVFX_NOW__${startOffset(options)};`,
     rankExpression(options.order, options.seed),
     easeExpression(ease, options.overshoot, options.bezier),
     "var kvN = textTotal, kvI = textIndex - 1;",
     "var kvR = kvRank(kvI, kvN), kvTotal = kvMaxRank(kvN) * stagger + dur;",
     "function kvPhase(t0) { return (time - t0 - kvR * stagger) / dur; }",
   ].join("\n");
+}
+
+function startOffset(options: TextMotionOptions): string {
+  const delay = options.delay ?? 0;
+  return delay > 0 ? ` + ${n(delay)}` : "";
 }
 
 /** When the out phase begins: at the playhead alone, before the out point with In+Out. */
@@ -463,7 +470,7 @@ export function typingExpression(options: TextMotionOptions): string {
   const lines = [
     "// KVFX Tools — typing",
     `var perChar = ${n(perChar)};`,
-    "var start = __KVFX_NOW__;",
+    `var start = __KVFX_NOW__${startOffset(options)};`,
     "var s = String(value), shown = s.length;",
     "var typed = Math.floor((time - start) / perChar);",
   ];

@@ -32,6 +32,8 @@ const EPSILON = 1e-9;
 const SPATIAL_DIMS = 3;
 const CENTRE = 0.5;
 const PERCENT = 100;
+/** What a new comp is when a plan does not say. */
+const NEW_COMP = { width: 1920, height: 1080, duration: 10, frameRate: 30 } as const;
 /** Layers ending this close to the old end are treated as running to it. */
 const END_TOLERANCE_FRAMES = 1.5;
 
@@ -295,5 +297,36 @@ export const resizeCompsOperation: Operation = {
       parentLayersFixed: parents,
       skipped: skips as unknown as HostJson,
     };
+  },
+};
+
+/**
+ * Creates a composition and opens it, so the rest of the plan builds inside
+ * it. Named after what it is for; a name already in use gets a number.
+ */
+export const createCompOperation: Operation = {
+  id: "kvfx.op.comp.create",
+  mutates: true,
+  run: function (ctx: OperationContext): HostJson {
+    const project = ctx.env.rawProject();
+    if (!project || !project.items) throw hostError(ErrorCode.PreconditionFailed, "Open a project first.");
+    const width = Math.round(readNumber(ctx.args, "width", NEW_COMP.width));
+    const height = Math.round(readNumber(ctx.args, "height", NEW_COMP.height));
+    const duration = readNumber(ctx.args, "duration", NEW_COMP.duration);
+    const frameRate = readNumber(ctx.args, "frameRate", NEW_COMP.frameRate);
+    if (width < MIN_SIZE || height < MIN_SIZE || width > MAX_SIZE || height > MAX_SIZE) {
+      throw hostError(ErrorCode.InvalidArgument, "That size is outside what After Effects allows.");
+    }
+    if (!(duration > 0) || duration > MAX_DURATION || !(frameRate > 0) || frameRate > MAX_FPS) {
+      throw hostError(ErrorCode.InvalidArgument, "Duration or frame rate is out of range.");
+    }
+    const base = readString(ctx.args, "name", "KVFX Comp");
+    const taken: { [name: string]: boolean } = {};
+    for (let i = 1; i <= project.numItems; i += 1) taken[project.item(i).name] = true;
+    let name = base;
+    for (let n = 2; taken[name]; n += 1) name = base + " " + String(n);
+    const comp = project.items.addComp(name, width, height, 1, duration, frameRate);
+    comp.openInViewer();
+    return { id: comp.id, name: comp.name };
   },
 };

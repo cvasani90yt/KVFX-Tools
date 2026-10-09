@@ -101,6 +101,9 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   silence: [bar(1, 6, 1.6, 4), bar(3.6, 3.5, 1.6, 9), rule(6.5, 8, 9.5, 8), bar(10.8, 4.5, 1.6, 7), bar(13.4, 6.5, 1.6, 3)],
   swap: [line("M2.5 5.5 H12.5"), tri("14.5,5.5 11.5,3 11.5,8"), line("M13.5 10.5 H3.5"), tri("1.5,10.5 4.5,8 4.5,13")],
 
+  layout: [box(1.5, 1.5, 13, 13), bar(3.5, 3.5, 9, 2.5), bar(3.5, 7.5, 4, 5), bar(9, 7.5, 3.5, 5)],
+  kinetic: [bar(1.5, 2.5, 13, 3.5), bar(3.5, 7.5, 9, 2.5), bar(5.5, 11.5, 5, 2.5)],
+
   // Order: an arrow for direction, plus a rule for the "all the way" variants.
   // Bars alone cannot distinguish up from down — an earlier set drew move-up and
   // move-down identically.
