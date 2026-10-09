@@ -1936,3 +1936,43 @@ select:focus-visible,
   border-radius: var(--kvfx-radius-pill);
   border: 1px solid var(--kvfx-border);
 }
+
+/* Silence Remover: the analysed track, pauses greyed. */
+.kvfx-wave {
+  display: block;
+  width: 100%;
+  height: 48px;
+  border-radius: var(--kvfx-radius-md);
+  background: var(--kvfx-surface-base);
+  border: 1px solid var(--kvfx-border);
+}
+
+/* Comp Resizer: the anchor picker beside its options. */
+.kvfx-row--top {
+  align-items: flex-start;
+}
+
+.kvfx-row > .kvfx-anchors {
+  flex: 0 0 auto;
+}
+
+.kvfx-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kvfx-anchors--pick .kvfx-tool--on {
+  background: var(--kvfx-accent-soft);
+}
+
+/* Group chips at the top of a long tab. */
+.kvfx-filters--tab {
+  padding: 2px 0 4px;
+}
+
+.kvfx-section[hidden] {
+  display: none;
+}

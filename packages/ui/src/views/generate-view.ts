@@ -2,7 +2,8 @@ import { type CounterOptions, DEFAULT_COUNTER, easeAt, formatCounter, normalizeB
 import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { CommandButtons, Section, colorField, hint, numberField, row, selectField, textField } from "../ui/controls.js";
-import { h, setText } from "../ui/dom.js";
+import { h, setText, toggleClass } from "../ui/dom.js";
+import { buildUiKitSections } from "./ui-kit-sections.js";
 import { buildUiMotionSections } from "./ui-motion-sections.js";
 
 /**
@@ -17,6 +18,27 @@ import { buildUiMotionSections } from "./ui-motion-sections.js";
 
 const COUNTER_PREVIEW_MS = 1800;
 const COUNTER_PAUSE_MS = 700;
+
+/** Generator groups, for the chips at the top of the tab. */
+const FILTERS: readonly (readonly [string, string])[] = [
+  ["all", "All"],
+  ["ui", "UI Motion"],
+  ["scene", "Scenes"],
+  ["build", "Builders"],
+];
+const GROUP_ORDER = ["ui", "scene", "build"];
+const SECTION_GROUP: Readonly<Record<string, string>> = {
+  "gen.uistagger": "ui",
+  "gen.cursor": "ui",
+  "gen.hover": "ui",
+  "gen.cardcarousel": "ui",
+  "gen.inputbar": "ui",
+  "gen.backdrop": "scene",
+  "gen.dotpulse": "scene",
+  "gen.glass": "scene",
+  "gen.wipe": "scene",
+  "gen.codeglyphs": "scene",
+};
 
 /** The tools' opening values. */
 const CAROUSEL = { cards: 8, radius: 600 } as const;
@@ -148,14 +170,54 @@ export class GenerateView implements View {
       hint("Works best on text, shapes and logos. Change the depth later with the KVFX Extrude slider on the face layer."),
     );
 
-    buildUiMotionSections(panel, this.#buttons, (id, title, hintText) => this.#section(id, title, hintText));
+    const make = (id: string, title: string, hintText?: string): Section => this.#section(id, title, hintText);
+    buildUiMotionSections(panel, this.#buttons, make);
+    buildUiKitSections(panel, this.#buttons, make);
 
-    this.root = h("div", { class: "kvfx-tab" }, ...this.#sections.map((s) => s.root));
+    // A long tab: chips narrow it to one kind of generator at a time.
+    this.#filters = h("div", { class: "kvfx-filters kvfx-filters--tab", attrs: { role: "tablist", "aria-label": "Generator groups" } });
+    for (const [id, label] of FILTERS) {
+      this.#filters.append(
+        h("button", {
+          class: "kvfx-filter",
+          type: "button",
+          text: label,
+          attrs: { "data-filter": id },
+          on: {
+            click: () => {
+              session.setToolParams("generate", { filter: id });
+              this.#applyFilter();
+            },
+          },
+        }),
+      );
+    }
+    // Sections in their groups' order, so a filtered tab reads top-down.
+    const ordered = [...this.#sections].sort((a, b) => GROUP_ORDER.indexOf(this.#group(a)) - GROUP_ORDER.indexOf(this.#group(b)));
+    this.root = h("div", { class: "kvfx-tab" }, this.#filters, ...ordered.map((s) => s.root));
+    this.#applyFilter();
+  }
+
+  readonly #filters: HTMLElement;
+  readonly #groups = new Map<Section, string>();
+
+  #group(section: Section): string {
+    return this.#groups.get(section) ?? "build";
+  }
+
+  #applyFilter(): void {
+    const value = this.#panel.session.toolParams("generate")["filter"];
+    const filter = typeof value === "string" && FILTERS.some(([id]) => id === value) ? value : "all";
+    for (const section of this.#sections) section.root.hidden = filter !== "all" && this.#group(section) !== filter;
+    for (const button of Array.from(this.#filters.querySelectorAll<HTMLButtonElement>(".kvfx-filter"))) {
+      toggleClass(button, "kvfx-filter--on", button.dataset["filter"] === filter);
+    }
   }
 
   #section(id: string, title: string, hintText?: string): Section {
     const section = new Section(this.#panel, id, title, hintText);
     this.#sections.push(section);
+    this.#groups.set(section, SECTION_GROUP[id] ?? "build");
     return section;
   }
 

@@ -125,6 +125,17 @@ const EFFECT_PARAMS: Readonly<Record<string, readonly LeafDef[]>> = {
     leaf("ADBE 4ColorGradient-0010", "Jitter", PVT.OneD, 0),
     leaf("ADBE 4ColorGradient-0011", "Opacity", PVT.OneD, 100),
   ],
+  "ADBE Geometry2": [
+    leaf("ADBE Geometry2-0001", "Anchor Point", PVT.TwoD_SPATIAL, [50, 25], true),
+    leaf("ADBE Geometry2-0002", "Position", PVT.TwoD_SPATIAL, [50, 25], true),
+    leaf("ADBE Geometry2-0011", "Uniform Scale", PVT.OneD, 1),
+    leaf("ADBE Geometry2-0003", "Scale", PVT.OneD, 100),
+    leaf("ADBE Geometry2-0004", "Scale Width", PVT.OneD, 100),
+    leaf("ADBE Geometry2-0005", "Skew", PVT.OneD, 0),
+    leaf("ADBE Geometry2-0006", "Skew Axis", PVT.OneD, 0),
+    leaf("ADBE Geometry2-0007", "Rotation", PVT.OneD, 0),
+    leaf("ADBE Geometry2-0008", "Opacity", PVT.OneD, 100),
+  ],
   "ADBE Noise": [
     leaf("ADBE Noise-0001", "Amount of Noise", PVT.OneD, 0),
     leaf("ADBE Noise-0002", "Noise Type", PVT.OneD, 1),
@@ -693,9 +704,18 @@ export class MockItem {
   /** Selected in the Project panel. */
   selected = false;
   readonly typeName: string;
+  /** Footage only. */
+  footageMissing = false;
+  file: AeFile | null = null;
   constructor(name: string, typeName: string) {
     this.name = name;
     this.typeName = typeName;
+  }
+
+  /** FootageItem.replace: points the item at another file. */
+  replace(file: AeFile): void {
+    this.file = file;
+    this.footageMissing = false;
   }
 }
 
@@ -717,7 +737,7 @@ export class MockLayer {
   parent: MockLayer | null = null;
   inPoint = 0;
   outPoint: number;
-  startTime = 0;
+  private shiftOrigin = 0;
   stretch = 100;
   selected = false;
   containingComp: MockComp;
@@ -739,6 +759,7 @@ export class MockLayer {
   /** The matte set with setTrackMatte (AE 23+), when one was. */
   trackMatteLayer: MockLayer | null = null;
   blendingMode = BLEND.normal;
+  hasAudio = false;
 
   constructor(comp: MockComp, options: MockLayerOptions) {
     this.containingComp = comp;
@@ -755,7 +776,7 @@ export class MockLayer {
       this.motionBlur = false;
       this.nullLayer = this.kind === "null";
     }
-    const groups: Def[] = [transformDef()];
+    const groups: Def[] = [leaf("ADBE Marker", "Marker", PVT.MARKER, null), transformDef()];
     if (this.kind === "camera") groups.push({ kind: "group", matchName: "ADBE Camera Options Group", name: "Camera Options" });
     if (this.kind === "light") groups.push({ kind: "group", matchName: "ADBE Light Options Group", name: "Light Options" });
     if (this.isAV) {
@@ -782,6 +803,18 @@ export class MockLayer {
 
   get isAV(): boolean {
     return this.kind !== "camera" && this.kind !== "light";
+  }
+
+  /** As in After Effects, moving a layer's start moves its in and out points with it. */
+  get startTime(): number {
+    return this.shiftOrigin;
+  }
+
+  set startTime(value: number) {
+    const delta = value - this.shiftOrigin;
+    this.shiftOrigin = value;
+    this.inPoint += delta;
+    this.outPoint += delta;
   }
 
   get index(): number {
@@ -1049,6 +1082,8 @@ export interface MockApp {
   purges: number[];
   executedCommands: string[];
   menuCommands: Record<string, number>;
+  /** Loudness per frame that Convert Audio to Keyframes reports, from the work area start. */
+  audioSamples: number[];
   existingFiles: Set<string>;
   beginUndoGroup(name: string): void;
   endUndoGroup(): void;
@@ -1063,7 +1098,7 @@ export function font(postScriptName: string, family = postScriptName, style = "R
 
 export function createMockApp(options: { version?: string; hasProject?: boolean } = {}): MockApp {
   const version = options.version ?? "26.0.1x45";
-  const menuCommands: Record<string, number> = { "Split Layer": 2158 };
+  const menuCommands: Record<string, number> = { "Split Layer": 2158, "Convert Audio to Keyframes": 2219 };
   const app: MockApp = {
     version,
     buildName: `Adobe After Effects ${version}`,
@@ -1079,6 +1114,7 @@ export function createMockApp(options: { version?: string; hasProject?: boolean 
     purges: [],
     executedCommands: [],
     menuCommands,
+    audioSamples: [],
     existingFiles: new Set<string>(),
     beginUndoGroup(name) {
       this.undoEvents.push(`begin:${name}`);
@@ -1096,6 +1132,7 @@ export function createMockApp(options: { version?: string; hasProject?: boolean 
       const name = Object.keys(this.menuCommands).find((k) => this.menuCommands[k] === id) ?? String(id);
       this.executedCommands.push(name);
       if (name === "Split Layer") splitSelected(this);
+      if (name === "Convert Audio to Keyframes") convertAudio(this);
     },
   };
   return app;
@@ -1110,5 +1147,21 @@ function splitSelected(app: MockApp): void {
     const upper = layer.duplicate();
     upper.inPoint = comp.time;
     layer.outPoint = comp.time;
+  }
+}
+
+/** Models Convert Audio to Keyframes: an Audio Amplitude null keyed over the work area. */
+function convertAudio(app: MockApp): void {
+  const comp = app.project?.activeItem;
+  if (!(comp instanceof MockComp)) return;
+  const layer = comp.addLayer({ name: "Audio Amplitude", kind: "null" });
+  for (const channel of ["Left Channel", "Right Channel", "Both Channels"]) {
+    const effect = layer.effects.addProperty("ADBE Slider Control");
+    effect.name = channel;
+    const slider = effect.property(1)!;
+    const frames = Math.floor(comp.workAreaDuration * comp.frameRate);
+    for (let f = 0; f < frames && f < app.audioSamples.length; f += 1) {
+      slider.setValueAtTime(comp.workAreaStart + f / comp.frameRate, app.audioSamples[f]);
+    }
   }
 }

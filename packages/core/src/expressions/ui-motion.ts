@@ -375,3 +375,128 @@ export const STAR_DRIFT_EXPRESSION = [
   "out[0] += time * 6;",
   "out;",
 ].join("\n");
+
+// ---------------------------------------------------------------------------
+// Hover
+// ---------------------------------------------------------------------------
+
+export const HOVER_CONTROLS = {
+  cursor: "KVFX Hover Cursor",
+  radius: "Hover Radius",
+  scale: "Hover Scale",
+  lift: "Hover Lift",
+  transform: "KVFX Hover",
+} as const;
+
+/**
+ * How near the cursor's tip is to this layer's bounds, 0 (far) to 1 (over
+ * it), eased. Measured to the bounds rather than the centre, so a wide card
+ * responds as soon as the cursor reaches its edge.
+ */
+const HOVER_HEAD = [
+  `${TAG} — hover`,
+  `var C = effect("${HOVER_CONTROLS.cursor}")(1);`,
+  "var k = 0;",
+  "if (C != null) {",
+  "  var tip = C.toComp(C.anchorPoint);",
+  "  var r = sourceRectAtTime(time, false);",
+  "  var a = toComp([r.left, r.top]), b = toComp([r.left + r.width, r.top + r.height]);",
+  "  var dx = Math.max(Math.min(a[0], b[0]) - tip[0], 0, tip[0] - Math.max(a[0], b[0]));",
+  "  var dy = Math.max(Math.min(a[1], b[1]) - tip[1], 0, tip[1] - Math.max(a[1], b[1]));",
+  `  var u = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / Math.max(1, effect("${HOVER_CONTROLS.radius}")(1)));`,
+  "  k = u * u * (3 - 2 * u);",
+  "}",
+].join("\n");
+
+export const HOVER_SCALE_EXPRESSION = [HOVER_HEAD, `value * (1 + k * effect("${HOVER_CONTROLS.scale}")(1) / 100);`].join("\n");
+export const HOVER_LIFT_EXPRESSION = [HOVER_HEAD, `[value[0], value[1] - k * effect("${HOVER_CONTROLS.lift}")(1)];`].join("\n");
+
+// ---------------------------------------------------------------------------
+// Dot pulse
+// ---------------------------------------------------------------------------
+
+export const PULSE_CONTROLS = { speed: "Pulse Speed", width: "Pulse Width", every: "Pulse Every", idle: "Idle Size" } as const;
+
+/**
+ * One dot of the halftone wave. Its distance from the centre (0–1) is fixed
+ * when the grid is built, so per frame it only compares that with the wave.
+ */
+export function dotPulseExpression(distance: number): string {
+  const c = PULSE_CONTROLS;
+  return [
+    `${TAG} — dot pulse`,
+    `var d = ${n(distance)};`,
+    `var every = Math.max(0.1, effect("${c.every}")(1));`,
+    `var w = Math.max(0.01, effect("${c.width}")(1) / 100);`,
+    `var idle = effect("${c.idle}")(1);`,
+    "var t = time - __KVFX_NOW__;",
+    "var k = 0;",
+    `if (t >= 0) { var front = (t % every) * effect("${c.speed}")(1); k = Math.max(0, 1 - Math.abs(front - d) / w); }`,
+    "var s = idle + (100 - idle) * k * k * (3 - 2 * k);",
+    "[s, s];",
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Code glyphs and the input bar
+// ---------------------------------------------------------------------------
+
+/** Pseudo-code for the scrolling lines: generic, readable, and ours. */
+export const CODE_LINES: readonly string[] = [
+  "const scene = compose(layers);",
+  "for (const card of deck) card.rise();",
+  "await render({ fps: 60, quality: 'max' });",
+  "if (frame.ready) ship(frame);",
+  "const ease = curve(0.16, 1, 0.3, 1);",
+  "timeline.add(title, { at: '+0.2' });",
+  "export default motion(scene);",
+  "const glow = light.bloom({ radius: 24 });",
+  "while (idea.alive) iterate(idea);",
+  "deck.stagger({ each: 3, from: 'center' });",
+  "const ui = build(screen, theme.dark);",
+  "cursor.moveTo(button).click();",
+  "camera.dolly({ z: -400, ease });",
+  "metrics.count(0, 12840, { suffix: '+' });",
+  "return keyframes.map(k => k.smooth());",
+  "status = 'ready to launch';",
+];
+
+export function codeLinesExpression(rows: number, linesPerSecond: number): string {
+  const quoted = CODE_LINES.map((line) => JSON.stringify(line)).join(",\n  ");
+  return [
+    `${TAG} — code lines`,
+    `var lines = [\n  ${quoted}\n];`,
+    `var rows = ${String(Math.max(1, Math.round(rows)))};`,
+    `var t = Math.max(0, time - __KVFX_NOW__) * ${n(linesPerSecond)};`,
+    "var top = Math.floor(t), part = t - top, out = [];",
+    "for (var i = 0; i < rows; i++) {",
+    "  var line = lines[(top + i) % lines.length];",
+    "  if (i === rows - 1) line = line.substr(0, Math.floor(line.length * part)) + '_';",
+    "  out.push(line);",
+    "}",
+    "out.join('\\r');",
+  ].join("\n");
+}
+
+export function glyphFieldExpression(columns: number, rows: number, rate: number): string {
+  return [
+    `${TAG} — glyph field`,
+    "var chars = '01<>/{}[]#$%&*+=?;:ABCDEF0123456789';",
+    `seedRandom(Math.floor(time * ${n(rate)}), true);`,
+    "var s = '';",
+    `for (var r = 0; r < ${String(Math.round(rows))}; r++) {`,
+    `  for (var c = 0; c < ${String(Math.round(columns))}; c++) s += chars.charAt(Math.floor(random(chars.length)));`,
+    `  if (r < ${String(Math.round(rows) - 1)}) s += '\\r';`,
+    "}",
+    "s;",
+  ].join("\n");
+}
+
+export const FLICKER_EXPRESSION = [
+  `${TAG} — flicker`,
+  "seedRandom(Math.floor(time / thisComp.frameDuration), true);",
+  "value * (random() < 0.07 ? random(0.25, 0.7) : 1);",
+].join("\n");
+
+/** The placeholder shows until typing starts. */
+export const PLACEHOLDER_EXPRESSION = [`${TAG} — input placeholder`, "time < __KVFX_NOW__ ? value : 0;"].join("\n");

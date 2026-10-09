@@ -22,3 +22,4 @@ export * from "./animation/order.js";
 export * from "./expressions/index.js";
 export * from "./text/index.js";
 export * from "./color/index.js";
+export * from "./audio/silence.js";

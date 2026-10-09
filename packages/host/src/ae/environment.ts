@@ -154,6 +154,10 @@ export interface AeEnvironment {
   importFile(path: string): AeRawItem;
   /** Applies an Animation Preset (.ffx) to a layer. */
   applyPreset(layer: AeRawLayer, path: string): void;
+  /** A File object for a path, for `FootageItem.replace`. */
+  file(path: string): AeFile;
+  /** A MarkerValue. */
+  newMarker(comment: string, duration: number): unknown;
   /** A Shape value for a path property: vertices and tangents in layer space. */
   newShape(vertices: number[][], inTangents: number[][], outTangents: number[][], closed: boolean): unknown;
   /** TrackMatteType constants. */

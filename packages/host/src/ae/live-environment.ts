@@ -256,6 +256,7 @@ export interface HostGlobals {
   readonly purgeTargets: { readonly all: number; readonly image: number };
   readonly nowMs: () => number;
   readonly newShape: (vertices: number[][], inTangents: number[][], outTangents: number[][], closed: boolean) => unknown;
+  readonly newMarker: (comment: string, duration: number) => unknown;
   readonly trackMatteTypes: TrackMatteTypes;
   readonly blendingModes: BlendingModes;
   readonly justifications: Justifications;
@@ -352,6 +353,10 @@ export function createEnvironment(g: HostGlobals): AeEnvironment {
       }
       layer.applyPreset(g.newFile(path));
     },
+    file: function (path: string): AeFile {
+      return g.newFile(path);
+    },
+    newMarker: g.newMarker,
     newShape: g.newShape,
     trackMatteTypes: function (): TrackMatteTypes {
       return g.trackMatteTypes;
@@ -408,6 +413,11 @@ export function createLiveEnvironment(): AeEnvironment {
       shape.outTangents = outTangents;
       shape.closed = closed;
       return shape;
+    },
+    newMarker: function (comment: string, duration: number): unknown {
+      const marker = new MarkerValue(comment);
+      marker.duration = duration;
+      return marker;
     },
     trackMatteTypes: {
       none: TrackMatteType.NO_TRACK_MATTE,

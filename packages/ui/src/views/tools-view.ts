@@ -16,6 +16,7 @@ import {
   toggles,
 } from "../ui/controls.js";
 import { h, setEnabled, setText, toggleClass } from "../ui/dom.js";
+import { type ToolsExtras, buildResizeAndSilence } from "./resize-silence-sections.js";
 
 /**
  * TOOLS: layer utilities, switches, stacking order, and a live transform
@@ -60,6 +61,7 @@ export class ToolsView implements View {
   readonly #linkScale: HTMLInputElement;
   #primary: PrimaryTransform | undefined;
   readonly #duplicateTarget: HTMLElement;
+  readonly #extras: ToolsExtras;
 
   constructor(panel: Panel) {
     this.#panel = panel;
@@ -220,6 +222,9 @@ export class ToolsView implements View {
       hint("Position always follows. The leader can be renamed or reordered; change the lag later with KVFX Follow Delay on each follower."),
     );
 
+    // --- Comp Resizer and Silence Remover --------------------------------------
+    this.#extras = buildResizeAndSilence(panel, b, (id, title, hintText) => this.#section(id, title, hintText));
+
     // --- Colour ------------------------------------------------------------
     const gradient = session.toolParams("gradient");
     const fillColor = colorField("Fill", session.state.settings.ui.solidColor);
@@ -358,6 +363,7 @@ export class ToolsView implements View {
     this.#buttons.update(state, availability);
     this.#updateInspector(state);
     this.#updateDuplicateTarget(state);
+    this.#extras.update(state);
   }
 
   /** Says what "Duplicate Comp" will copy, so the Project-panel rule is visible. */

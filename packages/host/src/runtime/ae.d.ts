@@ -101,6 +101,11 @@ interface AeRawItem {
   comment: string;
   label: number;
   parentFolder: AeRawItem | null;
+  /** FootageItem only. */
+  readonly footageMissing?: boolean;
+  readonly file?: AeFile | null;
+  readonly missingFootagePath?: string;
+  replace?(file: AeFile): void;
 }
 
 interface AeRawLayer {
@@ -146,6 +151,7 @@ interface AeRawLayer {
   trackMatteType?: number;
   setTrackMatte?(trackMatteLayer: AeRawLayer, trackMatteType: number): void;
   blendingMode?: number;
+  readonly hasAudio?: boolean;
   /** AVLayer source dimensions. */
   readonly width?: number;
   readonly height?: number;
@@ -271,6 +277,11 @@ interface AeShapeValue {
   closed: boolean;
 }
 declare const Shape: { new (): AeShapeValue };
+interface AeMarkerValue {
+  comment: string;
+  duration: number;
+}
+declare const MarkerValue: { new (comment: string): AeMarkerValue };
 
 /** Enumerations, declared as the numbers After Effects actually exposes. */
 declare const TrackMatteType: {

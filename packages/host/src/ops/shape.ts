@@ -3,7 +3,8 @@ import { hostError, labelOf } from "../runtime/errors.js";
 import { ErrorCode } from "../runtime/protocol.js";
 import type { Operation, OperationContext } from "../runtime/registry.js";
 import type { HostJson } from "../runtime/serialize.js";
-import { type Args, layerById, readColor, requireComp } from "./raw.js";
+import { stampTime } from "./prop.js";
+import { type Args, layerById, readColor, requireComp, resolvePath } from "./raw.js";
 
 /**
  * Builds vector content inside a shape layer.
@@ -15,6 +16,11 @@ import { type Args, layerById, readColor, requireComp } from "./raw.js";
  * the layer by index instead of holding on to a group object.
  *
  * `groups`: [{ name, items: [item], transform: { position, anchor, scale, rotation, opacity } }]
+ * Each group may also carry `expressions: [{ path, expression }]`, paths
+ * relative to the group, so a generator with hundreds of animated groups is
+ * one step rather than hundreds. With `relative`, `__KVFX_NOW__` in them
+ * becomes the current time.
+ *
  * item:      { type: "rect", name, size, position, roundness }
  *            { type: "ellipse", name, size, position }
  *            { type: "path", name, vertices, inTangents, outTangents, closed }
@@ -133,6 +139,7 @@ export const buildShapeOperation: Operation = {
     if (!layer.property(ROOT)) throw hostError(ErrorCode.PreconditionFailed, "That layer is not a shape layer.");
     if (layer.locked) throw hostError(ErrorCode.PreconditionFailed, "The shape layer is locked.");
 
+    const stamp = ctx.args["relative"] === true ? comp.time : undefined;
     const raw = ctx.args["groups"];
     if (!isArray(raw)) throw hostError(ErrorCode.InvalidArgument, "groups must be an array.");
     const groups = raw as HostJson[];
@@ -150,6 +157,16 @@ export const buildShapeOperation: Operation = {
       for (let i = 0; i < items.length; i += 1) {
         const item = items[i];
         if (item && typeof item === "object" && !isArray(item)) addItem(ctx, layer, groupIndex, item as Args);
+      }
+
+      const expressions = isArray(spec["expressions"]) ? (spec["expressions"] as HostJson[]) : [];
+      for (let e = 0; e < expressions.length; e += 1) {
+        const entry = expressions[e] as Args;
+        if (!entry || typeof entry["expression"] !== "string") continue;
+        const prop = resolvePath(ctx.env, groupAt(layer, groupIndex), entry["path"]);
+        if (!prop || !prop.canSetExpression) continue;
+        prop.expression = stamp === undefined ? entry["expression"] : stampTime(entry["expression"], stamp);
+        prop.expressionEnabled = true;
       }
 
       const transform = spec["transform"];

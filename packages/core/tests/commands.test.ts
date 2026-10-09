@@ -216,8 +216,11 @@ describe("plans", () => {
     });
   });
 
-  it("marks nothing in the Phase 3 set as destructive", () => {
-    for (const c of registry.all()) expect(c.metadata.destructive).toBe(false);
+  it("asks first only for commands that change more than the selection", () => {
+    // Resize Comps rewrites whole comps and the precomp layers that use them
+    // elsewhere in the project, so it names what it will change before running.
+    const asking = registry.all().filter((c) => c.metadata.destructive).map((c) => c.id);
+    expect(asking).toEqual(["kvfx.comp.resize"]);
   });
 });
 

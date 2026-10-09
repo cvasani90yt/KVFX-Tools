@@ -4,6 +4,7 @@ import { type FileEntry, baseName, fileUrl, filesAvailable, listFolder, pickFold
 import { IconSize, createIcon } from "../components/icons.js";
 import { Section, actionButton, hint } from "../ui/controls.js";
 import { clear, h, setEnabled, toggleClass } from "../ui/dom.js";
+import { RelinkSection } from "./relink-section.js";
 
 /**
  * LIBRARY: your own folders of footage, templates and presets, one click from
@@ -50,6 +51,7 @@ export class LibraryView implements View {
   readonly #filter: HTMLInputElement;
   readonly #grid: HTMLElement;
   readonly #addButton: HTMLButtonElement;
+  readonly #relink: RelinkSection;
   #root: string | undefined;
   #path: string | undefined;
   #entries: FileEntry[] = [];
@@ -73,7 +75,8 @@ export class LibraryView implements View {
     if (!filesAvailable()) {
       this.#section.body.append(hint("The Library needs After Effects' file access, which is not available here."));
     }
-    this.root = h("div", { class: "kvfx-tab" }, this.#section.root);
+    this.#relink = new RelinkSection(panel);
+    this.root = h("div", { class: "kvfx-tab" }, this.#section.root, this.#relink.section.root);
   }
 
   #addFolder(): void {
@@ -200,6 +203,7 @@ export class LibraryView implements View {
   update(state: SessionState, availability: Availability): void {
     void availability;
     this.#section.update(state);
+    this.#relink.update(state);
     setEnabled(this.#addButton, filesAvailable() && !state.busy, "File access is not available here.");
     this.#renderFolders();
   }

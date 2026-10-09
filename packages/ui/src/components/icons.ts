@@ -91,6 +91,16 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   "card-carousel": [box(0.8, 5, 3.4, 6), bar(5, 3, 6, 10), box(11.8, 5, 3.4, 6)],
   backdrop: [box(1.5, 2.5, 13, 11), solid("M1.5 13.5 Q5 7.5 8.5 10 T14.5 8 V13.5 Z"), dot(11.5, 5.5, 1.3)],
 
+  hover: [box(2, 6, 9, 7), tri("9,1.5 9,9.5 11.2,7.4 12.6,10.4 14,9.8 12.6,6.8 15.2,6.6")],
+  "dot-pulse": [dot(8, 8, 2.2), ring(8, 8, 5), dot(2, 2, 1), dot(14, 2, 1), dot(2, 14, 1), dot(14, 14, 1)],
+  glass: [box(1.5, 2.5, 13, 11), rule(4, 11, 9, 5), rule(7, 12, 12, 6)],
+  wipe: [box(1.5, 2.5, 13, 11), bar(1.5, 2.5, 7, 11), rule(10.5, 1, 10.5, 15)],
+  code: [line("M5 4 L1.8 8 L5 12"), line("M11 4 L14.2 8 L11 12"), rule(9.2, 3, 6.8, 13)],
+  "input-bar": [box(0.8, 4.5, 14.4, 7), bar(3, 7.25, 1.2, 2.5), dot(12.3, 8, 1.6)],
+  resize: [box(1.5, 4.5, 10, 10), line("M8.5 1.5 H14.5 V7.5"), rule(14.5, 1.5, 9, 7)],
+  silence: [bar(1, 6, 1.6, 4), bar(3.6, 3.5, 1.6, 9), rule(6.5, 8, 9.5, 8), bar(10.8, 4.5, 1.6, 7), bar(13.4, 6.5, 1.6, 3)],
+  swap: [line("M2.5 5.5 H12.5"), tri("14.5,5.5 11.5,3 11.5,8"), line("M13.5 10.5 H3.5"), tri("1.5,10.5 4.5,8 4.5,13")],
+
   // Order: an arrow for direction, plus a rule for the "all the way" variants.
   // Bars alone cannot distinguish up from down — an earlier set drew move-up and
   // move-down identically.

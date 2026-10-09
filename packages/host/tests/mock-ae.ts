@@ -199,6 +199,7 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
     leafPropertyType: PT.PROPERTY,
     purgeTargets: { all: PURGE_ALL, image: PURGE_IMAGE },
     newShape: (vertices, inTangents, outTangents, closed) => ({ vertices, inTangents, outTangents, closed }),
+    newMarker: (comment, duration) => ({ comment, duration }),
     trackMatteTypes: TRACK_MATTE,
     blendingModes: BLEND,
     justifications: JUSTIFY,
