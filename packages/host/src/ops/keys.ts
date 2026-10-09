@@ -120,7 +120,7 @@ function easeArray(
  * selecting every keyframe eases the whole curve, which is how users expect a
  * single click to behave.
  */
-function easeKeys(env: AeEnvironment, prop: AeRawProp, keys: number[], bezier: Bezier): number {
+export function easeKeys(env: AeEnvironment, prop: AeRawProp, keys: number[], bezier: Bezier): number {
   const shape = easeShape(env, prop);
   if (shape === "none") return 0;
   const n = prop.numKeys;

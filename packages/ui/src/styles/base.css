@@ -1107,6 +1107,64 @@ select:focus-visible,
   color: var(--kvfx-accent);
 }
 
+.kvfx-tile[hidden] {
+  display: none;
+}
+
+/* A long preset library scrolls in place, so the controls under it stay in reach. */
+.kvfx-tiles--scroll {
+  max-height: 116px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* Preset categories: one scrolling row of small pills above the tiles. */
+.kvfx-filters {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+
+.kvfx-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.kvfx-filter {
+  flex: 0 0 auto;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-pill);
+  background: var(--kvfx-surface-raised);
+  font-size: var(--kvfx-text-xxs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--kvfx-text-secondary);
+}
+
+.kvfx-filter:hover {
+  color: var(--kvfx-text-primary);
+  border-color: var(--kvfx-accent-edge);
+}
+
+.kvfx-filter--on {
+  border-color: var(--kvfx-accent);
+  background: var(--kvfx-accent-soft);
+  color: var(--kvfx-accent);
+}
+
+.kvfx-tool--on {
+  color: var(--kvfx-accent);
+  border-color: var(--kvfx-accent-edge);
+}
+
+.kvfx-stage__type {
+  white-space: pre;
+}
+
 .kvfx-list {
   display: flex;
   flex-direction: column;

@@ -175,8 +175,23 @@ function selectorDef(): GroupDef {
           leaf("ADBE Text Selector Smoothness", "Smoothness", PVT.OneD, 100),
           leaf("ADBE Text Levels Max Ease", "Ease High", PVT.OneD, 0),
           leaf("ADBE Text Levels Min Ease", "Ease Low", PVT.OneD, 0),
+          leaf("ADBE Text Randomize Order", "Randomize Order", PVT.OneD, 0),
+          leaf("ADBE Text Random Seed", "Random Seed", PVT.OneD, 0),
         ],
       },
+    ],
+  };
+}
+
+function expressionSelectorDef(): GroupDef {
+  return {
+    kind: "group",
+    matchName: "ADBE Text Expressible Selector",
+    name: "Expression Selector",
+    children: [
+      leaf("ADBE Text Selector Mode", "Mode", PVT.OneD, 2),
+      leaf("ADBE Text Range Type2", "Based On", PVT.OneD, 1),
+      leaf("ADBE Text Expressible Amount", "Amount", PVT.ThreeD, [100, 100, 100]),
     ],
   };
 }
@@ -192,7 +207,8 @@ function animatorDef(): GroupDef {
         matchName: "ADBE Text Selectors",
         name: "Selectors",
         indexed: true,
-        accepts: (m) => (m === "ADBE Text Selector" ? selectorDef() : undefined),
+        accepts: (m) =>
+          m === "ADBE Text Selector" ? selectorDef() : m === "ADBE Text Expressible Selector" ? expressionSelectorDef() : undefined,
       },
       {
         kind: "group",

@@ -1,13 +1,36 @@
+import { DEFAULT_BEZIER } from "../../animation/easing.js";
+import { parseOrder } from "../../animation/order.js";
+import type { Rgb } from "../../color/index.js";
 import { type SplitMode, splitRanges } from "../../text/split.js";
-import { TEXT_PRESETS, animatorFor, textPreset } from "../../text/presets.js";
+import {
+  TEXT_EASES,
+  TEXT_MOTION_PRESETS,
+  type TextEase,
+  type TextMode,
+  type TextMotionOptions,
+  type TextUnit,
+  keyAnimators,
+  liveAnimators,
+  textMotionPreset,
+  typingExpression,
+} from "../../text/motion.js";
 import type { JsonObject, JsonValue } from "../../types/json.js";
-import { NEEDS_LAYER, colorParam, measuredCommand, numberParam, simpleCommand, stringParam } from "../define.js";
+import {
+  NEEDS_LAYER,
+  bezierParam,
+  colorParam,
+  measuredCommand,
+  numberParam,
+  simpleCommand,
+  stringParam,
+} from "../define.js";
 import {
   AVAILABLE,
   type Command,
   type CommandAvailability,
   CommandCategory,
   type CommandContext,
+  type PlanStep,
   unavailable,
 } from "../types.js";
 
@@ -22,24 +45,86 @@ function hasText(ctx: CommandContext): CommandAvailability {
   return ctx.snapshot.layers.some((layer) => layer.kind === "text") ? AVAILABLE : unavailable("Select a text layer.");
 }
 
+/* eslint-disable no-magic-numbers -- the named defaults themselves */
+const DEFAULT_ACCENT: Rgb = [1, 0.56, 0.25];
+const FALLBACK_FRAME = 1 / 30;
+const TIMING = { stagger: 2, duration: 15, maxFrames: 600, overshoot: 30, maxOvershoot: 100, seedMax: 100_000 } as const;
+/* eslint-enable no-magic-numbers */
+
+function textMode(value: unknown): TextMode {
+  return value === "out" || value === "inOut" ? value : "in";
+}
+
+function textUnit(value: unknown): TextUnit {
+  return value === "words" || value === "lines" ? value : "characters";
+}
+
+function textEase(value: unknown): TextEase {
+  return TEXT_EASES.some((e) => e.id === value) ? (value as TextEase) : "preset";
+}
+
+/** The Animate section's settings, from a control or from what the user last chose. */
+export function textMotionOptions(ctx: CommandContext): TextMotionOptions | undefined {
+  const preset = textMotionPreset(stringParam(ctx, "preset", "rise")) ?? TEXT_MOTION_PRESETS[0];
+  if (preset === undefined) return undefined;
+  const frame = ctx.snapshot.comp?.frameDuration ?? FALLBACK_FRAME;
+  // `speed` is the original control: it divides the preset's timing.
+  const speed = numberParam(ctx, "speed", 1, SPEED.min, SPEED.max);
+  const stagger = numberParam(ctx, "stagger", TIMING.stagger / speed, 0, TIMING.maxFrames) * frame;
+  const duration = Math.max(frame, numberParam(ctx, "duration", TIMING.duration / speed, 0, TIMING.maxFrames) * frame);
+  return {
+    preset,
+    mode: textMode(ctx.params?.["mode"]),
+    unit: textUnit(ctx.params?.["unit"]),
+    order: parseOrder(ctx.params?.["order"]),
+    seed: numberParam(ctx, "seed", 1, 1, TIMING.seedMax),
+    ease: textEase(ctx.params?.["ease"]),
+    bezier: bezierParam(ctx, "bezier", DEFAULT_BEZIER),
+    stagger,
+    duration,
+    overshoot: numberParam(ctx, "overshoot", TIMING.overshoot, 0, TIMING.maxOvershoot),
+    engine: stringParam(ctx, "engine", "live") === "keys" ? "keys" : "live",
+    accent: colorParam(ctx, "accent", DEFAULT_ACCENT),
+  };
+}
+
+/** Plan steps for a text motion on the selected text layers. */
+export function textMotionSteps(options: TextMotionOptions): PlanStep[] {
+  if (options.preset.kind === "typing") {
+    return [
+      {
+        op: "kvfx.op.prop.expression",
+        args: {
+          target: "selection",
+          path: ["ADBE Text Properties", "ADBE Text Document"],
+          expression: typingExpression(options),
+          relative: true,
+          keepExisting: true,
+        },
+      },
+    ];
+  }
+  const animators = options.engine === "keys" ? keyAnimators(options) : liveAnimators(options);
+  return [{ op: "kvfx.op.text.addAnimator", args: { target: "selection", relative: true, animators } }];
+}
+
 export const animateText = simpleCommand({
   id: "kvfx.text.animate",
   name: "Animate Text",
-  description: "Add the chosen text animation to the selected text layers, starting at the playhead",
+  description:
+    "Animate the selected text layers in, out or both — by character, word or line, in any order, starting at the playhead",
   category: CommandCategory.Text,
-  keywords: ["animate", "text", "reveal", "typewriter", "fade", "intro", "preset", "per character"],
+  keywords: [
+    "animate", "text", "reveal", "typewriter", "typing", "fade", "intro", "outro", "preset", "per character",
+    "stagger", "words", "lines", "scramble", "decode", "kinetic", "highlight",
+  ],
   icon: "text-animate",
   metadata: NEEDS_LAYER,
   check: hasText,
-  defaultParams: (ui) => ui.toolParams["textAnimate"] ?? {},
+  defaultParams: (ui) => ({ bezier: [...ui.ease], ...(ui.toolParams["textAnimate"] ?? {}) }),
   steps: (ctx) => {
-    const preset = textPreset(stringParam(ctx, "preset", "rise")) ?? TEXT_PRESETS[0];
-    if (preset === undefined) return [];
-    const speed = numberParam(ctx, "speed", 1, SPEED.min, SPEED.max);
-    const timed = { ...preset, duration: preset.duration / speed };
-    return [
-      { op: "kvfx.op.text.addAnimator", args: { target: "selection", relative: true, animator: animatorFor(timed) } },
-    ];
+    const options = textMotionOptions(ctx);
+    return options === undefined ? [] : textMotionSteps(options);
   },
 });
 

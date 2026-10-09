@@ -3,6 +3,8 @@ import { hostError } from "../runtime/errors.js";
 import { ErrorCode } from "../runtime/protocol.js";
 import type { Operation, OperationContext } from "../runtime/registry.js";
 import type { HostJson } from "../runtime/serialize.js";
+import { type Bezier, easeKeys, readBezier } from "./keys.js";
+import { stampTime } from "./prop.js";
 import { type Args, layerById, readColor, requireComp, skipped, targets } from "./raw.js";
 
 /**
@@ -20,6 +22,8 @@ const ANIMATOR = "ADBE Text Animator";
 const ANIMATOR_PROPS = "ADBE Text Animator Properties";
 const SELECTORS = "ADBE Text Selectors";
 const SELECTOR = "ADBE Text Selector";
+const EXPRESSION_SELECTOR = "ADBE Text Expressible Selector";
+const KEY_TOLERANCE = 1e-6;
 const ADVANCED = "ADBE Text Range Advanced";
 
 /** Range selector "Units": 1 = Percentage, 2 = Index. */
@@ -45,17 +49,43 @@ function setIfPresent(group: AeRawProp, matchName: string, value: HostJson | und
   if (prop) prop.setValue(value);
 }
 
-function keyIfPresent(group: AeRawProp, matchName: string, keys: HostJson | undefined, offset: number): void {
+function keyIfPresent(
+  env: OperationContext["env"],
+  group: AeRawProp,
+  matchName: string,
+  keys: HostJson | undefined,
+  offset: number,
+  scale: number,
+  bezier: Bezier | undefined,
+): void {
   if (!isArray(keys)) return;
   const prop = group.property(matchName);
   if (!prop) return;
   const list = keys as HostJson[];
+  const times: number[] = [];
   for (let i = 0; i < list.length; i += 1) {
     const key = list[i] as Args;
     if (key && typeof key["time"] === "number" && typeof key["value"] === "number") {
-      prop.setValueAtTime(offset + (key["time"]), key["value"]);
+      const time = offset + key["time"] * scale;
+      prop.setValueAtTime(time, key["value"]);
+      times[times.length] = time;
     }
   }
+  if (!bezier || times.length < 2) return;
+  const indices: number[] = [];
+  for (let i = 0; i < times.length; i += 1) {
+    for (let k = 1; k <= prop.numKeys; k += 1) {
+      if (Math.abs(prop.keyTime(k) - (times[i] as number)) < KEY_TOLERANCE) indices[indices.length] = k;
+    }
+  }
+  easeKeys(env, prop, indices, bezier);
+}
+
+/** Range selector "Based On": characters, characters without spaces, words, lines. */
+const BASED_ON: { [unit: string]: number } = { characters: 1, glyphs: 2, words: 3, lines: 4 };
+
+function basedOn(value: HostJson | undefined): number | undefined {
+  return typeof value === "string" ? BASED_ON[value] : undefined;
 }
 
 /**
@@ -64,11 +94,27 @@ function keyIfPresent(group: AeRawProp, matchName: string, keys: HostJson | unde
  * `spec`:
  *   name        animator name
  *   properties  [{ matchName, value }]  — what the animator changes
- *   selectors   [{ units: "percent" | "index", mode: "add" | "subtract",
- *                  start, end, offset, amount, easeHigh, easeLow,
- *                  keys: { start, end, offset: [{ time, value }] } }]
+ *   selectors   [{ type: "range" | "expression",
+ *                  range:      units: "percent" | "index", mode: "add" | "subtract",
+ *                              basedOn, randomize, seed, shape,
+ *                              start, end, offset, amount, easeHigh, easeLow, smoothness,
+ *                              keys: { start, end, offset: [{ time, value }] }
+ *                  expression: basedOn, expression }]
+ *   ease        [x1, y1, x2, y2] — eases every selector keyframe written
+ *
+ * `timing` stretches normalised key times (0–1) to the layer's own text:
+ * stagger × (units − 1) + duration seconds, counted in characters, words or
+ * lines, and anchored at the playhead or so that it ends at the layer's out
+ * point. Only the host can count, because only it can read every selected
+ * layer's text at the moment the plan runs.
  */
-function addAnimator(layer: AeRawLayer, spec: Args, timeOffset: number): void {
+function addAnimator(
+  env: OperationContext["env"],
+  layer: AeRawLayer,
+  spec: Args,
+  timeOffset: number,
+  stampNow: number | undefined,
+): void {
   const animators = (layer.property(TEXT_GROUP) as AeRawProp).property(ANIMATORS) as AeRawProp;
   const created = animators.addProperty(ANIMATOR);
   const index = created.propertyIndex;
@@ -83,40 +129,128 @@ function addAnimator(layer: AeRawLayer, spec: Args, timeOffset: number): void {
     if (entry["value"] !== undefined) prop.setValue(entry["value"]);
   }
 
+  const timing = readTiming(layer, spec["timing"]);
+  let offset = timeOffset;
+  let scale = 1;
+  if (timing) {
+    scale = timing.total;
+    offset = timing.anchor === "end" ? layer.outPoint - timing.total : timeOffset;
+  }
+  const bezier = spec["ease"] === undefined ? undefined : readBezier(spec["ease"]);
+
   const selectors = isArray(spec["selectors"]) ? (spec["selectors"] as HostJson[]) : [];
+  let auto = 0;
   for (let s = 0; s < selectors.length; s += 1) {
     const sel = selectors[s] as Args;
     if (!sel) continue;
+    const position = s + 1 + auto;
+    const isExpression = sel["type"] === "expression";
+    const group = animatorAt(layer, index).property(SELECTORS) as AeRawProp;
+
+    if (isExpression) {
+      group.addProperty(EXPRESSION_SELECTOR);
+      // A version that pre-filled a full range selector leaves it first; it
+      // selects everything, so the expression selector below it decides.
+      const fresh = animatorAt(layer, index).property(SELECTORS) as AeRawProp;
+      const selector = fresh.property(fresh.numProperties) as AeRawProp;
+      auto = fresh.numProperties - (s + 1);
+      setIfPresent(selector, "ADBE Text Range Type2", basedOn(sel["basedOn"]));
+      const amount = expressionAmount(selector);
+      const source = typeof sel["expression"] === "string" ? sel["expression"] : "";
+      if (amount && source.length > 0) {
+        amount.expression = stampNow === undefined ? source : stampTime(source, stampNow);
+        amount.expressionEnabled = true;
+      }
+      continue;
+    }
+
     // Some versions create an animator with a range selector already in it;
     // reuse it rather than stacking a second one on top.
-    const group = animatorAt(layer, index).property(SELECTORS) as AeRawProp;
-    if (group.numProperties < s + 1) group.addProperty(SELECTOR);
-    const selector = (animatorAt(layer, index).property(SELECTORS) as AeRawProp).property(s + 1) as AeRawProp;
+    if (group.numProperties < position) group.addProperty(SELECTOR);
+    const selector = (animatorAt(layer, index).property(SELECTORS) as AeRawProp).property(position) as AeRawProp;
     const advanced = selector.property(ADVANCED) as AeRawProp;
 
     const byIndex = sel["units"] === "index";
     setIfPresent(advanced, "ADBE Text Range Units", byIndex ? UNITS_INDEX : UNITS_PERCENT);
+    setIfPresent(advanced, "ADBE Text Range Type2", basedOn(sel["basedOn"]));
     if (sel["mode"] === "subtract") setIfPresent(advanced, "ADBE Text Selector Mode", MODE_SUBTRACT);
     setIfPresent(advanced, "ADBE Text Selector Max Amount", sel["amount"]);
+    setIfPresent(advanced, "ADBE Text Range Shape", sel["shape"]);
     setIfPresent(advanced, "ADBE Text Levels Max Ease", sel["easeHigh"]);
     setIfPresent(advanced, "ADBE Text Levels Min Ease", sel["easeLow"]);
     setIfPresent(advanced, "ADBE Text Selector Smoothness", sel["smoothness"]);
+    if (sel["randomize"] === true) {
+      setIfPresent(advanced, "ADBE Text Randomize Order", 1);
+      setIfPresent(advanced, "ADBE Text Random Seed", sel["seed"]);
+    }
 
     const start = byIndex ? "ADBE Text Index Start" : "ADBE Text Percent Start";
     const end = byIndex ? "ADBE Text Index End" : "ADBE Text Percent End";
-    const offset = byIndex ? "ADBE Text Index Offset" : "ADBE Text Percent Offset";
+    const off = byIndex ? "ADBE Text Index Offset" : "ADBE Text Percent Offset";
     // End first, so a start beyond the default end is never briefly inverted.
     setIfPresent(selector, end, sel["end"]);
     setIfPresent(selector, start, sel["start"]);
-    setIfPresent(selector, offset, sel["offset"]);
+    setIfPresent(selector, off, sel["offset"]);
 
     const keys = sel["keys"] as Args | undefined;
     if (keys && typeof keys === "object") {
-      keyIfPresent(selector, start, keys["start"], timeOffset);
-      keyIfPresent(selector, end, keys["end"], timeOffset);
-      keyIfPresent(selector, offset, keys["offset"], timeOffset);
+      keyIfPresent(env, selector, start, keys["start"], offset, scale, bezier);
+      keyIfPresent(env, selector, end, keys["end"], offset, scale, bezier);
+      keyIfPresent(env, selector, off, keys["offset"], offset, scale, bezier);
     }
   }
+}
+
+/** The expression selector's Amount, found by match name or, failing that, by role. */
+function expressionAmount(selector: AeRawProp): AeRawProp | null {
+  const named = selector.property("ADBE Text Expressible Amount");
+  if (named) return named;
+  for (let i = selector.numProperties; i >= 1; i -= 1) {
+    const child = selector.property(i);
+    if (child && child.canSetExpression) return child;
+  }
+  return null;
+}
+
+interface Timing {
+  readonly total: number;
+  readonly anchor: "playhead" | "end";
+}
+
+const MAX_TIMING_SECONDS = 3600;
+const ETX = 3;
+
+/** Characters (spaces excluded), words or lines in a text layer's string. */
+export function countUnits(text: string, unit: string): number {
+  if (unit === "lines") {
+    // After Effects marks a soft line break with ETX (character 3).
+    const lines = text.split(String.fromCharCode(ETX)).join("\n").split(/\r\n|\r|\n/);
+    let n = 0;
+    for (let i = 0; i < lines.length; i += 1) if (/\S/.test(lines[i] as string)) n += 1;
+    return n;
+  }
+  if (unit === "words") {
+    const words = text.split(/\s+/);
+    let n = 0;
+    for (let i = 0; i < words.length; i += 1) if ((words[i] as string).length > 0) n += 1;
+    return n;
+  }
+  return text.replace(/\s+/g, "").length;
+}
+
+function readTiming(layer: AeRawLayer, raw: HostJson | undefined): Timing | undefined {
+  if (!raw || typeof raw !== "object" || isArray(raw)) return undefined;
+  const bag = raw as Args;
+  const stagger = typeof bag["stagger"] === "number" ? bag["stagger"] : 0;
+  const duration = typeof bag["duration"] === "number" ? bag["duration"] : 0;
+  const unit = typeof bag["unit"] === "string" ? bag["unit"] : "characters";
+  const source = (layer.property(TEXT_GROUP) as AeRawProp).property("ADBE Text Document") as AeRawProp;
+  const text = (source.value as AeRawTextDocument).text;
+  const count = Math.max(1, countUnits(String(text), unit));
+  let total = stagger * (count - 1) + duration;
+  if (!(total > 0)) total = duration > 0 ? duration : 1;
+  if (total > MAX_TIMING_SECONDS) total = MAX_TIMING_SECONDS;
+  return { total: total, anchor: bag["anchor"] === "end" ? "end" : "playhead" };
 }
 
 export const addAnimatorOperation: Operation = {
@@ -125,11 +259,28 @@ export const addAnimatorOperation: Operation = {
   run: function (ctx: OperationContext): HostJson {
     const comp = requireComp(ctx);
     const resolved = targets(comp, ctx.args);
-    const spec = ctx.args["animator"];
-    if (!spec || typeof spec !== "object" || isArray(spec)) {
-      throw hostError(ErrorCode.InvalidArgument, "animator must be an object.");
+    // One animator, or several applied together (an in and an out, say).
+    const many = ctx.args["animators"];
+    const specs: Args[] = [];
+    if (isArray(many)) {
+      const list = many as HostJson[];
+      for (let i = 0; i < list.length; i += 1) {
+        const entry = list[i];
+        if (!entry || typeof entry !== "object" || isArray(entry)) {
+          throw hostError(ErrorCode.InvalidArgument, "Each animator must be an object.");
+        }
+        specs[specs.length] = entry as Args;
+      }
+    } else {
+      const spec = ctx.args["animator"];
+      if (!spec || typeof spec !== "object" || isArray(spec)) {
+        throw hostError(ErrorCode.InvalidArgument, "animator must be an object.");
+      }
+      specs[0] = spec as Args;
     }
-    const offset = ctx.args["relative"] === true ? comp.time : 0;
+    if (specs.length === 0) throw hostError(ErrorCode.InvalidArgument, "There is no animator to add.");
+    const relative = ctx.args["relative"] === true;
+    const offset = relative ? comp.time : 0;
 
     let changed = 0;
     const skips: HostJson[] = [];
@@ -143,7 +294,9 @@ export const addAnimatorOperation: Operation = {
         skips[skips.length] = skipped(layer, "Layer is locked");
         continue;
       }
-      addAnimator(layer, spec as Args, offset);
+      for (let a = 0; a < specs.length; a += 1) {
+        addAnimator(ctx.env, layer, specs[a] as Args, offset, relative ? comp.time : undefined);
+      }
       changed += 1;
     }
     return {
@@ -194,6 +347,7 @@ export const explodeTextOperation: Operation = {
       const piece = layer.duplicate();
       if (typeof range["name"] === "string" && (range["name"]).length > 0) piece.name = range["name"];
       addAnimator(
+        ctx.env,
         piece,
         {
           name: "KVFX Split",
@@ -204,6 +358,7 @@ export const explodeTextOperation: Operation = {
           ],
         },
         0,
+        undefined,
       );
       ids[ids.length] = piece.id;
     }

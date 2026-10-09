@@ -1,8 +1,31 @@
-import { type CharacterState, TEXT_PRESETS, type TextPreset, hexToRgb, ref } from "@kvfx/core";
+import {
+  type JsonValue,
+  STAGGER_ORDERS,
+  TEXT_CATEGORIES,
+  TEXT_EASES,
+  TEXT_MOTION_PRESETS,
+  type TextMotionOptions,
+  type TextMotionPreset,
+  hexToRgb,
+  parseOrder,
+  ref,
+} from "@kvfx/core";
 import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
-import { CommandButtons, Section, actionButton, colorField, hint, numberField, row, segmented, textField } from "../ui/controls.js";
-import { clear, h, toggleClass } from "../ui/dom.js";
+import {
+  CommandButtons,
+  Section,
+  actionButton,
+  colorField,
+  hint,
+  numberField,
+  row,
+  segmented,
+  selectField,
+  textField,
+} from "../ui/controls.js";
+import { clear, h, setText, toggleClass } from "../ui/dom.js";
+import { TextPreview } from "./text-preview.js";
 
 /**
  * TEXT: create styled text, animate it with presets, explode it into pieces,
@@ -11,10 +34,13 @@ import { clear, h, toggleClass } from "../ui/dom.js";
 
 const FONT_SEARCH_DELAY_MS = 250;
 const FONT_RESULTS = 40;
-const PREVIEW_PAUSE_MS = 900;
-const SNAP_MS = 1;
-const SMOOTH_SHARE = 0.45;
-const MIN_CHAR_MS = 60;
+const DEFAULT_SIZE = 120;
+/** Presets remembered under Recent. */
+const RECENT_COUNT = 8;
+const SEED_RANGE = 99_999;
+const FALLBACK_FPS = 25;
+const DEFAULTS = { stagger: 2, duration: 15, overshoot: 30 } as const;
+const DEFAULT_ACCENT = hexToRgb("#ff8f3f") ?? ([1, 1, 1] as const);
 
 interface UsedFont {
   readonly postScriptName: string;
@@ -23,30 +49,10 @@ interface UsedFont {
   readonly uses: number;
 }
 
- 
-const OPACITY_SCALE = 100;
-const SCALE_PERCENT = 100;
-/** After Effects blur radius reads stronger than CSS blur; this keeps the preview honest. */
-const BLUR_RATIO = 4;
-/** Tracking is in thousandths of an em; at the preview's 22px that is about 1/40 px per unit. */
-const TRACKING_RATIO = 40;
-const MAX_PREVIEW_CHARS = 24;
-const MIN_SPEED = 0.1;
-const MS = 1000;
-const DEFAULT_SIZE = 120;
- 
+type Filter = "all" | "favourites" | "recent" | (typeof TEXT_CATEGORIES)[number];
 
-function keyframeFor(state: CharacterState): Keyframe {
-  const transforms: string[] = [];
-  if (state.x !== undefined || state.y !== undefined) transforms.push(`translate(${String(state.x ?? 0)}px, ${String(state.y ?? 0)}px)`);
-  if (state.scale !== undefined) transforms.push(`scale(${String(state.scale / SCALE_PERCENT)})`);
-  if (state.rotation !== undefined) transforms.push(`rotate(${String(state.rotation)}deg)`);
-  return {
-    opacity: String(state.opacity === undefined ? 1 : state.opacity / OPACITY_SCALE),
-    transform: transforms.length > 0 ? transforms.join(" ") : "none",
-    filter: state.blur === undefined ? "blur(0px)" : `blur(${String(state.blur / BLUR_RATIO)}px)`,
-    marginRight: state.tracking === undefined ? "0px" : `${String(state.tracking / TRACKING_RATIO)}px`,
-  };
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
 
 export class TextView implements View {
@@ -64,14 +70,28 @@ export class TextView implements View {
   readonly #color: HTMLInputElement;
   readonly #tracking: HTMLInputElement;
   readonly #stage: HTMLElement;
+  readonly #preview: TextPreview;
+  readonly #tiles: HTMLElement;
+  readonly #filters: HTMLElement;
   readonly #presetTiles = new Map<string, HTMLButtonElement>();
+  readonly #favouriteButton: HTMLButtonElement;
   readonly #fontsList: HTMLElement;
-  #preset: TextPreset;
-  #speed: HTMLInputElement;
+  readonly #motion: {
+    mode: string;
+    unit: string;
+    order: HTMLSelectElement;
+    ease: HTMLSelectElement;
+    stagger: HTMLInputElement;
+    duration: HTMLInputElement;
+    overshoot: HTMLInputElement;
+    engine: string;
+    accent: HTMLInputElement;
+  };
+  #preset: TextMotionPreset;
+  #filter: Filter = "all";
+  #seed = 1;
   #explodeMode: string;
   #fontTimer: ReturnType<typeof setTimeout> | undefined;
-  #animations: Animation[] = [];
-  #loopTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(panel: Panel) {
     this.#panel = panel;
@@ -111,14 +131,16 @@ export class TextView implements View {
     );
 
     // --- animate ------------------------------------------------------------
-    this.#preset = TEXT_PRESETS.find((p) => p.id === animate["preset"]) ?? TEXT_PRESETS[2] ?? (TEXT_PRESETS[0] as TextPreset);
+    this.#preset = TEXT_MOTION_PRESETS.find((p) => p.id === animate["preset"]) ?? TEXT_MOTION_PRESETS[2] ?? (TEXT_MOTION_PRESETS[0] as TextMotionPreset);
     this.#stage = h("div", { class: "kvfx-stage", attrs: { "aria-hidden": "true" } });
-    const tiles = h("div", { class: "kvfx-tiles" });
-    for (const preset of TEXT_PRESETS) {
+    this.#preview = new TextPreview(this.#stage);
+    this.#tiles = h("div", { class: "kvfx-tiles kvfx-tiles--scroll" });
+    for (const preset of TEXT_MOTION_PRESETS) {
       const tile = h("button", {
         class: "kvfx-tile",
         type: "button",
         text: preset.name,
+        title: `${preset.name} — ${preset.category}`,
         on: {
           click: () => {
             this.#preset = preset;
@@ -131,29 +153,134 @@ export class TextView implements View {
         },
       });
       this.#presetTiles.set(preset.id, tile);
-      tiles.append(tile);
+      this.#tiles.append(tile);
     }
-    const speed = numberField("Speed", typeof animate["speed"] === "number" ? animate["speed"] : 1, { min: 0.1, max: 10, step: 0.25, unit: "×" });
-    this.#speed = speed.input;
-    speed.root.classList.add("kvfx-field--narrow");
-    this.#speed.addEventListener("change", () => {
-      session.setToolParams("textAnimate", { speed: Number(this.#speed.value) || 1 });
-      this.#play();
-    });
+
+    // Category filter: everything, favourites, recently applied, then each family.
+    this.#filters = h("div", { class: "kvfx-filters", attrs: { role: "tablist", "aria-label": "Preset categories" } });
+    const filterOptions: { value: Filter; label: string }[] = [
+      { value: "all", label: "All" },
+      { value: "favourites", label: "★" },
+      { value: "recent", label: "Recent" },
+      ...TEXT_CATEGORIES.map((c) => ({ value: c, label: c })),
+    ];
+    for (const option of filterOptions) {
+      this.#filters.append(
+        h("button", {
+          class: "kvfx-filter",
+          type: "button",
+          text: option.label,
+          title: option.value === "favourites" ? "Favourites" : option.label,
+          attrs: { "data-filter": option.value },
+          on: {
+            click: () => {
+              this.#filter = option.value;
+              this.#applyFilter();
+            },
+          },
+        }),
+      );
+    }
+
+    const n = (key: string, fallback: number): number => (typeof animate[key] === "number" ? animate[key] : fallback);
+    const replay = (): void => this.#play();
+    const remember = (patch: Record<string, JsonValue>): void => {
+      session.setToolParams("textAnimate", patch);
+      replay();
+    };
+    let mode = typeof animate["mode"] === "string" ? animate["mode"] : "in";
+    const modeSeg = segmented(
+      [
+        { value: "in", label: "In" },
+        { value: "out", label: "Out" },
+        { value: "inOut", label: "In+Out", title: "In from the playhead, out at the layer's end" },
+      ],
+      mode,
+      (value) => {
+        mode = value;
+        this.#motion.mode = value;
+        modeSeg.set(value);
+        remember({ mode: value });
+      },
+    );
+    let unit = typeof animate["unit"] === "string" ? animate["unit"] : "characters";
+    const unitSeg = segmented(
+      [
+        { value: "characters", label: "Chars" },
+        { value: "words", label: "Words" },
+        { value: "lines", label: "Lines" },
+      ],
+      unit,
+      (value) => {
+        unit = value;
+        this.#motion.unit = value;
+        unitSeg.set(value);
+        remember({ unit: value });
+      },
+    );
+    const order = selectField(
+      "Order",
+      STAGGER_ORDERS.map((o) => ({ value: o.id, label: o.label })),
+      parseOrder(animate["order"]),
+      (value) => {
+        this.#seed = 1 + Math.floor(Math.random() * SEED_RANGE);
+        remember({ order: value });
+      },
+    );
+    const ease = selectField(
+      "Ease",
+      TEXT_EASES.map((e) => ({ value: e.id, label: e.label })),
+      typeof animate["ease"] === "string" ? animate["ease"] : "preset",
+      (value) => remember({ ease: value }),
+    );
+    const stagger = numberField("Stagger", n("stagger", DEFAULTS.stagger), { min: 0, step: 1, unit: "fr", onChange: (v) => remember({ stagger: v }) });
+    const duration = numberField("Each", n("duration", DEFAULTS.duration), { min: 1, step: 1, unit: "fr", onChange: (v) => remember({ duration: v }) });
+    const overshoot = numberField("Overshoot", n("overshoot", DEFAULTS.overshoot), { min: 0, max: 100, step: 5, unit: "%", onChange: (v) => remember({ overshoot: v }) });
+    let engine = animate["engine"] === "keys" ? "keys" : "live";
+    const engineSeg = segmented(
+      [
+        { value: "live", label: "Live", title: "An expression selector: every option, follows text edits" },
+        { value: "keys", label: "Keys", title: "Range-selector keyframes you can drag; overshoot is approximated" },
+      ],
+      engine,
+      (value) => {
+        engine = value;
+        this.#motion.engine = value;
+        engineSeg.set(value);
+        session.setToolParams("textAnimate", { engine: value });
+      },
+    );
+    const accent = colorField("Accent", typeof animate["accent"] === "string" ? animate["accent"] : "#ff8f3f", (hex) => remember({ accent: hex }));
+    this.#motion = {
+      mode,
+      unit,
+      order: order.select,
+      ease: ease.select,
+      stagger: stagger.input,
+      duration: duration.input,
+      overshoot: overshoot.input,
+      engine,
+      accent: accent.input,
+    };
+    this.#favouriteButton = actionButton("Favourite", () => this.#toggleFavourite(), { icon: "star", variant: "tool", title: "Add this preset to ★ favourites" });
+
     const animateSection = this.#section("text.animate", "Animate", "from the playhead");
     animateSection.body.append(
       this.#stage,
-      tiles,
-      row(
-        speed.root,
-        this.#buttons.button("kvfx.text.animate", {
-          label: "Animate Text",
-          icon: "text-animate",
-          variant: "wide",
-          className: "kvfx-primary",
-          params: () => ({ preset: this.#preset.id, speed: Number(this.#speed.value) || 1 }),
-        }),
-      ),
+      this.#filters,
+      this.#tiles,
+      row(modeSeg.root, unitSeg.root),
+      row(order.root, ease.root),
+      row(stagger.root, duration.root, overshoot.root),
+      row(engineSeg.root, accent.root, this.#favouriteButton),
+      this.#buttons.button("kvfx.text.animate", {
+        label: "Animate Text",
+        icon: "text-animate",
+        variant: "wide",
+        className: "kvfx-primary",
+        params: () => this.#animateParams(),
+      }),
+      hint("Stagger is the gap between units starting; Each is how long one unit takes. Accent colours Colour Typing and Highlight."),
     );
 
     // --- explode ------------------------------------------------------------
@@ -193,6 +320,7 @@ export class TextView implements View {
 
     this.root = h("div", { class: "kvfx-tab" }, ...this.#sections.map((s) => s.root));
     this.#highlightPreset();
+    this.#applyFilter();
   }
 
   #section(id: string, title: string, hintText?: string): Section {
@@ -300,35 +428,111 @@ export class TextView implements View {
     if (value !== undefined) await this.#scanFonts();
   }
 
-  // --- live preview ---------------------------------------------------------
+  // --- animate ------------------------------------------------------------
 
-  #highlightPreset(): void {
-    for (const [id, tile] of this.#presetTiles) toggleClass(tile, "kvfx-tile--on", id === this.#preset.id);
+  #fps(): number {
+    return this.#panel.session.state.snapshot.comp?.frameRate ?? FALLBACK_FPS;
   }
 
-  #play(preset: TextPreset = this.#preset): void {
-    for (const animation of this.#animations) animation.cancel();
-    this.#animations = [];
-    if (this.#loopTimer !== undefined) clearTimeout(this.#loopTimer);
+  /** The motion as the command will build it, for the preview. */
+  #options(preset: TextMotionPreset = this.#preset): TextMotionOptions {
+    const m = this.#motion;
+    const frame = 1 / this.#fps();
+    const ease = TEXT_EASES.find((e) => e.id === m.ease.value)?.id ?? "preset";
+    return {
+      preset,
+      mode: m.mode === "out" || m.mode === "inOut" ? m.mode : "in",
+      unit: m.unit === "words" || m.unit === "lines" ? m.unit : "characters",
+      order: parseOrder(m.order.value),
+      seed: this.#seed,
+      ease,
+      bezier: this.#panel.session.state.settings.ui.ease,
+      stagger: Math.max(0, Number(m.stagger.value) || 0) * frame,
+      duration: Math.max(1, Number(m.duration.value) || DEFAULTS.duration) * frame,
+      overshoot: Math.max(0, Number(m.overshoot.value) || 0),
+      engine: m.engine === "keys" ? "keys" : "live",
+      accent: hexToRgb(m.accent.value) ?? DEFAULT_ACCENT,
+    };
+  }
+
+  #animateParams(): Record<string, JsonValue> {
+    const m = this.#motion;
+    const session = this.#panel.session;
+    const recent = [this.#preset.id, ...stringList(session.toolParams("textAnimate")["recent"]).filter((id) => id !== this.#preset.id)].slice(0, RECENT_COUNT);
+    session.setToolParams("textAnimate", { recent });
+    if (this.#filter === "recent") this.#applyFilter();
+    return {
+      preset: this.#preset.id,
+      mode: m.mode,
+      unit: m.unit,
+      order: m.order.value,
+      seed: this.#seed,
+      ease: m.ease.value,
+      bezier: [...session.state.settings.ui.ease],
+      stagger: Math.max(0, Number(m.stagger.value) || 0),
+      duration: Math.max(1, Number(m.duration.value) || DEFAULTS.duration),
+      overshoot: Math.max(0, Number(m.overshoot.value) || 0),
+      engine: m.engine,
+      accent: m.accent.value,
+    };
+  }
+
+  #favourites(): string[] {
+    return stringList(this.#panel.session.toolParams("textAnimate")["favourites"]);
+  }
+
+  #toggleFavourite(): void {
+    const current = this.#favourites();
+    const id = this.#preset.id;
+    const next = current.includes(id) ? current.filter((f) => f !== id) : [...current, id];
+    this.#panel.session.setToolParams("textAnimate", { favourites: next });
+    this.#highlightPreset();
+    this.#applyFilter();
+  }
+
+  #applyFilter(): void {
+    const favourites = new Set(this.#favourites());
+    const recent = stringList(this.#panel.session.toolParams("textAnimate")["recent"]);
+    for (const [id, tile] of this.#presetTiles) {
+      const preset = TEXT_MOTION_PRESETS.find((p) => p.id === id);
+      let shown = true;
+      if (this.#filter === "favourites") shown = favourites.has(id);
+      else if (this.#filter === "recent") shown = recent.includes(id);
+      else if (this.#filter !== "all") shown = preset?.category === this.#filter;
+      tile.hidden = !shown;
+    }
+    // Recent lists in the order presets were last used.
+    if (this.#filter === "recent") {
+      for (const id of [...recent].reverse()) {
+        const tile = this.#presetTiles.get(id);
+        if (tile !== undefined) this.#tiles.prepend(tile);
+      }
+    } else {
+      for (const preset of TEXT_MOTION_PRESETS) {
+        const tile = this.#presetTiles.get(preset.id);
+        if (tile !== undefined) this.#tiles.append(tile);
+      }
+    }
+    for (const button of Array.from(this.#filters.querySelectorAll<HTMLButtonElement>(".kvfx-filter"))) {
+      toggleClass(button, "kvfx-filter--on", button.dataset["filter"] === this.#filter);
+    }
+  }
+
+  #highlightPreset(): void {
+    const favourites = new Set(this.#favourites());
+    for (const [id, tile] of this.#presetTiles) {
+      toggleClass(tile, "kvfx-tile--on", id === this.#preset.id);
+      const preset = TEXT_MOTION_PRESETS.find((p) => p.id === id);
+      setText(tile, `${favourites.has(id) ? "★ " : ""}${preset?.name ?? id}`);
+    }
+    const on = favourites.has(this.#preset.id);
+    toggleClass(this.#favouriteButton, "kvfx-tool--on", on);
+    this.#favouriteButton.title = on ? `Remove ${this.#preset.name} from ★ favourites` : `Add ${this.#preset.name} to ★ favourites`;
+  }
+
+  #play(preset: TextMotionPreset = this.#preset): void {
     if (!this.root.isConnected) return;
-
-    clear(this.#stage);
-    const sample = (this.#content.value.trim() || "Your title").slice(0, MAX_PREVIEW_CHARS);
-    const chars = Array.from(sample).map((ch) => h("span", { class: "kvfx-stage__char", text: ch === " " ? " " : ch }));
-    this.#stage.append(...chars);
-
-    const speed = Math.max(MIN_SPEED, Number(this.#speed.value) || 1);
-    const totalMs = (preset.duration / speed) * MS;
-    const stagger = totalMs / Math.max(1, chars.length);
-    const charMs = preset.smoothness === 0 ? SNAP_MS : Math.max(MIN_CHAR_MS, totalMs * SMOOTH_SHARE);
-    const from = keyframeFor(preset.from);
-    const to = keyframeFor({});
-    chars.forEach((node, i) => {
-      this.#animations.push(
-        node.animate([from, to], { duration: charMs, delay: i * stagger, fill: "both", easing: "cubic-bezier(0.25, 1, 0.5, 1)" }),
-      );
-    });
-    this.#loopTimer = setTimeout(() => this.#play(preset), totalMs + charMs + PREVIEW_PAUSE_MS);
+    this.#preview.play(this.#content.value, this.#options(preset));
   }
 
   shown(): void {
