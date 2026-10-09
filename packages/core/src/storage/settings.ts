@@ -23,7 +23,7 @@ export interface CommandUsage {
 export interface UiSettings {
   /** Last active tab id. */
   readonly activeTab: string;
-  /** Align grid's reference mode: "auto", "composition" or "selection". */
+  /** Align grid's reference mode: "auto", "composition", "selection" or "group". */
   readonly alignReference: string;
   /**
    * Ids of tool groups the user has folded away.
@@ -233,7 +233,10 @@ function uiSettings(value: unknown): UiSettings {
   return {
     activeTab: typeof activeTab === "string" && activeTab.length > 0 ? activeTab : DEFAULT_UI_SETTINGS.activeTab,
     alignReference:
-      alignReference === "auto" || alignReference === "composition" || alignReference === "selection"
+      alignReference === "auto" ||
+      alignReference === "composition" ||
+      alignReference === "selection" ||
+      alignReference === "group"
         ? alignReference
         : DEFAULT_UI_SETTINGS.alignReference,
     collapsedGroups: stringList(value["collapsedGroups"]),

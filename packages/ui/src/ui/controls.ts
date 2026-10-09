@@ -244,3 +244,45 @@ export function actionButton(label: string, onClick: () => void, options: { icon
 export function hint(text: string): HTMLElement {
   return h("p", { class: "kvfx-hint", text });
 }
+
+/**
+ * Independent on/off switches drawn like a segmented control, so a row of
+ * options ("Rotation · Scale · Opacity") matches the choices around it.
+ */
+export function toggles<K extends string>(
+  options: readonly { key: K; label: string; title?: string }[],
+  values: Readonly<Partial<Record<K, boolean>>>,
+  onChange: (key: K, on: boolean) => void,
+): { root: HTMLElement; get: (key: K) => boolean } {
+  const state = new Map<K, boolean>(options.map((o) => [o.key, values[o.key] === true]));
+  const buttons = options.map((option) => {
+    const button = h("button", {
+      class: "kvfx-seg__btn",
+      type: "button",
+      text: option.label,
+      ...(option.title === undefined ? {} : { title: option.title }),
+      attrs: { "aria-pressed": "false" },
+    });
+    const paint = (): void => {
+      const on = state.get(option.key) === true;
+      toggleClass(button, "kvfx-seg__btn--on", on);
+      button.setAttribute("aria-pressed", on ? "true" : "false");
+    };
+    button.addEventListener("click", () => {
+      const next = !(state.get(option.key) === true);
+      state.set(option.key, next);
+      paint();
+      onChange(option.key, next);
+    });
+    paint();
+    return button;
+  });
+  return { root: h("div", { class: "kvfx-seg kvfx-seg--multi" }, ...buttons), get: (key) => state.get(key) === true };
+}
+
+/** A number field that may be left empty, meaning "automatic". */
+export function optionalNumber(input: HTMLInputElement): number | undefined {
+  if (input.value.trim().length === 0) return undefined;
+  const value = Number.parseFloat(input.value);
+  return Number.isFinite(value) ? value : undefined;
+}

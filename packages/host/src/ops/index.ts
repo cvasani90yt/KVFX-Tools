@@ -7,6 +7,7 @@ import { createLayerOperation } from "./layer/create.js";
 import { layerEditOperations } from "./layer/edit.js";
 import { setFlagOperation } from "./layer/flags.js";
 import { measureOperation, setTransformOperation } from "./layer/geometry.js";
+import { offsetPositionOperation } from "./layer/offset.js";
 import { reorderOperation } from "./layer/reorder.js";
 import { projectOperations } from "./project.js";
 import { propertyOperations } from "./prop.js";
@@ -30,6 +31,7 @@ export function createProductionRegistry(): OperationRegistry {
     createLayerOperation,
     measureOperation,
     setTransformOperation,
+    offsetPositionOperation,
     ...layerEditOperations,
     ...propertyOperations,
     ...effectOperations,

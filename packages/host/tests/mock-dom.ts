@@ -95,6 +95,7 @@ const EFFECT_PARAMS: Readonly<Record<string, readonly LeafDef[]>> = {
   "ADBE Angle Control": [leaf("ADBE Angle Control-0001", "Angle", PVT.OneD, 0)],
   "ADBE Point Control": [leaf("ADBE Point Control-0001", "Point", PVT.TwoD_SPATIAL, [0, 0], true)],
   "ADBE Color Control": [leaf("ADBE Color Control-0001", "Color", PVT.COLOR, [1, 1, 1, 1])],
+  "ADBE Layer Control": [leaf("ADBE Layer Control-0001", "Layer", PVT.LAYER_INDEX, 0)],
   "ADBE Gaussian Blur 2": [
     leaf("ADBE Gaussian Blur 2-0001", "Blurriness", PVT.OneD, 0),
     leaf("ADBE Gaussian Blur 2-0002", "Blur Dimensions", PVT.OneD, 1),

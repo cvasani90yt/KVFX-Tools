@@ -393,3 +393,145 @@ export function moveAnchorPoints(
 
   return { changes, skipped };
 }
+
+// ---------------------------------------------------------------------------
+// Moving the selection as one block, and spacing by gaps
+// ---------------------------------------------------------------------------
+
+/** Movements smaller than this are rounding, not a request to move. */
+const NEGLIGIBLE = 1e-9;
+
+/** A displacement for one layer, in its own parent space. */
+export interface OffsetChange {
+  readonly id: number;
+  readonly dx: number;
+  readonly dy: number;
+}
+
+export interface OffsetResult {
+  readonly changes: readonly OffsetChange[];
+  readonly skipped: readonly SkippedLayer[];
+}
+
+/**
+ * Converts one composition-space displacement per layer into parent space.
+ *
+ * Layers whose parent (at any depth) is also being moved are left out: they
+ * travel with that parent, and moving them as well would move them twice.
+ */
+function toOffsets(
+  layers: readonly LayerBounds[],
+  measurements: readonly LayerMeasurement[],
+  context: readonly LayerMeasurement[],
+  deltaFor: (layer: LayerBounds) => Vec2,
+  skipped: SkippedLayer[],
+): OffsetChange[] {
+  const byId = new Map<number, LayerMeasurement>();
+  for (const entry of context) byId.set(entry.id, entry);
+  for (const entry of measurements) byId.set(entry.id, entry);
+  const moving = new Set(layers.map((layer) => layer.id));
+
+  const hasMovingAncestor = (id: number): boolean => {
+    let current = byId.get(id)?.parentId;
+    for (let depth = 0; current !== undefined && depth < MAX_PARENT_DEPTH; depth += 1) {
+      if (moving.has(current)) return true;
+      current = byId.get(current)?.parentId;
+    }
+    return false;
+  };
+
+  const changes: OffsetChange[] = [];
+  for (const layer of layers) {
+    if (hasMovingAncestor(layer.id)) continue;
+    const inverse = invertLinear(layer.parentWorld);
+    if (inverse === undefined) {
+      skipped.push({ id: layer.id, name: layer.name, reason: "Layer or its parent is scaled to zero" });
+      continue;
+    }
+    const local = transformVector(inverse, deltaFor(layer));
+    changes.push({ id: layer.id, dx: local.x, dy: local.y });
+  }
+  return changes;
+}
+
+/**
+ * Aligns the selection's combined bounds to the composition, moving every
+ * layer by the same amount — so their arrangement is kept, and animated
+ * layers move with their keyframes.
+ */
+export function alignGroup(options: {
+  readonly measurements: readonly LayerMeasurement[];
+  readonly context?: readonly LayerMeasurement[];
+  readonly edge: AlignEdge;
+  readonly compWidth: number;
+  readonly compHeight: number;
+}): OffsetResult {
+  const context = options.context ?? options.measurements;
+  const measured = measureSelection(options.measurements, context);
+  const union = unionRects(measured.layers.map((entry) => entry.bounds));
+  if (union === undefined) return { changes: [], skipped: measured.skipped };
+
+  const comp = { left: 0, top: 0, width: options.compWidth, height: options.compHeight };
+  const delta = alignDelta(union, comp, options.edge);
+  const skipped: SkippedLayer[] = [...measured.skipped];
+  const changes = toOffsets(measured.layers, options.measurements, context, () => delta, skipped);
+  return { changes, skipped };
+}
+
+/**
+ * Equal space between the layers' edges, along one axis.
+ *
+ * Without a gap, the outermost two stay where they are and the space between
+ * them is shared out evenly — the counterpart to `distributeLayers`, which
+ * evens out centres instead. With a gap, the first layer stays and the rest
+ * are stacked after it that many pixels apart.
+ */
+export function distributeGaps(options: {
+  readonly measurements: readonly LayerMeasurement[];
+  readonly context?: readonly LayerMeasurement[];
+  readonly axis: DistributeAxis;
+  /** Pixels between neighbours; undefined shares the existing span. */
+  readonly gap?: number;
+}): OffsetResult {
+  const context = options.context ?? options.measurements;
+  const measured = measureSelection(options.measurements, context);
+  const horizontal = options.axis === "horizontal";
+  const fixedGap = options.gap !== undefined && Number.isFinite(options.gap) ? options.gap : undefined;
+  const minimum = fixedGap === undefined ? MIN_LAYERS_TO_DISTRIBUTE : 2;
+  if (measured.layers.length < minimum) return { changes: [], skipped: measured.skipped };
+
+  const start = (r: Rect): number => (horizontal ? r.left : r.top);
+  const size = (r: Rect): number => (horizontal ? r.width : r.height);
+  const ordered = [...measured.layers].sort((a, b) => start(a.bounds) - start(b.bounds));
+
+  let gap: number;
+  if (fixedGap !== undefined) {
+    gap = fixedGap;
+  } else {
+    const first = ordered[0] as LayerBounds;
+    const last = ordered[ordered.length - 1] as LayerBounds;
+    const span = start(last.bounds) + size(last.bounds) - start(first.bounds);
+    const total = ordered.reduce((sum, layer) => sum + size(layer.bounds), 0);
+    gap = (span - total) / (ordered.length - 1);
+  }
+
+  const targets = new Map<number, number>();
+  let cursor = start((ordered[0] as LayerBounds).bounds);
+  for (const layer of ordered) {
+    targets.set(layer.id, cursor);
+    cursor += size(layer.bounds) + gap;
+  }
+
+  const skipped: SkippedLayer[] = [...measured.skipped];
+  const changes = toOffsets(
+    ordered,
+    options.measurements,
+    context,
+    (layer) => {
+      const shift = (targets.get(layer.id) ?? start(layer.bounds)) - start(layer.bounds);
+      return horizontal ? { x: shift, y: 0 } : { x: 0, y: shift };
+    },
+    skipped,
+  );
+  return { changes: changes.filter((c) => Math.abs(c.dx) > NEGLIGIBLE || Math.abs(c.dy) > NEGLIGIBLE), skipped };
+}

@@ -54,6 +54,7 @@ const REFERENCE_LABEL: Record<AlignReference, { short: string; long: string }> =
   auto: { short: "Auto", long: "the composition for one layer, the selection for several" },
   composition: { short: "Comp", long: "the composition" },
   selection: { short: "Sel", long: "the selection's bounds" },
+  group: { short: "Grp", long: "the composition, moving the selection as one block with its keyframes" },
 };
 
 export class Shell implements Panel {
@@ -207,7 +208,7 @@ export class Shell implements Panel {
       type: "button",
       on: {
         click: () => {
-          const order: readonly AlignReference[] = ["auto", "composition", "selection"];
+          const order: readonly AlignReference[] = ["auto", "composition", "selection", "group"];
           const current = order.indexOf(session.state.settings.ui.alignReference as AlignReference);
           session.setAlignReference(order[(current + 1) % order.length] ?? "auto");
         },

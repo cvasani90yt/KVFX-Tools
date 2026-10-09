@@ -79,6 +79,12 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   "distribute-h": [bar(1, 3, 2.5, 10), bar(6.75, 3, 2.5, 10), bar(12.5, 3, 2.5, 10)],
   "distribute-v": [bar(3, 1, 10, 2.5), bar(3, 6.75, 10, 2.5), bar(3, 12.5, 10, 2.5)],
 
+  // Even gaps: bars of different widths with equal guide-marked gaps.
+  "gaps-h": [bar(1, 4, 2, 8), rule(4.5, 8, 5.5, 8), bar(7, 3, 3.5, 10), rule(12, 8, 13, 8), bar(14.5, 5, 1, 6)],
+  "gaps-v": [bar(4, 1, 8, 2), rule(8, 4.5, 8, 5.5), bar(3, 7, 10, 3.5), rule(8, 12, 8, 13), bar(5, 14.5, 6, 1)],
+  // Follow: a leader and a trailing copy joined by a dashed path.
+  follow: [bar(9.5, 2.5, 5, 5), box(1.5, 8.5, 5, 5), line("M6.5 9.5 Q8.5 9 9.5 7.5")],
+
   // Order: an arrow for direction, plus a rule for the "all the way" variants.
   // Bars alone cannot distinguish up from down — an earlier set drew move-up and
   // move-down identically.

@@ -1,8 +1,20 @@
-import type { JsonObject, PrimaryTransform, TransformChannel } from "@kvfx/core";
+import { type JsonObject, type PrimaryTransform, STAGGER_ORDERS, type TransformChannel, parseOrder } from "@kvfx/core";
 import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
-import { CommandButtons, Section, colorField, hint, numberField, pillGrid, row, segmented } from "../ui/controls.js";
+import {
+  CommandButtons,
+  Section,
+  colorField,
+  hint,
+  numberField,
+  optionalNumber,
+  pillGrid,
+  row,
+  segmented,
+  selectField,
+  toggles,
+} from "../ui/controls.js";
 import { h, setEnabled, setText, toggleClass } from "../ui/dom.js";
 
 /**
@@ -14,6 +26,8 @@ const TRANSFORM = "ADBE Transform Group";
 const ROUNDING = 100;
 const SEQUENCE_FRAMES = 5;
 const FINE_STEP = 0.1;
+/** Random sequence orders draw a seed from this range. */
+const SEED_RANGE = 99_999;
 /** Comp names listed under Duplicate Comp before "+N more". */
 const NAMES_SHOWN = 3;
 
@@ -82,6 +96,33 @@ export class ToolsView implements View {
       hint("For a precomp layer selected in this timeline: the copy sits above it and uses its own comps."),
     );
 
+    // --- Arrange -------------------------------------------------------------
+    const gapParams = session.toolParams("gaps");
+    const gap = numberField("Gap", 0, { step: 1, unit: "px" });
+    gap.input.value = typeof gapParams["gap"] === "number" ? String(gapParams["gap"]) : "";
+    gap.input.placeholder = "even";
+    gap.input.addEventListener("change", () => {
+      const value = optionalNumber(gap.input);
+      session.setToolParams("gaps", { gap: value === undefined ? null : value });
+    });
+    const gapArgs = (): JsonObject => {
+      const value = optionalNumber(gap.input);
+      return value === undefined ? {} : { gap: value };
+    };
+    const arrange = this.#section("tools.arrange", "Arrange", "equal gaps");
+    arrange.body.append(
+      row(
+        gap.root,
+        h(
+          "div",
+          { class: "kvfx-toolrow" },
+          b.button("kvfx.align.gaps.horizontal", { label: "Even gaps horizontally", icon: "gaps-h", variant: "tool", params: gapArgs }),
+          b.button("kvfx.align.gaps.vertical", { label: "Even gaps vertically", icon: "gaps-v", variant: "tool", params: gapArgs }),
+        ),
+      ),
+      hint("Equal space between edges. Leave Gap empty to share the space between the outer two; type a value to stack them that far apart. Keyframed layers move with their animation. To align the whole selection as one block, set the align bar to Grp."),
+    );
+
     // --- Sequence ----------------------------------------------------------
     const seqParams = session.toolParams("sequence");
     let seqMode = seqParams["mode"] === "chain" ? "chain" : "offset";
@@ -102,15 +143,81 @@ export class ToolsView implements View {
         session.setToolParams("sequence", { mode: value });
       },
     );
-    const sequence = this.#section("tools.sequence", "Sequence", "top to bottom");
+    const seqOrder = selectField(
+      "Order",
+      STAGGER_ORDERS.map((o) => ({ value: o.id, label: o.label })),
+      parseOrder(seqParams["order"]),
+      (value) => session.setToolParams("sequence", { order: value }),
+    );
+    const sequence = this.#section("tools.sequence", "Sequence");
     sequence.body.append(
       row(frames.root, mode.root),
+      seqOrder.root,
       b.button("kvfx.layer.sequence", {
         label: "Sequence Layers",
         icon: "sequence",
         variant: "wide",
-        params: () => ({ frames: Number.parseFloat(frames.input.value) || 0, mode: seqMode }),
+        params: () => ({
+          frames: Number.parseFloat(frames.input.value) || 0,
+          mode: seqMode,
+          order: seqOrder.select.value,
+          // A fresh shuffle each click, so "Random" can be re-rolled.
+          seed: 1 + Math.floor(Math.random() * SEED_RANGE),
+        }),
       }),
+    );
+
+    // --- Follow --------------------------------------------------------------
+    const followParams = session.toolParams("follow");
+    let leader = followParams["leader"] === "bottom" ? "bottom" : "top";
+    const leaderSeg = segmented(
+      [
+        { value: "top", label: "Top leads", title: "The highest selected layer leads; the others follow it" },
+        { value: "bottom", label: "Bottom leads", title: "The lowest selected layer leads; the others follow it" },
+      ],
+      leader,
+      (value) => {
+        leader = value;
+        leaderSeg.set(value);
+        session.setToolParams("follow", { leader: value });
+      },
+    );
+    const channels = toggles(
+      [
+        { key: "rotation", label: "Rotation" },
+        { key: "scale", label: "Scale" },
+        { key: "opacity", label: "Opacity" },
+      ],
+      {
+        rotation: followParams["rotation"] === true,
+        scale: followParams["scale"] === true,
+        opacity: followParams["opacity"] === true,
+      },
+      (key, on) => session.setToolParams("follow", { [key]: on }),
+    );
+    const delay = numberField("Delay", typeof followParams["delay"] === "number" ? followParams["delay"] : 0, {
+      min: 0,
+      step: 1,
+      unit: "fr",
+      onChange: (value) => session.setToolParams("follow", { delay: value }),
+    });
+    const follow = this.#section("tools.follow", "Follow Layer", "without parenting");
+    follow.body.append(
+      leaderSeg.root,
+      row(channels.root, delay.root),
+      b.button("kvfx.layer.follow", {
+        label: "Follow",
+        icon: "follow",
+        variant: "wide",
+        params: () => ({
+          leader,
+          rotation: channels.get("rotation"),
+          scale: channels.get("scale"),
+          opacity: channels.get("opacity"),
+          delay: Math.max(0, Number.parseFloat(delay.input.value) || 0),
+        }),
+      }),
+      hint("Position always follows. The leader can be renamed or reordered; change the lag later with KVFX Follow Delay on each follower."),
     );
 
     // --- Colour ------------------------------------------------------------
