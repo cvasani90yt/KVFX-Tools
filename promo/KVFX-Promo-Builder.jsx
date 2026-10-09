@@ -345,14 +345,27 @@
     return Folder.selectDialog("Pick the KVFX promo \"assets\" folder (Cancel builds with placeholders)");
   }
 
-  // "anime/city.png" also finds anime/city.jpg or .jpeg.
+  // Images are found however they were saved: "anime/silver-cutout.png" also
+  // matches .jpg, .jpeg or .webp, "silver_cutout" or "silver cutout", any
+  // letter case of the extension, and the same file dropped straight into
+  // assets/ instead of assets/anime/.
+  var IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG", ".JPEG", ".WEBP"];
   function assetFile(rel) {
     if (!ASSET_DIR) return null;
     var names = [rel];
     var dot = rel.lastIndexOf(".");
-    if (dot > 0 && rel.substr(dot).toLowerCase() === ".png") {
-      names.push(rel.substr(0, dot) + ".jpg");
-      names.push(rel.substr(0, dot) + ".jpeg");
+    var ext = dot > 0 ? rel.substr(dot).toLowerCase() : "";
+    if (ext === ".png" || ext === ".jpg") {
+      var stem = rel.substr(0, dot);
+      var slash = stem.lastIndexOf("/");
+      var stems = [stem, stem.replace(/-/g, "_"), stem.replace(/-/g, " ")];
+      if (slash >= 0) {
+        var base = stem.substr(slash + 1);
+        stems.push(base, base.replace(/-/g, "_"), base.replace(/-/g, " "));
+      }
+      for (var s0 = 0; s0 < stems.length; s0++) {
+        for (var e0 = 0; e0 < IMAGE_EXTS.length; e0++) names.push(stems[s0] + IMAGE_EXTS[e0]);
+      }
     }
     for (var i = 0; i < names.length; i++) {
       var f = new File(ASSET_DIR.fsName + "/" + names[i]);
@@ -2409,8 +2422,24 @@
     }
   }
 
+  // The nine stills that vary the anime section. Each is optional, so the
+  // report says plainly which ones the build found.
+  var OPTIONAL_ART = ["alley", "subway", "skyview", "moon", "blade", "splash", "bike", "silver", "silver-cutout"];
+
   function report(main) {
     var lines = ["KVFX promo built: " + main.name + " (" + main.duration + " s, " + W + "x" + H + ")."];
+    var found = [];
+    var absent = [];
+    for (var a = 0; a < OPTIONAL_ART.length; a++) {
+      if (assetFile("anime/" + OPTIONAL_ART[a] + ".png")) found.push(OPTIONAL_ART[a]);
+      else absent.push(OPTIONAL_ART[a]);
+    }
+    lines.push("");
+    lines.push("Extra anime art: " + found.length + " of " + OPTIONAL_ART.length + " found" + (found.length ? " (" + found.join(", ") + ")." : "."));
+    if (absent.length) {
+      lines.push("Not found, so those shots use the original art: " + absent.join(", ") + ".");
+      lines.push("Save them in " + (ASSET_DIR ? ASSET_DIR.fsName : "assets") + "/anime as <name>.png (or .jpg) and build again.");
+    }
     if (SOUND_NOTE) {
       lines.push("");
       lines.push(SOUND_NOTE);
