@@ -6,6 +6,55 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — arrange and timing (Tools)
+- Align as a group: the align bar's **Grp** reference moves the whole
+  selection to a comp edge as one block, keyframes and all
+- **Even Gaps** horizontally or vertically, sharing the span or at a fixed gap
+- **Sequence** orders: reversed, centre-out, edges-in, shuffled
+- **Follow Layer**: followers copy a leader's movement (optionally rotation,
+  scale and opacity, with a delay) without parenting
+- **Comp Resizer**: batch size, length and frame rate; content pinned to any
+  of nine spots with Keep, Fit or Fill; parent comps corrected so nothing jumps
+- **Silence Remover**: finds pauses in a voice track and cuts every selected
+  layer in sync — closing the gaps, keeping them, or marking them
+
+### Added — text
+- **Animate** rebuilt: 41 presets with families, favourites and recents;
+  In, Out or In+Out; by characters, words or lines; five orders; ten eases plus
+  the Ease tab's curve, with overshoot; Live (expression) or Keys engines;
+  Typing, Scramble, Decode, Colour Typing and Highlight Sweep
+- **Kinetic Title**: a phrase as big type in eight styles, starred words in
+  accent colours, in this comp or a new 16:9, 9:16, 1:1 or 4:5 comp
+
+### Added — Generate
+- **Layouts**: fourteen interface scenes (chat, notification, metrics, bar and
+  line charts, progress ring, feature, card stack, pricing, testimonial,
+  kanban, team list, phone and browser frames), fitted to any aspect and
+  revealed in order, with a thumbnail gallery
+- **UI Motion**: UI Stagger, Cursor (clicks, ripples, pressed buttons, name
+  tag), Card Carousel, Hover Lift, Input Bar
+- **Scenes**: Backdrop (drift, horizon, stars, grain, clip to a layer), Dot
+  Pulse, Frosted Glass, Wipe Reveal, Code Glyphs
+- Group chips filter the tab
+
+### Added — project
+- **Missing Footage** (Library): find, search a folder by file name, relink
+  the ticked matches
+- Settings: show, hide and reorder sections; tooltips on or off; compact
+  spacing; a save reminder that offers File ▸ Save in the header
+
+### Added — engineering
+- Host operations: `layer.offsetPosition`, `layer.place`, `layer.matte`,
+  `shape.build` (rects, ellipses, paths, fills, strokes, repeaters, trim
+  paths, per-group expressions), `comp.resize`, `comp.create`,
+  `project.missing`, `project.relink`, `project.save`, `audio.analyse`,
+  `layer.cutRanges`, `layer.markers`; text animators with expression
+  selectors, Based On, random order and text-length timing
+- Expressions can be stamped with the attach time and never replace one the
+  user wrote
+- 677 tests; generated expressions are executed in the tests to check their
+  maths matches the panel's preview
+
 ### Added — promo kit
 - `promo/KVFX-Promo-Builder.jsx` builds the vertical promo (plus a 16:9
   version) as an editable After Effects project: eight scenes, a camera rig per
