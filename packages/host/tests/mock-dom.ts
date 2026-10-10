@@ -700,6 +700,11 @@ export class MockProp {
 
 let nextId = 1000;
 
+/** Moves the id counter, so ids from one run can never pass for another's. */
+export function setNextMockId(value: number): void {
+  nextId = value;
+}
+
 export class MockItem {
   readonly id = nextId++;
   name: string;
@@ -729,6 +734,45 @@ export interface MockLayerOptions {
   readonly kind?: "av" | "camera" | "light" | "text" | "shape" | "null" | "precomp";
   readonly text?: string;
   readonly source?: MockComp | MockItem | null;
+}
+
+type Box = [number, number, number, number];
+
+function unionBox(a: Box | undefined, b: Box | undefined): Box | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+}
+
+/** The untransformed bounds of shape contents: rectangles, ellipses and paths, through group transforms. */
+function shapeBounds(contents: MockProp | null | undefined): Box | undefined {
+  if (contents === null || contents === undefined) return undefined;
+  let box: Box | undefined;
+  for (const item of contents.children) {
+    const value = (match: string): number[] => (item.property(match)?.value as number[] | undefined) ?? [0, 0];
+    if (item.matchName === "ADBE Vector Shape - Rect" || item.matchName === "ADBE Vector Shape - Ellipse") {
+      const kind = item.matchName === "ADBE Vector Shape - Rect" ? "Rect" : "Ellipse";
+      const [w = 0, h = 0] = value(`ADBE Vector ${kind} Size`);
+      const [x = 0, y = 0] = value(`ADBE Vector ${kind} Position`);
+      box = unionBox(box, [x - w / 2, y - h / 2, x + w / 2, y + h / 2]);
+    } else if (item.matchName === "ADBE Vector Shape - Group") {
+      const path = item.property("ADBE Vector Shape")?.value as { vertices?: number[][] } | undefined;
+      for (const [x = 0, y = 0] of path?.vertices ?? []) box = unionBox(box, [x, y, x, y]);
+    } else if (item.matchName === "ADBE Vector Group") {
+      const inner = shapeBounds(item.property("ADBE Vectors Group"));
+      const transform = item.property("ADBE Vector Transform Group");
+      if (inner === undefined || transform === null) continue;
+      const read = (match: string, fallback: number[]): number[] => (transform.property(match)?.value as number[] | undefined) ?? fallback;
+      const [ax = 0, ay = 0] = read("ADBE Vector Anchor", [0, 0]);
+      const [px = 0, py = 0] = read("ADBE Vector Position", [0, 0]);
+      const [sx = 100, sy = 100] = read("ADBE Vector Scale", [100, 100]);
+      const map = (x: number, y: number): [number, number] => [px + ((x - ax) * sx) / 100, py + ((y - ay) * sy) / 100];
+      const [l, t] = map(inner[0], inner[1]);
+      const [r, b] = map(inner[2], inner[3]);
+      box = unionBox(box, [Math.min(l, r), Math.min(t, b), Math.max(l, r), Math.max(t, b)]);
+    }
+  }
+  return box;
 }
 
 export class MockLayer {
@@ -835,10 +879,40 @@ export class MockLayer {
     return this.root.property(nameOrIndex);
   }
 
+  /**
+   * Off by default: every layer measures `sourceRect`. The walkthrough recipes
+   * turn it on so shape, text and precomp layers measure roughly as After
+   * Effects would, which is what cursor targets and alignment are planned from.
+   */
+  static realisticBounds = false;
+
   /** Exposed only for AV layers; cameras and lights have no bounds. */
   get sourceRectAtTime(): ((time: number, extents: boolean) => typeof this.sourceRect) | undefined {
     if (!this.isAV) return undefined;
-    return () => ({ ...this.sourceRect });
+    return () => (MockLayer.realisticBounds ? this.measuredRect() : undefined) ?? { ...this.sourceRect };
+  }
+
+  private measuredRect(): typeof this.sourceRect | undefined {
+    if (this.kind === "precomp" && this.source instanceof MockComp) {
+      return { left: 0, top: 0, width: this.source.width, height: this.source.height };
+    }
+    if (this.kind === "text") {
+      const document = this.root.property("ADBE Text Properties")?.property("ADBE Text Document")?.value as
+        | { text?: string; fontSize?: number; justification?: number }
+        | undefined;
+      const lines = String(document?.text ?? "").split(/\r|\n/);
+      const size = document?.fontSize ?? 72;
+      // A sans-serif averages a little over half an em per character.
+      const width = Math.max(...lines.map((line) => line.length)) * size * 0.56;
+      const height = size * (0.72 + 1.2 * (lines.length - 1));
+      const left = document?.justification === JUSTIFY.center ? -width / 2 : document?.justification === JUSTIFY.right ? -width : 0;
+      return { left, top: -size * 0.72, width, height };
+    }
+    if (this.kind === "shape") {
+      const box = shapeBounds(this.root.property("ADBE Root Vectors Group"));
+      return box === undefined ? undefined : { left: box[0], top: box[1], width: box[2] - box[0], height: box[3] - box[1] };
+    }
+    return undefined;
   }
 
   get applyPreset(): ((file: AeFile) => void) | undefined {

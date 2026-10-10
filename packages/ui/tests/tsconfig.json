@@ -5,7 +5,7 @@
   "compilerOptions": {
     "target": "ES2021",
     "lib": ["ES2021", "DOM"],
-    "types": [],
+    "types": ["node"],
     "composite": false,
     "declaration": false,
     "declarationMap": false,

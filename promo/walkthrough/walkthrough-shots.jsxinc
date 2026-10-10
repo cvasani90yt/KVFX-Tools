@@ -1,0 +1,154 @@
+// KVFX Tools walkthrough: the shot list.
+//
+// Plain ES3 so After Effects can #include it, and Node can read it too (the
+// animatic preview uses the same data).
+
+// When each recording clicks, in seconds (from the clip list in
+// scripts/promo-capture.mjs), so a click sound lands on it.
+var WT_CLIP_CLICKS = {
+  "wt-layouts": [4.4, 5.9, 9.7],
+  "wt-motion": [0.6, 1.7, 3.2, 4.7, 7.5],
+  "wt-interact": [0.6, 2.65, 5.1, 7.7, 11.1],
+  "wt-text": [5.0, 6.3, 7.2, 8.7],
+  "wt-kinetic": [1.5, 6.3, 7.1, 8.3],
+  "wt-scene": [0.6, 1.7, 2.7, 4.1, 6.1, 8.3, 10.5, 12.7],
+  "wt-polish": [1.5, 2.7, 4.1, 6.1, 8.1, 8.6, 9.1, 10.3, 12.5],
+  "wt-ship": [1.7, 3.3, 5.9, 7.1, 8.1, 9.5, 10.9, 12.5, 13.9, 15.5, 16.7],
+  "wt-tour": [0.6, 1.5, 2.4, 3.3, 4.2, 5.1, 6.0, 6.9],
+  "ease": [0.6, 1.95, 4.05, 5.05],
+  "palette": [2.5]
+};
+
+// ---------------------------------------------------------------------------
+// The shots. Each chapter is a list of beats; a beat starts at a caption
+// (cap: 3 is the start of the fourth caption, 3.5 halfway through it) and
+// changes only what it names:
+//   panel: [recording, seconds in, rate, loop from, loop to]
+//                                        the panel close-up from there; rate
+//                                        0 holds the frame, and a loop replays
+//                                        a stretch while the voice catches up
+//   stage: [scene, seconds in] | "empty" what the comp viewer shows
+//   sync:  [scene, run time, click time] start a scene so its command runs
+//          as the panel recording clicks the button for it
+//   focus: [x, y, zoom] | null           push in on a spot of the panel
+//   wide:  true | false                  the viewer takes the whole frame
+//   chip:  "Tab > Tool"            where the feature lives
+// ---------------------------------------------------------------------------
+
+var WT_SHOTS = {
+  layouts: [
+    { cap: 0, panel: ["wt-layouts", 0, 0.25], stage: "empty", chip: "Generate \u25B8 Layouts" },
+    { cap: 2, panel: ["wt-layouts", 0.6, 1, 0.6, 4.3], focus: [190, 330, 1.45] },
+    { cap: 3, stage: ["lay-chat", 0.1] },
+    { cap: 3.3, stage: ["lay-notify", 0.1] },
+    { cap: 3.66, stage: ["lay-bars", 0.1] },
+    { cap: 4, stage: ["lay-pricing", 0.1] },
+    { cap: 4.5, stage: ["stagger", 0.4] },
+    { cap: 5, stage: ["lay-phone", 0.1] },
+    { cap: 5.5, stage: ["lay-browser", 0.1] },
+    { cap: 6, focus: [190, 360, 1.7], stage: ["lay-chat", 2] },
+    { cap: 8, panel: ["wt-layouts", 4.3], focus: null, sync: ["metrics", 0.5, 9.7], chip: "Metric Cards" },
+    { cap: 8.4, focus: [190, 420, 1.5] },
+    { cap: 10, focus: null },
+    { cap: 10.6, wide: true },
+    { cap: 12, wide: false, chip: "One null \u00B7 ordinary layers" },
+    { cap: 13, wide: true }
+  ],
+  motion: [
+    { cap: 0, panel: ["wt-motion", 0], stage: "empty", wide: false },
+    { cap: 1, sync: ["stagger", 0.5, 4.7], chip: "Generate \u25B8 UI Stagger" },
+    { cap: 2, focus: [190, 420, 1.35] },
+    { cap: 3, panel: ["wt-motion", 1.0, 1, 1.0, 5.4], stage: ["stagger-pop", 0.2], focus: null },
+    { cap: 4, stage: ["stagger-slide", 0.2] },
+    { cap: 5, stage: ["stagger-blur", 0.2] },
+    { cap: 6, stage: ["stagger", 0.3] },
+    { cap: 7, wide: true, keys: true },
+    { cap: 8, wide: false, panel: ["wt-motion", 5.6], sync: ["carousel", 0, 7.5], chip: "Generate \u25B8 Card Carousel" },
+    { cap: 9.5, wide: true }
+  ],
+  interact: [
+    { cap: 0, panel: ["wt-interact", 0], sync: ["cursor", 2.0, 2.65] },
+    { cap: 2, panel: ["wt-interact", 3.6, 0], wide: true, chip: "Generate \u25B8 Cursor" },
+    { cap: 7, wide: false, panel: ["wt-interact", 3.8], sync: ["hover", 1.6, 5.1], chip: "Generate \u25B8 Hover Lift" },
+    { cap: 8, panel: ["wt-interact", 5.6, 0], wide: true },
+    { cap: 9, wide: false, panel: ["wt-interact", 6.2], sync: ["inputbar", 0.3, 11.1], chip: "Generate \u25B8 Input Bar" },
+    { cap: 9.3, focus: [190, 260, 1.5] },
+    { cap: 10, focus: null },
+    { cap: 10.4, wide: true }
+  ],
+  type: [
+    { cap: 0, panel: ["wt-text", 0], sync: ["textanimate", 0.4, 8.7] },
+    { cap: 1, focus: [190, 560, 1.3], chip: "Text \u25B8 Animate" },
+    { cap: 3, focus: null },
+    { cap: 4.5, wide: true },
+    { cap: 6, wide: false, chip: "Still live text" },
+    { cap: 8, panel: ["wt-kinetic", 0], sync: ["kinetic", 0.2, 8.3], chip: "Text \u25B8 Kinetic Title" },
+    { cap: 9, focus: [190, 160, 1.6] },
+    { cap: 10.5, focus: null },
+    { cap: 11, wide: true },
+    { cap: 12, stage: ["kinetic-vertical", 0] }
+  ],
+  scene: [
+    { cap: 0, panel: ["wt-scene", 0], sync: ["backdrop", 0, 4.1] },
+    { cap: 1, chip: "Generate \u25B8 Backdrop" },
+    { cap: 1.8, panel: ["wt-scene", 1.2, 1, 1.2, 4.7] },
+    { cap: 2, stage: ["horizon", 0.3] },
+    { cap: 2.55, stage: ["stars", 0.3] },
+    { cap: 3, stage: ["backdrop", 3], wide: true },
+    { cap: 4, wide: false, panel: ["wt-scene", 4.9], sync: ["dotpulse", 0.2, 6.1], chip: "Generate \u25B8 Dot Pulse" },
+    { cap: 5, panel: ["wt-scene", 6.6, 0], wide: true },
+    { cap: 6, wide: false, panel: ["wt-scene", 6.9], sync: ["glass", 0.4, 8.3], chip: "Generate \u25B8 Frosted Glass" },
+    { cap: 7, panel: ["wt-scene", 8.8, 0] },
+    { cap: 8, panel: ["wt-scene", 9.1], sync: ["wipe", 0.3, 10.5], chip: "Generate \u25B8 Wipe Reveal" },
+    { cap: 9, panel: ["wt-scene", 11.0, 0] },
+    { cap: 10, panel: ["wt-scene", 11.3], sync: ["code", 0.2, 12.7], chip: "Generate \u25B8 Code Glyphs" },
+    { cap: 11, wide: true }
+  ],
+  polish: [
+    { cap: 0, panel: ["ease", 0], sync: ["ease", 0.6, 4.05] },
+    { cap: 1, chip: "Ease \u25B8 Curve" },
+    { cap: 2.5, wide: true },
+    { cap: 4, wide: false, panel: ["wt-polish", 0.9], sync: ["elastic", 0.6, 1.5], chip: "Ease \u25B8 Motion" },
+    { cap: 4.5, sync: ["bounce", 0.5, 2.7] },
+    { cap: 5, panel: ["wt-polish", 4.0], sync: ["follow", 0.0, 6.1], chip: "Tools \u25B8 Follow Layer" },
+    { cap: 6, panel: ["wt-polish", 6.6, 0], wide: true },
+    { cap: 8, wide: false, panel: ["wt-polish", 7.6], sync: ["align", 1.0, 10.3], chip: "Align \u00B7 as Group" },
+    { cap: 10, chip: "Tools \u25B8 Even Gaps" },
+    { cap: 10.5, wide: true }
+  ],
+  ship: [
+    { cap: 0, panel: ["wt-ship", 0], stage: ["silence", 0] },
+    { cap: 1, focus: [190, 300, 1.35], chip: "Tools \u25B8 Silence Remover" },
+    { cap: 2, sync: ["silence", 2.2, 3.3] },
+    { cap: 2.6, panel: ["wt-ship", 3.8, 0] },
+    { cap: 3.5, focus: null },
+    { cap: 4, wide: true },
+    { cap: 5, wide: false, panel: ["wt-ship", 4.2], stage: ["promo16", 2], chip: "Tools \u25B8 Comp Resizer" },
+    { cap: 7, stage: ["promo9", 3] },
+    { cap: 8, panel: ["wt-ship", 9.8, 0] },
+    { cap: 9, panel: ["wt-ship", 10.6], sync: ["relink", 2.0, 16.7], chip: "Library \u25B8 Missing Footage" },
+    { cap: 10.5, focus: [190, 360, 1.3] }
+  ],
+  more: [
+    { cap: 0, panel: ["wt-tour", 0, 0.4], stage: ["carousel3d", 0.5], wide: false },
+    { cap: 1, stage: ["carousel", 2], chip: "Tools \u25B8 Duplicate Comp" },
+    { cap: 2, stage: ["explode", 0], chip: "Text \u25B8 Explode" },
+    { cap: 3, stage: ["textanimate", 1.2], chip: "Text \u25B8 Replace Fonts" },
+    { cap: 4, stage: ["glass", 2.5], chip: "FX \u25B8 Effects Manager" },
+    { cap: 5, stage: ["counter", 0], chip: "Generate \u25B8 Number Counter" },
+    { cap: 5.6, stage: ["carousel3d", 1], chip: "Generate \u25B8 3D Carousel" },
+    { cap: 7, panel: ["wt-tour", 3.9, 0.5], stage: ["lay-browser", 0.6], chip: "Labels \u00B7 Library \u00B7 Media" },
+    { cap: 9, panel: ["palette", 0], stage: ["kinetic", 0.2], chip: "Ctrl + Space" }
+  ]
+};
+
+// The finished Kovo promo: [scene, seconds in, length].
+var WT_PROMO = [
+  ["kinetic-punch", 0, 2.2],
+  ["backdrop", 0.3, 4.4],
+  ["cursor", 1.4, 4.0],
+  ["inputbar", 0.3, 3.6],
+  ["glass", 0.4, 3.2],
+  ["code", 0.2, 3.0],
+  ["kinetic", 0.1, 3.6]
+];

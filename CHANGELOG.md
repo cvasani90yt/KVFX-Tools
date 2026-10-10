@@ -72,8 +72,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (moving the flashes, whips and guide markers with them), and works on an
   already-built promo; the builder runs it automatically. The licensed audio
   itself is kept out of the repository
+- `promo/walkthrough/` builds a five-and-a-half-minute YouTube walkthrough:
+  one promo built live, chapter by chapter, with captions, chapter cards, push-ins
+  on the panel and a 9:16 copy made with Comp Resizer. Every demo scene is made
+  by the installed KVFX host from the plans the shipped commands produce
+  (`walkthrough-recipes.jsxinc`, generated and checked by a test that replays
+  each one from layer names), and the edit is timed from the voiceover takes
+- `scripts/promo-capture.mjs` can aim the cursor at buttons, tabs and fields
+  by name, scroll the panel, pick from dropdowns and dry-run a clip; nine new
+  walkthrough recordings
 
 ### Fixed
+- **Silence Remover**: Analyse asked for twice the time a plan may take, so
+  the panel refused it before After Effects saw it and showed only "Something
+  went wrong". A test now holds every budget the panel writes to the limit
+- **Missing Footage**: after Find Missing or a folder search, Search and Relink
+  stayed greyed out until something else in the session changed
 - The success toast for **Duplicate Comp + Nested Comps** and **Duplicate
   Precomp Layer + Nested** used the old "(Deep)" names; the command names now
   match their buttons everywhere, including search

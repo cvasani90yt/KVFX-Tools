@@ -115,8 +115,25 @@ const STUB = `
     "kvfx.op.fonts.search": { fonts: [] },
     "kvfx.op.keys.readEase": { property: "Opacity", bezier: [0.16, 1, 0.3, 1], linear: false },
     "kvfx.op.text.read": { id: 11, name: "Title", text: "Your title" },
-    "kvfx.op.project.info": { open: true, saved: true, folder: "/projects/promo" }
+    "kvfx.op.project.info": { open: true, saved: true, folder: "/projects/promo" },
+    "kvfx.op.project.missing": { items: [
+      { id: 41, name: "voiceover-final.wav", path: "D:/Old drive/Kovo/voiceover-final.wav", file: "voiceover-final.wav" },
+      { id: 42, name: "kovo-logo.png", path: "D:/Old drive/Kovo/kovo-logo.png", file: "kovo-logo.png" },
+      { id: 43, name: "screen-capture-01.mp4", path: "D:/Old drive/Kovo/screen-capture-01.mp4", file: "screen-capture-01.mp4" }
+    ] }
   };
+  var RELINKED = false;
+  // A voice take, one loudness value per frame at 25 fps: words with pauses between.
+  var VOICE = (function () {
+    var out = [];
+    var phrases = [[0.3, 2.1], [2.9, 5.0], [6.4, 8.2], [8.7, 10.9], [12.3, 14.0]];
+    for (var f = 0; f < 15 * 25; f++) {
+      var t = f / 25;
+      var talking = phrases.some(function (p) { return t >= p[0] && t <= p[1]; });
+      out.push(talking ? Math.round((6 + 5 * Math.abs(Math.sin(f * 1.7)) + 3 * Math.abs(Math.sin(f * 0.37))) * 100) / 100 : Math.round(0.4 * Math.abs(Math.sin(f)) * 100) / 100);
+    }
+    return out;
+  })();
   window.__adobe_cep__ = {
     getExtensionId: function () { return "com.kvfx.tools.panel"; },
     getHostEnvironment: function () { return '{"appName":"AEFT","appVersion":"26.0"}'; },
@@ -126,6 +143,12 @@ const STUB = `
       var id = /"id":"([^"]+)"/.exec(source);
       var op = match ? match[1] : "";
       var result = REPLIES[op] === undefined ? { stepCount: 1, steps: [] } : REPLIES[op];
+      // Once relinked, nothing is missing any more.
+      if (/"op":"kvfx\\.op\\.project\\.relink"/.test(source)) RELINKED = true;
+      if (op === "kvfx.op.project.missing" && RELINKED) result = { items: [] };
+      if (/"op":"kvfx\\.op\\.audio\\.analyse"/.test(source)) {
+        result = { stepCount: 1, steps: [{ op: "kvfx.op.audio.analyse", result: { id: 11, name: "Voiceover", start: 0, frameDuration: 0.04, samples: VOICE } }] };
+      }
       setTimeout(function () {
         callback(JSON.stringify({ v: 1, id: id ? id[1] : "r1", ok: true, result: result, elapsedMs: 7 }));
       }, 0);
@@ -134,7 +157,9 @@ const STUB = `
   // A read-only cep.fs with a small fake library, so every tab can be previewed.
   var DIRS = {
     "/Library/Motion": ["Lower Thirds", "Transitions", "Logo Reveal.aep", "Pop In.ffx", "Whoosh.wav", "Light Leak.mov", "Grain.mov"],
-    "/Library/Motion/Lower Thirds": ["Clean.aep", "Bold.aep"]
+    "/Library/Motion/Lower Thirds": ["Clean.aep", "Bold.aep"],
+    "/Footage": ["Kovo"],
+    "/Footage/Kovo": ["voiceover-final.wav", "kovo-logo.png", "screen-capture-01.mp4", "music.wav"]
   };
   function isDir(path) { return DIRS[path] !== undefined; }
   window.cep = {
@@ -147,7 +172,9 @@ const STUB = `
       stat: function (path) {
         return { err: 0, data: { isDirectory: function () { return isDir(path); }, isFile: function () { return !isDir(path); } } };
       },
-      showOpenDialog: function () { return { err: 0, data: ["/Library/Motion"] }; }
+      showOpenDialog: function (multiple, folders, title) {
+        return { err: 0, data: [/missing/i.test(String(title)) ? "/Footage" : "/Library/Motion"] };
+      }
     }
   };
   var OPEN = __KVFX_OPEN__;

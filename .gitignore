@@ -46,3 +46,9 @@ build/preview/
 # Licensed promo audio (Envato) - shipped in the promo kit zip, never committed
 promo/assets/sfx/
 promo/assets/music/
+# The walkthrough's licensed music and sound effects, and its voiceover takes:
+# all large, and the first two not ours to redistribute.
+promo/walkthrough/assets/sfx/*
+promo/walkthrough/assets/music/*
+promo/walkthrough/assets/vo/*
+!promo/walkthrough/assets/*/README.txt

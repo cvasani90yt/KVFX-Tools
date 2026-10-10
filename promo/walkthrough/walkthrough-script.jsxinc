@@ -1,0 +1,114 @@
+// KVFX Tools walkthrough: the voiceover script.
+//
+// One entry per voiceover file, found in assets/vo as <file>.wav (or .mp3), or
+// under the name Higgsfield gave it, which contains `job`. `say` is exactly
+// what the narrator reads; each "|" marks where an on-screen caption breaks
+// (the narrator ignores it). The builder times every segment from its
+// voiceover file, so a longer or shorter read simply stretches or shrinks that
+// segment. `min` is the shortest the segment may be, in seconds, for when no
+// voiceover file is there yet.
+//
+// Plain ES3 so After Effects can #include it, and Node can read it too.
+
+var WT_SCRIPT = [
+  {
+    id: "hook",
+    file: "01-hook",
+    job: "2adf6f78",
+    min: 9,
+    say: "Everything in this promo was built in After Effects.|Real layers, real keyframes,|nothing pre-rendered.|And all of it came from one panel."
+  },
+  {
+    id: "problem",
+    file: "02-problem",
+    job: "c94c42e7",
+    min: 9,
+    say: "A scene like this usually costs an afternoon|of shape layers, stagger offsets|and graph editor tweaks.|So let's build it together, one tool at a time,|and you can see how long it really takes."
+  },
+  {
+    id: "brand",
+    file: "03-brand",
+    job: "9327b36b",
+    min: 8,
+    say: "This is KVFX Tools.|Eight tabs, more than a hundred commands,|and every one of them undoes in a single step.|We start with an empty comp."
+  },
+  {
+    id: "layouts",
+    file: "04-layouts",
+    job: "fa6e1aea",
+    chapter: 1,
+    title: "Start with a layout",
+    min: 30,
+    say: "Chapter one. Start with a layout.|In the Generate tab, open Layouts.|There are fourteen interface scenes:|chat threads, notifications, metric cards, charts,|pricing, kanban boards,|and phone and browser frames.|Each thumbnail is drawn from the same data the builder uses,|so what you see is what you get.|I'll take Metric Cards, type my own numbers,|pick dark, set the accent,|and click Build Layout.|Every card and label is an ordinary layer,|all on one null, so the whole scene moves as one.|And it already animates in."
+  },
+  {
+    id: "motion",
+    file: "05-motion",
+    job: "c706f734",
+    chapter: 2,
+    title: "Make it move",
+    min: 28,
+    say: "Chapter two. Make it move.|Select your layers and open UI Stagger.|Pick how they arrive:|rise, slide, pop, blur or bounce.|Pick the order: top to bottom, left to right,|from the centre out, or random.|Set the stagger in frames,|and every layer gets real keyframes from the playhead.|For a set of cards, Card Carousel lines them up|with the focused card up front,|its neighbours smaller and dimmer,|and it advances on its own."
+  },
+  {
+    id: "interact",
+    file: "06-interact",
+    job: "97a8fb86",
+    chapter: 3,
+    title: "Show how it's used",
+    min: 28,
+    say: "Chapter three. Show how it's used.|Nothing sells an interface like a cursor.|Add Cursor sends an arrow or a hand|to each selected layer in turn,|on an arcing path, with a tilt, a shadow|and a ripple on every click.|The button even presses down.|Hover Lift makes cards grow and lift|as the cursor comes near.|And Input Bar builds a search bar that types your text|with a caret, then presses its own send button."
+  },
+  {
+    id: "type",
+    file: "07-type",
+    job: "f91c913f",
+    chapter: 4,
+    title: "Type that talks",
+    min: 32,
+    say: "Chapter four. Type that talks.|The Text tab has forty-one motion presets,|and the preview plays each one live as you hover.|Animate in, out, or both,|by letter, word or line, in any order,|with your own ease.|It stays live text, so change the words later|and the animation follows.|For a big statement, Kinetic Title|sets a whole phrase as animated type.|Put stars around a word|and it lands in your accent colour.|Pick a new size, and it opens|as its own vertical or square comp."
+  },
+  {
+    id: "scene",
+    file: "08-scene",
+    job: "2d898a24",
+    chapter: 5,
+    title: "Set the scene",
+    min: 30,
+    say: "Chapter five. Set the scene.|Backdrop adds a moving background:|a drifting gradient, a glowing horizon or twinkling stars,|in six palettes, with film grain if you like.|Dot Pulse lays down a halftone grid|with a shockwave rippling out.|Frosted Glass blurs whatever sits behind a card,|inside its shape.|Wipe Reveal brings layers in one after another,|with a soft edge.|And Code Glyphs builds a decoding headline|over scrolling code.|Perfect for anything tech."
+  },
+  {
+    id: "polish",
+    file: "09-polish",
+    job: "8a3af657",
+    chapter: 6,
+    title: "Polish",
+    min: 30,
+    say: "Chapter six. Polish.|The Ease tab has a real curve editor.|Drag the handles, see the motion,|and apply it to your keys.|Elastic and Bounce are one click each.|Follow Layer makes one layer trail another|without parenting, with a delay,|which is perfect for labels and shadows.|Align as Group moves a whole selection together|without breaking its layout.|And Even Gaps spaces everything|with exactly the same gap."
+  },
+  {
+    id: "ship",
+    file: "10-ship",
+    job: "8d1dd2ce",
+    chapter: 7,
+    title: "Ship it",
+    min: 30,
+    say: "Chapter seven. Ship it.|Recorded a voiceover?|Silence Remover finds the pauses and cuts them,|with a little padding so nothing sounds clipped,|and the picture stays in sync.|Comp Resizer turns your sixteen by nine edit|into vertical, square or four by five,|and keeps everything pinned to an anchor.|Because it changes your comps, it asks first.|And when footage goes missing,|the Missing Footage section searches a folder|and relinks only the files you tick."
+  },
+  {
+    id: "more",
+    file: "11-more",
+    job: "a47db77c",
+    chapter: 8,
+    title: "Also inside",
+    min: 24,
+    say: "And there's more inside.|Duplicate a comp with all of its nested comps.|Precomp each layer. Explode text into letters.|Replace fonts across a project.|Manage your effects.|Build number counters, 3D carousels|and extruded logos.|Colour-code with labels, keep your own library,|paste media straight in,|and find any command from one shortcut."
+  },
+  {
+    id: "end",
+    file: "12-end",
+    job: "2044fe22",
+    min: 14,
+    say: "Here's the promo we just built,|in landscape and in vertical, from the same comps.|KVFX Tools is linked in the description.|If this saved you an afternoon, subscribe,|and tell me in the comments|which tool you'll reach for first."
+  }
+];

@@ -1,3 +1,4 @@
+import { MAX_PLAN_BUDGET_MS } from "@kvfx/bridge";
 import {
   AnchorSpot,
   COMP_PRESETS,
@@ -253,7 +254,8 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
       session.report("Silence Remover", false, "Select the voice layer first.");
       return;
     }
-    const value = await session.runPlan("Analyse Audio", [{ op: "kvfx.op.audio.analyse", args: { id: first.id } }], 60_000);
+    // Converting a long voice track takes After Effects a while: allow the most a plan may have.
+    const value = await session.runPlan("Analyse Audio", [{ op: "kvfx.op.audio.analyse", args: { id: first.id } }], MAX_PLAN_BUDGET_MS);
     const step = (value as { steps?: { result?: unknown }[] } | null)?.steps?.[0]?.result as typeof analysis | undefined;
     if (step === undefined || !Array.isArray(step.samples)) return;
     analysis = step;

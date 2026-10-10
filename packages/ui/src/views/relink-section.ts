@@ -142,6 +142,7 @@ export class RelinkSection {
       box.addEventListener("change", () => {
         if (match !== undefined) match.chosen = box.checked;
         this.#updateButton();
+        this.#refreshButtons(this.#panel.session.state);
       });
       this.#list.append(
         h(
@@ -158,6 +159,9 @@ export class RelinkSection {
       );
     }
     this.#updateButton();
+    // Finding or matching files changes what can be done next, without any
+    // change to the session that would refresh the buttons on its own.
+    this.#refreshButtons(this.#panel.session.state);
   }
 
   #updateButton(): void {
@@ -167,6 +171,10 @@ export class RelinkSection {
 
   update(state: SessionState): void {
     this.section.update(state);
+    this.#refreshButtons(state);
+  }
+
+  #refreshButtons(state: SessionState): void {
     const files = filesAvailable();
     setEnabled(this.#find, !state.busy && state.snapshot.hasProject, "Open a project first.");
     setEnabled(this.#searchButton, files && !state.busy && this.#missing.length > 0, files ? "Find missing footage first." : "File access is not available here.");
