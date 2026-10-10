@@ -100,7 +100,7 @@ export class Section {
       h("span", { class: "kvfx-section__title", text: title }),
       hint === undefined ? null : h("span", { class: "kvfx-section__hint", text: hint }),
     );
-    this.root = h("section", { class: "kvfx-section" }, this.#head, this.body);
+    this.root = h("section", { class: "kvfx-section", attrs: { "data-section": id, "data-title": title } }, this.#head, this.body);
   }
 
   update(state: SessionState): void {

@@ -558,7 +558,13 @@ describe("project.info, project.import, layer.applyPreset", () => {
   it("reports where a saved project lives", () => {
     const { ae, query } = harness();
     ae.project!.file = { exists: true, fsName: "/Users/me/Jobs/Promo/promo.aep", name: "promo.aep" };
-    expect(result(query("kvfx.op.project.info"))).toEqual({ open: true, saved: true, folder: "/Users/me/Jobs/Promo" });
+    expect(result(query("kvfx.op.project.info"))).toEqual({
+      open: true,
+      saved: true,
+      folder: "/Users/me/Jobs/Promo",
+      name: "promo.aep",
+      savedAgo: null,
+    });
   });
 
   it("imports footage and places it in the comp", () => {

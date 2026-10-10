@@ -2038,3 +2038,86 @@ select:focus-visible,
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Settings ▸ Sections. */
+.kvfx-sectionlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kvfx-sectiongroup summary {
+  cursor: pointer;
+  font-size: var(--kvfx-text-xs);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kvfx-text-secondary);
+  padding: 3px 0;
+}
+
+.kvfx-sectionrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 12px;
+}
+
+.kvfx-sectionrow .kvfx-check {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kvfx-iconbtn--small {
+  width: 22px;
+  height: 22px;
+}
+
+.kvfx-section--off {
+  display: none;
+}
+
+/* Header save reminder: one small amber pill, only when it is due. */
+.kvfx-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--kvfx-accent-edge);
+  border-radius: var(--kvfx-radius-pill);
+  background: var(--kvfx-accent-soft);
+  color: var(--kvfx-accent);
+  font-size: var(--kvfx-text-xxs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.kvfx-save[hidden] {
+  display: none;
+}
+
+/* Compact spacing for small docked panels. */
+.kvfx-app--compact .kvfx-section__body {
+  gap: 4px;
+  padding-top: 2px;
+  padding-bottom: 6px;
+}
+
+.kvfx-app--compact .kvfx-section__head {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+/* Explanatory notes go; status lines like "Will copy: …" stay. */
+.kvfx-app--compact .kvfx-section__body > .kvfx-hint:last-child {
+  display: none;
+}
+
+.kvfx-app--compact .kvfx-quick {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}

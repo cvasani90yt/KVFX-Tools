@@ -23,6 +23,7 @@ import {
   defaultSettings,
   deleteEase,
   migrateSettings,
+  moveSection,
   pruneUnknownCommands,
   recordUsage,
   saveEase,
@@ -80,6 +81,8 @@ export interface SessionState {
   readonly memoryBytes: number | undefined;
   /** Settings-load notes, shown in diagnostics rather than as an error. */
   readonly notices: readonly string[];
+  /** Seconds since the project file was last written; undefined when unknown or never saved. */
+  readonly savedAgo: number | undefined;
 }
 
 export type QueryResult = { readonly ok: true; readonly value: JsonValue } | { readonly ok: false; readonly message: string };
@@ -127,6 +130,7 @@ export class Session {
       lastOutcome: undefined,
       memoryBytes: undefined,
       notices: loaded.warnings,
+      savedAgo: undefined,
     };
   }
 
@@ -340,6 +344,33 @@ export class Session {
     if (!result.ok) return;
     const bytes = (result.value as { bytes?: unknown } | null)?.bytes;
     if (typeof bytes === "number" && bytes !== this.#state.memoryBytes) this.#set({ memoryBytes: bytes });
+  }
+
+  /** Reads how long ago the project was saved, for the save reminder. */
+  async refreshProject(): Promise<void> {
+    if (!this.connected || this.#state.settings.ui.saveReminder === 0) return;
+    const result = await this.query("kvfx.op.project.info");
+    if (!result.ok) return;
+    const ago = (result.value as { savedAgo?: unknown } | null)?.savedAgo;
+    const next = typeof ago === "number" ? ago : undefined;
+    if (next !== this.#state.savedAgo) this.#set({ savedAgo: next });
+  }
+
+  /** File ▸ Save, from the save reminder. */
+  async saveProject(): Promise<void> {
+    const result = await this.query("kvfx.op.project.save");
+    this.report("Save", result.ok, result.ok ? "Project saved" : result.message);
+    if (result.ok) this.#set({ savedAgo: 0 });
+  }
+
+  /** Shows or hides a section in its tab. */
+  toggleSection(sectionId: string): void {
+    this.setUi("hiddenSections", toggleListEntry(this.#state.settings.ui.hiddenSections, sectionId));
+  }
+
+  /** Moves a section up or down among its siblings. */
+  moveSection(siblings: readonly string[], sectionId: string, delta: -1 | 1): void {
+    this.#updateSettings(moveSection(this.#state.settings, siblings, sectionId, delta));
   }
 
   async purge(target: "image" | "all"): Promise<void> {

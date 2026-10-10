@@ -1050,8 +1050,15 @@ export class MockProject {
   fontReplacements: { from: string; to: string }[] = [];
   imported: string[] = [];
 
+  saveCount = 0;
+
   get numItems(): number {
     return this.items.length;
+  }
+
+  save(): void {
+    if (this.file === null) throw new Error("The project has no file");
+    this.saveCount += 1;
   }
 
   get selection(): MockItem[] {

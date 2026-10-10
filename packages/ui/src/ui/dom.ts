@@ -49,10 +49,38 @@ export function toggleClass(node: Element, name: string, on: boolean): void {
   if (node.classList.contains(name) !== on) node.classList.toggle(name, on);
 }
 
+/**
+ * Hover tooltips, switchable in Settings. Off hides the descriptive ones;
+ * the reason a control is disabled always shows, because without it a grey
+ * button is a mystery.
+ */
+let tooltipsOn = true;
+
+export function tooltipsEnabled(): boolean {
+  return tooltipsOn;
+}
+
+/** Applies the tooltip setting to everything already under `root`. */
+export function applyTooltips(root: Element, on: boolean): void {
+  tooltipsOn = on;
+  if (on) {
+    for (const node of Array.from(root.querySelectorAll<HTMLElement>("[data-kvfx-title]"))) {
+      node.title = node.dataset["kvfxTitle"] ?? "";
+      delete node.dataset["kvfxTitle"];
+    }
+    return;
+  }
+  for (const node of Array.from(root.querySelectorAll<HTMLElement>("[title]"))) {
+    if ((node as HTMLButtonElement).disabled === true || node.title.length === 0) continue;
+    node.dataset["kvfxTitle"] = node.title;
+    node.title = "";
+  }
+}
+
 /** Enables or disables a control, with the reason as its tooltip when disabled. */
 export function setEnabled(node: HTMLButtonElement | HTMLInputElement | HTMLSelectElement, enabled: boolean, reason?: string, title?: string): void {
   if (node.disabled === enabled) node.disabled = !enabled;
-  const tip = enabled ? (title ?? "") : (reason ?? title ?? "");
+  const tip = enabled ? (tooltipsOn ? (title ?? "") : "") : (reason ?? title ?? "");
   if (node.title !== tip) node.title = tip;
 }
 

@@ -45,7 +45,31 @@ export const projectInfoOperation: Operation = {
     if (!file) return { open: true, saved: false, folder: null };
     const full = file.fsName;
     const cut = full.lastIndexOf("/") > full.lastIndexOf("\\") ? full.lastIndexOf("/") : full.lastIndexOf("\\");
-    return { open: true, saved: true, folder: cut > 0 ? full.substring(0, cut) : null };
+    // How long since the file was written: the save reminder's clock.
+    const modified = file.modified;
+    const savedAgo = modified ? Math.max(0, Math.round((ctx.env.nowMs() - modified.getTime()) / MS_PER_SECOND)) : null;
+    return { open: true, saved: true, folder: cut > 0 ? full.substring(0, cut) : null, name: file.name, savedAgo: savedAgo };
+  },
+};
+
+const MS_PER_SECOND = 1000;
+
+/**
+ * Saves the project to the file it already has — what File ▸ Save does, when
+ * the user clicks the save reminder. A project that has never been saved is
+ * refused: choosing where to put it is the user's decision, in Save As.
+ */
+export const saveProjectOperation: Operation = {
+  id: "kvfx.op.project.save",
+  mutates: false,
+  run: function (ctx: OperationContext): HostJson {
+    const project = ctx.env.rawProject();
+    if (!project) throw hostError(ErrorCode.PreconditionFailed, "Open a project first.");
+    if (!project.file || typeof project.save !== "function") {
+      throw hostError(ErrorCode.PreconditionFailed, "Save this project once with File ▸ Save As, so it has a place on disk.");
+    }
+    project.save();
+    return { saved: true, name: project.file.name };
   },
 };
 
@@ -104,4 +128,4 @@ export const applyPresetOperation: Operation = {
   },
 };
 
-export const projectOperations: Operation[] = [projectInfoOperation, importFileOperation, applyPresetOperation];
+export const projectOperations: Operation[] = [projectInfoOperation, saveProjectOperation, importFileOperation, applyPresetOperation];

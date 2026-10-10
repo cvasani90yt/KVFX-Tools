@@ -32,6 +32,7 @@ const paletteHotkey = parseHotkey(DEFAULT_PALETTE_HOTKEY);
  * out polling the selection.
  */
 const MEMORY_REFRESH_MS = 15_000;
+const PROJECT_REFRESH_MS = 30_000;
 
 // The session reports changes before the shell exists; those are simply
 // rendered by the shell's first update below.
@@ -68,11 +69,17 @@ void session.connect();
 window.addEventListener("focus", () => {
   void session.refreshSelection();
   void session.refreshMemory();
+  void session.refreshProject();
 });
 
 setInterval(() => {
   if (!document.hidden) void session.refreshMemory();
 }, MEMORY_REFRESH_MS);
+
+// The save reminder only needs minute precision.
+setInterval(() => {
+  if (!document.hidden) void session.refreshProject();
+}, PROJECT_REFRESH_MS);
 
 // Settings writes are debounced, so flush whenever the panel might stop running.
 window.addEventListener("blur", () => session.flushSettings());

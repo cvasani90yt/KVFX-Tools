@@ -1,11 +1,14 @@
-import { PRODUCT_VERSION } from "@kvfx/core";
+import { PRODUCT_VERSION, SAVE_REMINDER_MINUTES } from "@kvfx/core";
 import type { Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
 import { clear, h, setText } from "../ui/dom.js";
 
+type SectionsProvider = () => { view: View; sections: { id: string; title: string }[] }[];
+
 /**
- * Settings: which tabs show, where pasted media goes, diagnostics, reset.
+ * Settings: which tabs and sections show and in what order, display options,
+ * the save reminder, where pasted media goes, diagnostics, reset.
  *
  * Everything here is a preference the user can change back; the one
  * irreversible action, resetting, asks first.
@@ -20,11 +23,29 @@ export class SettingsDialog {
   readonly #diagnostics: HTMLElement;
   #tabs: readonly View[] = [];
   #open = false;
+  readonly #sections: SectionsProvider;
+  readonly #sectionList: HTMLElement;
+  readonly #tooltips: HTMLInputElement;
+  readonly #compact: HTMLInputElement;
+  readonly #reminder: HTMLSelectElement;
+  #sectionsKey = "";
 
-  constructor(panel: Panel) {
+  constructor(panel: Panel, sections: SectionsProvider = () => []) {
     this.#panel = panel;
+    this.#sections = sections;
     const session = panel.session;
     this.#tabList = h("div", { class: "kvfx-checklist" });
+    this.#sectionList = h("div", { class: "kvfx-sectionlist" });
+    this.#tooltips = h("input", { type: "checkbox", on: { change: () => session.setUi("tooltips", this.#tooltips.checked) } });
+    this.#compact = h("input", { type: "checkbox", on: { change: () => session.setUi("compact", this.#compact.checked) } });
+    this.#reminder = h("select", {
+      class: "kvfx-input kvfx-select",
+      attrs: { "aria-label": "Save reminder" },
+      on: { change: () => session.setUi("saveReminder", Number(this.#reminder.value) || 0) },
+    });
+    for (const minutes of SAVE_REMINDER_MINUTES) {
+      this.#reminder.append(h("option", { text: minutes === 0 ? "Off" : `After ${String(minutes)} min without saving`, attrs: { value: String(minutes) } }));
+    }
 
     const radio = (value: "project" | "appData", label: string, detail: string): HTMLInputElement => {
       const input = h("input", {
@@ -54,6 +75,19 @@ export class SettingsDialog {
       h("h3", { class: "kvfx-dialog__sub", text: "Tabs" }),
       h("p", { class: "kvfx-hint", text: "Hide the tabs you don't use. Their commands stay in search." }),
       this.#tabList,
+      h("h3", { class: "kvfx-dialog__sub", text: "Sections" }),
+      h("p", { class: "kvfx-hint", text: "Show, hide and reorder the sections inside each tab." }),
+      this.#sectionList,
+      h("h3", { class: "kvfx-dialog__sub", text: "Display" }),
+      h(
+        "div",
+        { class: "kvfx-checklist" },
+        h("label", { class: "kvfx-check" }, this.#tooltips, h("span", { text: "Tooltips on hover" })),
+        h("label", { class: "kvfx-check" }, this.#compact, h("span", { text: "Compact spacing" })),
+      ),
+      h("h3", { class: "kvfx-dialog__sub", text: "Save reminder" }),
+      h("p", { class: "kvfx-hint", text: "A Save button appears in the header when the project hasn't been saved for a while." }),
+      this.#reminder,
       h("h3", { class: "kvfx-dialog__sub", text: "Pasted and dropped media" }),
       this.#mediaChoices,
       h("h3", { class: "kvfx-dialog__sub", text: "Diagnostics" }),
@@ -113,6 +147,11 @@ export class SettingsDialog {
       this.#tabList.append(h("label", { class: "kvfx-check" }, box, createIcon(tab.icon, IconSize.medium), h("span", { text: tab.label })));
     }
 
+    this.#tooltips.checked = state.settings.ui.tooltips;
+    this.#compact.checked = state.settings.ui.compact;
+    this.#reminder.value = String(state.settings.ui.saveReminder);
+    this.#renderSections(state);
+
     this.#mediaProject.checked = state.settings.ui.mediaTarget === "project";
     this.#mediaAppData.checked = state.settings.ui.mediaTarget === "appData";
 
@@ -127,6 +166,30 @@ export class SettingsDialog {
       ...state.notices.map((n) => `Note: ${n}`),
     ].filter((line) => line.length > 0);
     setText(this.#diagnostics, lines.join("\n"));
+  }
+
+  #renderSections(state: SessionState): void {
+    const ui = state.settings.ui;
+    const groups = this.#sections();
+    const key = `${groups.map((g) => g.sections.map((x) => x.id).join(",")).join("|")}#${ui.hiddenSections.join(",")}`;
+    if (key === this.#sectionsKey) return;
+    this.#sectionsKey = key;
+    clear(this.#sectionList);
+    const hidden = new Set(ui.hiddenSections);
+    for (const { view, sections } of groups) {
+      if (sections.length === 0) continue;
+      const ids = sections.map((x) => x.id);
+      const rows = sections.map((section, i) => {
+        const box = h("input", { type: "checkbox", attrs: { "aria-label": `Show ${section.title}` }, on: { change: () => this.#panel.session.toggleSection(section.id) } });
+        box.checked = !hidden.has(section.id);
+        const up = h("button", { class: "kvfx-iconbtn kvfx-iconbtn--small", type: "button", title: "Move up", attrs: { "aria-label": `Move ${section.title} up` }, on: { click: () => this.#panel.session.moveSection(ids, section.id, -1) } }, createIcon("move-up", IconSize.small));
+        const down = h("button", { class: "kvfx-iconbtn kvfx-iconbtn--small", type: "button", title: "Move down", attrs: { "aria-label": `Move ${section.title} down` }, on: { click: () => this.#panel.session.moveSection(ids, section.id, 1) } }, createIcon("move-down", IconSize.small));
+        up.disabled = i === 0;
+        down.disabled = i === sections.length - 1;
+        return h("div", { class: "kvfx-sectionrow" }, h("label", { class: "kvfx-check" }, box, h("span", { text: section.title })), up, down);
+      });
+      this.#sectionList.append(h("details", { class: "kvfx-sectiongroup" }, h("summary", { text: view.label }), ...rows));
+    }
   }
 
   async #reset(): Promise<void> {

@@ -3,7 +3,7 @@ import { IconSize, createIcon } from "../components/icons.js";
 import { PaletteOverlay } from "../palette/palette-view.js";
 import { SettingsDialog } from "../settings/settings-dialog.js";
 import { CommandButtons } from "../ui/controls.js";
-import { clear, h, setText, toggleClass } from "../ui/dom.js";
+import { applyTooltips, clear, h, setText, toggleClass } from "../ui/dom.js";
 import type { Availability, ConfirmOptions, Panel, View } from "./panel.js";
 import type { Session, SessionState } from "./session.js";
 
@@ -27,6 +27,16 @@ const PERCENT = 100;
 /** Above this share the bar turns to the warning colour. */
 const HIGH_SHARE = 0.75;
 const TOAST_MS = 3200;
+const SECONDS_PER_MINUTE = 60;
+
+/** The elements whose direct children are a view's sections. */
+function sectionParents(root: HTMLElement): HTMLElement[] {
+  const parents = new Set<HTMLElement>();
+  for (const section of Array.from(root.querySelectorAll<HTMLElement>("[data-section]"))) {
+    if (section.parentElement !== null) parents.add(section.parentElement);
+  }
+  return [...parents];
+}
 const TOAST_ERROR_MS = 6000;
 
 const ANCHORS: readonly { id: string; icon: string; label: string }[] = [
@@ -75,7 +85,10 @@ export class Shell implements Panel {
   readonly #modal: HTMLElement;
   readonly #solidSwatch: HTMLInputElement;
   readonly #reference: HTMLButtonElement;
+  readonly #save: HTMLButtonElement;
   #activeView: View | undefined;
+  #layoutKey = "";
+  #tooltipKey = "";
   #toastTimer: ReturnType<typeof setTimeout> | undefined;
   #lastToast = 0;
 
@@ -83,7 +96,7 @@ export class Shell implements Panel {
     this.session = session;
     this.#buttons = new CommandButtons(this);
     this.#palette = new PaletteOverlay(this, platform);
-    this.#settings = new SettingsDialog(this);
+    this.#settings = new SettingsDialog(this, () => this.sectionsByView());
 
     // --- header ------------------------------------------------------------
     this.#context = h("button", {
@@ -127,11 +140,21 @@ export class Shell implements Panel {
     );
     this.#ramMenu.hidden = true;
 
+    // Appears only once the project has gone unsaved for the reminder's time.
+    this.#save = h(
+      "button",
+      { class: "kvfx-save", type: "button", on: { click: () => void session.saveProject() } },
+      createIcon("check", IconSize.small),
+      h("span", { class: "kvfx-save__label", text: "Save" }),
+    );
+    this.#save.hidden = true;
+
     const header = h(
       "header",
       { class: "kvfx-header" },
       h("div", { class: "kvfx-brand", title: "KVFX Tools" }, h("span", { class: "kvfx-brand__mark" }), h("span", { class: "kvfx-brand__name", text: "KVFX" })),
       this.#context,
+      this.#save,
       h("div", { class: "kvfx-ram-wrap" }, this.#ram, this.#ramMenu),
       h("button", { class: "kvfx-iconbtn", type: "button", title: "Search every command (Ctrl/⌘ + Space)", attrs: { "aria-label": "Search commands" }, on: { click: () => this.openPalette() } }, createIcon("search")),
       h("button", { class: "kvfx-iconbtn", type: "button", title: "Settings", attrs: { "aria-label": "Settings" }, on: { click: () => this.openSettings() } }, createIcon("gear")),
@@ -363,6 +386,58 @@ export class Shell implements Panel {
     this.#activeView?.update(state, availability);
     this.#palette.refresh();
     this.#settings.update(state);
+    this.#updateLayout(state);
+    this.#updateSave(state);
+  }
+
+  /** The tabs' section order and visibility, compact spacing and tooltips, from Settings. */
+  #updateLayout(state: SessionState): void {
+    const ui = state.settings.ui;
+    toggleClass(this.root, "kvfx-app--compact", ui.compact);
+    const key = `${ui.sectionOrder.join(",")}|${ui.hiddenSections.join(",")}`;
+    if (key !== this.#layoutKey) {
+      this.#layoutKey = key;
+      const order = new Map(ui.sectionOrder.map((id, i) => [id, i]));
+      const hidden = new Set(ui.hiddenSections);
+      for (const view of this.#views) {
+        for (const parent of sectionParents(view.root)) {
+          const sections = Array.from(parent.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.dataset["section"] !== undefined);
+          const ranked = sections
+            .map((section, i) => ({ section, rank: order.get(section.dataset["section"] ?? "") ?? Number.MAX_SAFE_INTEGER, i }))
+            .sort((a, b) => a.rank - b.rank || a.i - b.i);
+          if (ranked.some((r, i) => r.section !== sections[i])) for (const r of ranked) parent.append(r.section);
+          for (const section of sections) toggleClass(section, "kvfx-section--off", hidden.has(section.dataset["section"] ?? ""));
+        }
+      }
+    }
+    const tooltipKey = `${String(ui.tooltips)}:${this.#activeView?.id ?? ""}`;
+    if (tooltipKey !== this.#tooltipKey) {
+      this.#tooltipKey = tooltipKey;
+      applyTooltips(this.root, ui.tooltips);
+    }
+  }
+
+  #updateSave(state: SessionState): void {
+    const minutes = state.settings.ui.saveReminder;
+    const ago = state.savedAgo;
+    const due = minutes > 0 && ago !== undefined && ago >= minutes * SECONDS_PER_MINUTE;
+    this.#save.hidden = !due;
+    if (due) {
+      const elapsed = Math.floor((ago ?? 0) / SECONDS_PER_MINUTE);
+      this.#save.title = `Last saved ${String(elapsed)} min ago — click to save (File ▸ Save)`;
+    }
+  }
+
+  /** Every view's sections, for Settings ▸ Sections. */
+  sectionsByView(): { view: View; sections: { id: string; title: string }[] }[] {
+    return this.#views.map((view) => ({
+      view,
+      sections: sectionParents(view.root).flatMap((parent) =>
+        Array.from(parent.children)
+          .filter((c): c is HTMLElement => c instanceof HTMLElement && c.dataset["section"] !== undefined)
+          .map((c) => ({ id: c.dataset["section"] ?? "", title: c.dataset["title"] ?? "" })),
+      ),
+    }));
   }
 
   #updateHeader(state: SessionState): void {

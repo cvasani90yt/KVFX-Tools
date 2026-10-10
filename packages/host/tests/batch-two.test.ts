@@ -252,3 +252,15 @@ describe("interface rigs", () => {
     expect(ae.stack().indexOf("KVFX Input Text")).toBeLessThan(ae.stack().indexOf("KVFX Input Box"));
   });
 });
+
+describe("save reminder", () => {
+  it("reports how long ago the project file was written, and saves only to an existing file", () => {
+    const ae = hd();
+    expect(send(ae, { kind: "query", op: "kvfx.op.project.save", args: {}, budgetMs: 500 }).ok).toBe(false);
+    ae.project!.file = { exists: true, fsName: "/work/promo.aep", name: "promo.aep", modified: new Date(1_000_000 - 90_000) };
+    const info = send(ae, { kind: "query", op: "kvfx.op.project.info", args: {}, budgetMs: 500 });
+    expect((info.result as { savedAgo: number }).savedAgo).toBe(90);
+    expect(send(ae, { kind: "query", op: "kvfx.op.project.save", args: {}, budgetMs: 500 }).ok).toBe(true);
+    expect(ae.project!.saveCount).toBe(1);
+  });
+});

@@ -223,6 +223,8 @@ interface AeRawProject {
   readonly items?: { addComp(name: string, width: number, height: number, pixelAspect: number, duration: number, frameRate: number): AeRawComp };
   importFile(options: AeImportOptions): AeRawItem;
   replaceFont?(fromFont: AeFont, toFont: AeFont, noFontLocking?: boolean): boolean;
+  /** Saves to the project's existing file. */
+  save?(): void;
 }
 
 interface AeApplication {
@@ -255,6 +257,8 @@ interface AeFile {
   readonly exists: boolean;
   readonly fsName: string;
   readonly name: string;
+  /** When the file was last written. */
+  readonly modified?: Date;
 }
 
 interface AeImportOptions {

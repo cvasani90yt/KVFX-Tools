@@ -51,6 +51,16 @@ export interface UiSettings {
    * JSON and each tool validates its own on read.
    */
   readonly toolParams: Readonly<Record<string, JsonObject>>;
+  /** Hover tooltips on buttons. Reasons a control is disabled always show. */
+  readonly tooltips: boolean;
+  /** Tighter spacing, for small docked panels. */
+  readonly compact: boolean;
+  /** Section ids the user switched off in Settings ▸ Sections. */
+  readonly hiddenSections: readonly string[];
+  /** Section ids in the user's preferred order; sections not listed keep theirs. */
+  readonly sectionOrder: readonly string[];
+  /** Minutes since the last save before the header suggests saving; 0 is off. */
+  readonly saveReminder: number;
 }
 
 export interface SavedEase {
@@ -75,7 +85,16 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   libraryFolders: [],
   mediaTarget: "project",
   toolParams: {},
+  tooltips: true,
+  compact: false,
+  hiddenSections: [],
+  sectionOrder: [],
+  saveReminder: 20,
 };
+
+/** Choices offered for the save reminder, in minutes. */
+// eslint-disable-next-line no-magic-numbers -- the choices themselves
+export const SAVE_REMINDER_MINUTES: readonly number[] = [0, 10, 20, 30, 60];
 
 export interface KvfxSettings {
   readonly schemaVersion: number;
@@ -250,7 +269,29 @@ function uiSettings(value: unknown): UiSettings {
     libraryFolders: stringList(value["libraryFolders"], MAX_LIBRARY_FOLDERS),
     mediaTarget: value["mediaTarget"] === "appData" ? "appData" : "project",
     toolParams: toolParams(value["toolParams"]),
+    tooltips: value["tooltips"] !== false,
+    compact: value["compact"] === true,
+    hiddenSections: stringList(value["hiddenSections"]),
+    sectionOrder: stringList(value["sectionOrder"]),
+    saveReminder: SAVE_REMINDER_MINUTES.includes(value["saveReminder"] as number)
+      ? (value["saveReminder"] as number)
+      : DEFAULT_UI_SETTINGS.saveReminder,
   };
+}
+
+/**
+ * Moves a section one place up or down among `siblings` (in their current
+ * order), recording the whole sibling order so the move sticks.
+ */
+export function moveSection(settings: KvfxSettings, siblings: readonly string[], id: string, delta: -1 | 1): KvfxSettings {
+  const order = [...siblings];
+  const from = order.indexOf(id);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= order.length) return settings;
+  order.splice(from, 1);
+  order.splice(to, 0, id);
+  const rest = settings.ui.sectionOrder.filter((s) => !order.includes(s));
+  return setUiSetting(settings, "sectionOrder", [...rest, ...order]);
 }
 
 /** Remembers a tool's parameters, merged over what was stored before. */
