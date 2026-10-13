@@ -82,6 +82,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by name, scroll the panel, pick from dropdowns and dry-run a clip; nine new
   walkthrough recordings
 
+### Changed — Comp Resizer
+- New **Stretch** mode: every layer stretches with the frame, each axis on
+  its own, for when 9:16 should simply become 16:9
+- **Fill backgrounds** (on by default): solids, adjustment layers and anything
+  else that covered the old frame now cover the new one in every mode, instead
+  of leaving empty bands or a narrow strip. Solids get a new solid of the right
+  size (the old one is left for any comp that shares it), with effect points
+  and masks moved to match; full-frame shapes stretch; full-frame footage and
+  precomps scale evenly until they cover
+- Locked layers move with everything else and are locked again, instead of
+  being left behind off the new frame
+
 ### Fixed
 - **Silence Remover**: Analyse asked for twice the time a plan may take, so
   the panel refused it before After Effects saw it and showed only "Something

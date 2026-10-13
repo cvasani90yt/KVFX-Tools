@@ -97,12 +97,13 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
   const fps = numberField("FPS", 0, { min: 1, step: 1 });
   fps.input.value = typeof r["frameRate"] === "number" ? String(r["frameRate"]) : "";
   fps.input.placeholder = "same";
-  let fit = r["fit"] === "fit" || r["fit"] === "fill" ? r["fit"] : "keep";
+  let fit = r["fit"] === "fit" || r["fit"] === "fill" || r["fit"] === "stretch" ? r["fit"] : "keep";
   const fitSeg = segmented(
     [
       { value: "keep", label: "Keep", title: "Content keeps its size, pinned to the anchor" },
-      { value: "fit", label: "Fit", title: "Content scales to fit inside the new frame" },
-      { value: "fill", label: "Fill", title: "Content scales to fill the new frame" },
+      { value: "fit", label: "Fit", title: "Content scales evenly to fit inside the new frame" },
+      { value: "fill", label: "Fill", title: "Content scales evenly to fill the new frame; edges may be cut off" },
+      { value: "stretch", label: "Stretch", title: "Every layer stretches to the new frame, wider or taller; text and images distort" },
     ],
     fit,
     (value) => {
@@ -141,8 +142,9 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
     [
       { key: "extend", label: "Extend layers", title: "Layers that ran to the old end run to the new one" },
       { key: "fixParents", label: "Fix parents", title: "Comps that use these stay exactly as they look now" },
+      { key: "backgrounds", label: "Fill backgrounds", title: "Solids, adjustment layers and anything else that covered the old frame cover the new one" },
     ],
-    { extend: r["extend"] !== false, fixParents: r["fixParents"] !== false },
+    { extend: r["extend"] !== false, fixParents: r["fixParents"] !== false, backgrounds: r["backgrounds"] !== false },
     () => undefined,
   );
   const target = h("p", { class: "kvfx-hint kvfx-target" });
@@ -166,6 +168,7 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
           anchor,
           extend: resizeOptions.get("extend"),
           fixParents: resizeOptions.get("fixParents"),
+          backgrounds: resizeOptions.get("backgrounds"),
           percent: scale ?? null,
           duration: optionalNumber(duration.input) ?? null,
           frameRate: optionalNumber(fps.input) ?? null,
@@ -175,7 +178,7 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
       },
     }),
     target,
-    hint("Scale overrides W and H. Content stays pinned to the highlighted spot; Fix parents keeps every comp that uses these looking the same."),
+    hint("Keep pins content to the highlighted spot at its size; Fit and Fill scale it evenly; Stretch stretches every layer with the frame. Fill backgrounds makes solids, adjustment layers and full-frame footage cover the new frame. Scale overrides W and H."),
   );
 
   // --- Silence Remover --------------------------------------------------------

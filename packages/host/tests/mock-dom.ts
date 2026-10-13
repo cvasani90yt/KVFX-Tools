@@ -717,6 +717,11 @@ export class MockItem {
   /** Footage only. */
   footageMissing = false;
   file: AeFile | null = null;
+  /** Footage only: a solid's source carries its colour. */
+  mainSource: { color?: number[] } | null = null;
+  width?: number;
+  height?: number;
+  pixelAspect = 1;
   constructor(name: string, typeName: string) {
     this.name = name;
     this.typeName = typeName;
@@ -836,6 +841,16 @@ export class MockLayer {
         indexed: true,
         accepts: effectDef,
       });
+      groups.push({
+        kind: "group",
+        matchName: "ADBE Mask Parade",
+        name: "Masks",
+        indexed: true,
+        accepts: (m) =>
+          m === "ADBE Mask Atom"
+            ? { kind: "group", matchName: "ADBE Mask Atom", name: "Mask 1", children: [leaf("ADBE Mask Shape", "Mask Path", PVT.SHAPE, null)] }
+            : undefined,
+      });
     }
     if (this.kind === "text") groups.push(textDef(options.text ?? "Text"));
     if (this.kind === "shape") {
@@ -929,6 +944,10 @@ export class MockLayer {
 
   replaceSource(newSource: MockComp | MockItem): void {
     this.source = newSource;
+    // As in After Effects, the layer now measures its new source.
+    if (typeof newSource.width === "number" && typeof newSource.height === "number") {
+      this.sourceRect = { left: 0, top: 0, width: newSource.width, height: newSource.height };
+    }
   }
 
   moveToBeginning(): void {
@@ -1058,6 +1077,9 @@ export class MockComp extends MockItem {
       addNull: () => comp.addLayer({ name: "Null 1", kind: "null" }) as unknown as AeRawLayer,
       addSolid: (color, name, width, height) => {
         const item = new MockItem(name, "Solid");
+        item.mainSource = { color: [...color] };
+        item.width = width;
+        item.height = height;
         comp.project.items.push(item);
         const layer = comp.addLayer({ name, kind: "av", source: item });
         layer.sourceRect = { left: 0, top: 0, width, height };

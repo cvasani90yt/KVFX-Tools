@@ -5,7 +5,9 @@ import { AVAILABLE, type Command, CommandCategory, unavailable } from "../types.
 
 /**
  * Comp Resizer: new size, duration or frame rate for whole comps, with the
- * content pinned to a spot and optionally scaled to fit or fill.
+ * content pinned to a spot and optionally scaled to fit, fill or stretch to the
+ * new frame. Backgrounds (anything that covered the old frame) cover the new
+ * one in every mode unless that is turned off.
  */
 
 export interface CompPreset {
@@ -51,9 +53,9 @@ export const resizeComps = simpleCommand({
   id: "kvfx.comp.resize",
   name: "Resize Comps",
   description:
-    "Change the size, length or frame rate of the comps selected in the Project panel — or the open comp — keeping content pinned to an anchor, and fixing the comps that use them so nothing jumps",
+    "Change the size, length or frame rate of the comps selected in the Project panel — or the open comp — keeping content pinned to an anchor or scaling it to fit, fill or stretch, with backgrounds covering the new frame and the comps that use them fixed so nothing jumps",
   category: CommandCategory.Project,
-  keywords: ["resize", "comp", "composition", "size", "aspect", "vertical", "square", "9:16", "4:5", "reframe", "duration", "fps", "frame rate", "batch"],
+  keywords: ["resize", "comp", "composition", "size", "aspect", "vertical", "horizontal", "square", "9:16", "16:9", "4:5", "reframe", "stretch", "fill", "duration", "fps", "frame rate", "batch"],
   icon: "resize",
   metadata: { destructive: true, minLayers: 0, requiresComp: false },
   defaultParams: (ui) => ui.toolParams["resize"] ?? {},
@@ -65,12 +67,13 @@ export const resizeComps = simpleCommand({
     const args: JsonObject = {
       fit: ((): string => {
         const fit = stringParam(ctx, "fit", "keep");
-        return fit === "fit" || fit === "fill" ? fit : "keep";
+        return fit === "fit" || fit === "fill" || fit === "stretch" ? fit : "keep";
       })(),
       anchor: anchorFractionFor(stringParam(ctx, "anchor", "centre")),
       swap: boolParam(ctx, "swap", false),
       extend: boolParam(ctx, "extend", true),
       fixParents: boolParam(ctx, "fixParents", true),
+      backgrounds: boolParam(ctx, "backgrounds", true),
     };
     const percent = numberParam(ctx, "percent", 0, 0, LIMITS.percent);
     if (percent > 0) args["percent"] = percent;

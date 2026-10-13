@@ -403,8 +403,12 @@ export const STAGES: readonly Stage[] = [
   },
 ];
 
-/** Comp Resizer, as the builder runs it on a copy of the finished promo. */
-const RESIZE: Run = { label: "Resize Comps", at: 0, command: "kvfx.comp.resize", params: { width: 1080, height: 1920, fit: "fit", anchor: "centre", fixParents: false } };
+/**
+ * Comp Resizer, as the builder runs it on a copy of the finished promo. Its
+ * shots are full-frame precomps, which Fill backgrounds would crop to cover;
+ * the vertical promo wants them whole, fitted, over a blurred copy.
+ */
+const RESIZE: Run = { label: "Resize Comps", at: 0, command: "kvfx.comp.resize", params: { width: 1080, height: 1920, fit: "fit", anchor: "centre", fixParents: false, backgrounds: false } };
 
 // ---------------------------------------------------------------------------
 // Running a stage
