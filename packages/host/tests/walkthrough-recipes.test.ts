@@ -225,7 +225,7 @@ export const STAGES: readonly Stage[] = [
     fonts: [{ layer: "Headline", font: "display" }],
     runs: [
       { label: "Text", at: 0, steps: textLayer("t", "Headline", "Numbers that move.", 130, [960, 580]) },
-      { label: "Animate In + Out", at: 0.4, select: ["Headline"], command: "kvfx.text.animate", params: { preset: "blur-rise", mode: "inOut", unit: "words", order: "forward" } },
+      { label: "Animate In + Out", at: 0.4, select: ["Headline"], command: "kvfx.text.animate", params: { preset: "blur", mode: "inOut", unit: "words", order: "forward" } },
     ],
   },
   { id: "kinetic", duration: 6, fonts: [{ layer: "KVFX Kinetic · *", font: "display" }], runs: [{ label: "Build Kinetic Title", at: 0.2, command: "kvfx.rig.kinetic", params: { text: "Dashboards that *actually* *move*", style: "stack", accent: AMBER, accent2: "#fbbf24", background: "drift", aspect: "comp" } }] },
@@ -360,7 +360,7 @@ export const STAGES: readonly Stage[] = [
   },
   {
     id: "align",
-    duration: 6,
+    duration: 12,
     runs: [
       {
         label: "Cards",
@@ -373,7 +373,7 @@ export const STAGES: readonly Stage[] = [
         ],
       },
       { label: "Align as Group", at: 1, select: ["Card A", "Card B", "Card C", "Card D"], command: "kvfx.align.centrey.group", animate: true },
-      { label: "Even gaps horizontally", at: 3, select: ["Card A", "Card B", "Card C", "Card D"], command: "kvfx.align.gaps.horizontal", params: { gap: 60 }, animate: true },
+      { label: "Even gaps horizontally", at: 8.1, select: ["Card A", "Card B", "Card C", "Card D"], command: "kvfx.align.gaps.horizontal", params: { gap: 60 }, animate: true },
     ],
   },
 

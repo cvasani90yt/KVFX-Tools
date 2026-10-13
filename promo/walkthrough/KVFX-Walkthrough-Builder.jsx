@@ -992,8 +992,10 @@
   }
 
   // Bars for the voice, pauses lit in amber, then the pauses close up.
+  // Timed to the recording: Analyse at 0, the pauses found at 1, and the cut
+  // confirmed at 6.7 (wt-ship clicks Remove Silences 6.7 s after Analyse).
   function silenceStage(samples) {
-    var comp = newComp("WT silence", 8, FOLDERS.stages, C.stage);
+    var comp = newComp("WT silence", 12, FOLDERS.stages, C.stage);
     dotGrid(comp, C.mute, 10, 60);
     var data = samples && samples.length > 30 ? samples : syntheticVoice(600);
     var bars = 140;
@@ -1031,7 +1033,7 @@
       if (run.quiet) {
         var gap = shape(comp, "Pause " + (r + 1));
         rectGroup(gap, "pause", w, 300, 10, [left + w / 2, mid], C.amber, null, 0, 26);
-        anim(tr(gap, "ADBE Opacity"), [[1.0, 0], [1.3, 100], [2.2, 100], [2.6, 0]], "smooth");
+        anim(tr(gap, "ADBE Opacity"), [[1.0, 0], [1.3, 100], [6.7, 100], [7.1, 0]], "smooth");
         removed += w;
         continue;
       }
@@ -1045,11 +1047,11 @@
         gItem(phrase, gi, ri).property("ADBE Vector Rect Roundness").setValue(step * 0.3);
       }
       paint(phrase, gi, C.cream, null, 0);
-      if (removed > 0) anim(tr(phrase, "ADBE Position"), [[2.2, [0, 0]], [2.8, [-removed, 0]]], "snap");
+      if (removed > 0) anim(tr(phrase, "ADBE Position"), [[6.7, [0, 0]], [7.3, [-removed, 0]]], "snap");
     }
     var saved = txt(comp, "Pauses removed", { font: "ui", size: 44, color: C.amber, pos: [W / 2, mid + 230] });
     saved.name = "Result";
-    anim(tr(saved, "ADBE Opacity"), [[2.6, 0], [2.9, 100]], "smooth");
+    anim(tr(saved, "ADBE Opacity"), [[7.3, 0], [7.6, 100]], "smooth");
     return comp;
   }
 
@@ -1150,14 +1152,13 @@
   }
 
   // A recording that starts at t0 from `from` seconds in, holding its first
-  // and last frames, as layers of `comp`. `rate` slows it down (0 holds the
-  // frame) and `loop` ([a, b]) plays that stretch over and over.
-  function remapped(comp, item, name, t0, t1, from, rate, loop) {
+  // and last frames, as layers of `comp`. `rate` changes its speed. It plays
+  // once: nothing is looped, so no click is ever seen twice.
+  function remapped(comp, item, name, t0, t1, from, rate) {
     var l = comp.layers.add(item);
     l.name = name;
     var r = rate === undefined ? 1 : rate;
     var body = "var u = " + fixed(from) + " + (time - " + fixed(t0) + ") * " + fixed(r) + ";\n";
-    if (loop) body += "if (u > " + fixed(loop[1]) + ") u = " + fixed(loop[0]) + " + (u - " + fixed(loop[0]) + ") % " + fixed(loop[1] - loop[0]) + ";\n";
     body += "Math.min(Math.max(u, 0), source.duration - thisComp.frameDuration);";
     try {
       l.timeRemapEnabled = true;
@@ -1172,9 +1173,7 @@
   // Where a panel beat's recording is, dt seconds into it.
   function clipTime(panel, dt) {
     var r = panel.length > 2 ? panel[2] : 1;
-    var u = panel[1] + dt * r;
-    if (panel.length > 4 && u > panel[4]) u = panel[3] + (u - panel[3]) % (panel[4] - panel[3]);
-    return u;
+    return panel[1] + dt * r;
   }
 
   // The panel close-up: a comp the size of the recordings, so pushing in on a
@@ -1190,7 +1189,7 @@
       var item = clipItem(b.panel[0]);
       var l;
       if (item) {
-        l = remapped(comp, item, "Panel \u00B7 " + b.panel[0], b.t, t1, b.panel[1], b.panel.length > 2 ? b.panel[2] : 1, b.panel.length > 4 ? [b.panel[3], b.panel[4]] : null);
+        l = remapped(comp, item, "Panel \u00B7 " + b.panel[0], b.t, t1, b.panel[1], b.panel.length > 2 ? b.panel[2] : 1);
         if (item.width !== PANEL.w) setScale(l, PANEL.w / item.width * 100);
       } else {
         l = solid(comp, C.missing, "MISSING " + b.panel[0]);
@@ -1491,7 +1490,7 @@
         }
       }
       var rate = cb.panel.length > 2 ? cb.panel[2] : 1;
-      if (rate <= 0 || cb.panel.length > 4) continue;
+      if (rate <= 0) continue;
       var clicks = WT_CLIP_CLICKS[cb.panel[0]] || [];
       for (var k = 0; k < clicks.length; k++) {
         var at = cb.t + (clicks[k] - cb.panel[1]) / rate;

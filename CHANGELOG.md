@@ -79,8 +79,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`walkthrough-recipes.jsxinc`, generated and checked by a test that replays
   each one from layer names), and the edit is timed from the voiceover takes
 - `scripts/promo-capture.mjs` can aim the cursor at buttons, tabs and fields
-  by name, scroll the panel, pick from dropdowns and dry-run a clip; nine new
-  walkthrough recordings
+  by name, scroll the panel, pick from dropdowns, click before recording and
+  dry-run a clip
+- The walkthrough's panel recordings are one continuous take per chapter,
+  paced to its voiceover, with the cursor resting on whatever is being
+  described. Every click happens once, as the voice names it; the edit no
+  longer loops or freezes a recording to fill time
 
 ### Added — Unprecompose
 - **Unprecompose** (Tools ▸ Layer, and search): the layers inside the
@@ -109,6 +113,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   went wrong". A test now holds every budget the panel writes to the limit
 - **Missing Footage**: after Find Missing or a folder search, Search and Relink
   stayed greyed out until something else in the session changed
+- **Silence Remover**: after Analyse, Cut Pauses stayed greyed out until
+  something else in the session changed
 - The success toast for **Duplicate Comp + Nested Comps** and **Duplicate
   Precomp Layer + Nested** used the old "(Deep)" names; the command names now
   match their buttons everywhere, including search

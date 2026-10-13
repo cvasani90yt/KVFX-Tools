@@ -250,6 +250,13 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
   const analyse = actionButton("Analyse", () => void runAnalysis(), { icon: "silence", variant: "wide" });
   const apply = actionButton("Cut Pauses", () => void removeSilences(), { icon: "split", variant: "wide", title: "Remove the pauses found above" });
   apply.classList.add("kvfx-primary");
+  // Also called once an analysis lands or is used up: the session's own update
+  // runs when the plan finishes, before the result is stored here.
+  const refreshButtons = (state: SessionState): void => {
+    const busy = state.busy;
+    setEnabled(analyse, !busy && state.snapshot.layers.length > 0, "Select the voice layer first.");
+    setEnabled(apply, !busy && analysis !== undefined, "Analyse a layer first.");
+  };
 
   const runAnalysis = async (): Promise<void> => {
     const first = session.state.snapshot.layers[0];
@@ -263,6 +270,7 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
     if (step === undefined || !Array.isArray(step.samples)) return;
     analysis = step;
     redraw();
+    refreshButtons(session.state);
   };
 
   const removeSilences = async (): Promise<void> => {
@@ -297,6 +305,7 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
     analysis = undefined;
     result = undefined;
     redraw();
+    refreshButtons(session.state);
     setText(summary, "Done. Analyse again to look for more.");
   };
 
@@ -320,9 +329,7 @@ export function buildResizeAndSilence(panel: Panel, buttons: CommandButtons, sec
           ? "Select comps in the Project panel, or open one."
           : `Will resize: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${String(names.length - 3)} more` : ""}.`,
       );
-      const busy = state.busy;
-      setEnabled(analyse, !busy && state.snapshot.layers.length > 0, "Select the voice layer first.");
-      setEnabled(apply, !busy && analysis !== undefined, "Analyse a layer first.");
+      refreshButtons(state);
     },
   };
 }

@@ -17,12 +17,12 @@ the real panel.
 | `walkthrough-script.jsxinc` | The voiceover script: one entry per voiceover file, with caption breaks. |
 | `walkthrough-shots.jsxinc` | The shot list: what the panel and the viewer show at each caption. |
 | `walkthrough-recipes.jsxinc` | The demo scenes as KVFX plans. **Generated**; do not edit by hand. |
-| `assets/clips/wt-*.mp4` | Panel recordings, one per chapter, at 2× (760 × 1720, 30 fps). |
+| `assets/clips/wt-*.mp4` | Panel recordings at 2× (760 × 1720, 30 fps): one continuous take per chapter, paced to its voiceover. |
 | `assets/vo/` | The voiceover takes (not in the repository). |
 | `assets/music/`, `assets/sfx/` | Licensed music and sound effects (not in the repository). |
 
-The builder also uses `../assets/clips/ease.mp4` and `palette.mp4` from the
-promo kit, and its sound effects from `../assets/sfx` when this folder has none.
+The builder uses the promo kit's sound effects from `../assets/sfx` when this
+folder has none.
 
 ## Build it
 
@@ -60,8 +60,10 @@ reported rather than built somewhere else.
   panel or the viewer shows:
   * `sync: [scene, run time, click time]` starts a scene so that its command
     runs at the moment the recording clicks the button for it.
-  * `panel: [clip, from, rate, a, b]` can slow a recording down, hold a
-    frame (rate 0), or loop a stretch while the voice catches up.
+  * `panel: [clip, from]` plays a recording. Each chapter plays its own
+    recording once, from start to finish. The recordings were made at the
+    pace of the voiceover, so each click is seen once, as the voice names it.
+    Nothing loops.
   * `focus` pushes in on part of the panel, `wide` gives the viewer the
     whole frame, and `chip` names where the tool lives.
 * **Chapters** open with a card over the viewer, then keep an `01 / 08` chip.
@@ -112,8 +114,10 @@ The first line must be `0:00`.
   node scripts/promo-capture.mjs --clip wt-layouts,wt-motion   # --dry checks targets first
   ```
 
-  If you move a click, update its time in `WT_CLIP_CLICKS` and in the `sync`
-  beats that use it.
+  Each walkthrough clip is one take that follows its chapter's captions,
+  with the cursor resting on whatever the voice is describing. If you move a
+  click, update its time in `WT_CLIP_CLICKS` and in the `sync` beats that use
+  it. If you record a new voiceover take, re-time the clip to match.
 
 ## Script and chapters
 
@@ -125,7 +129,7 @@ The first line must be `0:00`.
 | 1 | Start with a layout | Layouts gallery, five templates, Metric Cards built from the panel |
 | 2 | Make it move | UI Stagger in four styles and orders, Card Carousel |
 | 3 | Show how it's used | Cursor, Hover Lift, Input Bar |
-| 4 | Type that talks | Animate (Blur Rise, in and out, by word), Kinetic Title, 9:16 title |
+| 4 | Type that talks | Animate (Blur In, in and out, by word), Kinetic Title, 9:16 title |
 | 5 | Set the scene | Backdrop (drift, horizon, stars), Dot Pulse, Frosted Glass, Wipe Reveal, Code Glyphs |
 | 6 | Polish | Curve editor, Elastic, Bounce, Follow Layer, Align as Group, Even Gaps |
 | 7 | Ship it | Silence Remover, Comp Resizer, Missing Footage |
