@@ -73,7 +73,8 @@ export class ToolsView implements View {
     const layer = this.#section("tools.layer", "Layer");
     layer.body.append(
       pillGrid(
-        b.button("kvfx.layer.precomposeeach", { label: "Precomp Each", icon: "precompose" }),
+        b.button("kvfx.layer.precomposeeach", { label: "Precomp", icon: "precompose" }),
+        b.button("kvfx.layer.unprecompose", { label: "Unprecomp", icon: "unprecompose" }),
         b.button("kvfx.layer.split", { label: "Split", icon: "split" }),
         b.button("kvfx.layer.trimworkarea", { label: "Trim to WA", icon: "trim" }),
         b.button("kvfx.layer.nullparent", { label: "Null Parent", icon: "link" }),

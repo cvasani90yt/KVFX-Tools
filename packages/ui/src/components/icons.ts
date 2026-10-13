@@ -135,6 +135,7 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
 
   // Layer tools.
   precompose: [box(1.5, 1.5, 13, 13), bar(4.5, 4.5, 7, 7)],
+  unprecompose: [box(1.5, 4.5, 10, 10), line("M6.5 9.5 L14.5 1.5"), line("M9.5 1.5 L14.5 1.5 L14.5 6.5")],
   split: [bar(1.5, 4, 5, 8), bar(9.5, 4, 5, 8), rule(8, 1.5, 8, 14.5)],
   duplicate: [box(1.5, 5.5, 9, 9), bar(5.5, 1.5, 9, 9)],
   trim: [bar(2.5, 2.5, 1.75, 11), bar(11.75, 2.5, 1.75, 11), bar(5.5, 7, 5, 2)],

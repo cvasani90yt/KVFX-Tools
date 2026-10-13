@@ -99,6 +99,24 @@ export const deepDuplicate = simpleCommand({
   steps: () => [{ op: "kvfx.op.comp.deepDuplicate", args: { target: "selection" } }],
 });
 
+/**
+ * The reverse of precomposing: the selected precomp layers' layers come back
+ * into this comp, where and when they were seen, and the precomp layers are
+ * switched off rather than deleted.
+ */
+export const unprecompose = simpleCommand({
+  id: "kvfx.layer.unprecompose",
+  name: "Unprecompose",
+  description:
+    "Bring the layers inside the selected precomp layers back into this comp, where and when they were seen, and switch the precomp layers off",
+  category: CommandCategory.Layer,
+  keywords: ["unprecompose", "un-precompose", "release", "extract", "unnest", "flatten", "ungroup", "decompose", "precomp", "nested", "break apart"],
+  icon: "unprecompose",
+  metadata: NEEDS_LAYER,
+  check: hasPrecomp,
+  steps: () => [{ op: "kvfx.op.layer.unprecompose", args: { target: "selection" } }],
+});
+
 export const trimToWorkArea = simpleCommand({
   id: "kvfx.layer.trimworkarea",
   name: "Trim to Work Area",
@@ -360,6 +378,7 @@ export const gradientLock = simpleCommand({
 
 export const toolCommands: readonly Command[] = [
   precomposeEach,
+  unprecompose,
   splitLayers,
   deepDuplicateComp,
   deepDuplicate,

@@ -814,6 +814,7 @@ export class MockLayer {
   trackMatteLayer: MockLayer | null = null;
   blendingMode = BLEND.normal;
   hasAudio = false;
+  timeRemapEnabled = false;
 
   constructor(comp: MockComp, options: MockLayerOptions) {
     this.containingComp = comp;
@@ -879,6 +880,12 @@ export class MockLayer {
     this.shiftOrigin = value;
     this.inPoint += delta;
     this.outPoint += delta;
+    // Keyframes are stored relative to the layer, so they move with it too.
+    const walk = (p: MockProp): void => {
+      for (const key of p.keys) key.time += delta;
+      for (const child of p.children) walk(child);
+    };
+    walk(this.root);
   }
 
   get index(): number {
@@ -972,6 +979,15 @@ export class MockLayer {
     const stack = this.containingComp.stack;
     stack.splice(stack.indexOf(this), 1);
     stack.splice(stack.indexOf(other) + 1, 0, this);
+  }
+
+  /** Layer.copyToComp: a copy at the top of another comp, with no parent there. */
+  copyToComp(intoComp: MockComp): void {
+    const copy = Object.create(MockLayer.prototype) as MockLayer;
+    Object.assign(copy, this, { selected: false, appliedPresets: [], parent: null, trackMatteLayer: null, containingComp: intoComp });
+    (copy as { id: number }).id = nextId++;
+    copy.root = this.root.cloneInto(null, copy);
+    intoComp.stack.unshift(copy);
   }
 
   duplicate(): MockLayer {

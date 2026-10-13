@@ -82,6 +82,15 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by name, scroll the panel, pick from dropdowns and dry-run a clip; nine new
   walkthrough recordings
 
+### Added — Unprecompose
+- **Unprecompose** (Tools ▸ Layer, and search): the layers inside the
+  selected precomp layers come back into the comp, in order, where and when
+  they were seen — on a null carrying the precomp layer's transform when it
+  was moved, scaled or animated. Parenting and track mattes are rebuilt; the
+  precomp layer is switched off, not deleted, and anything it did that plain
+  layers cannot (effects, masks, opacity, blending) is listed in the toast
+- Toasts now show a command's own remarks about what it could not carry over
+
 ### Changed — Comp Resizer
 - New **Stretch** mode: every layer stretches with the frame, each axis on
   its own, for when 9:16 should simply become 16:9

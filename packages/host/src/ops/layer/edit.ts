@@ -4,6 +4,7 @@ import { ErrorCode } from "../../runtime/protocol.js";
 import type { Operation, OperationContext } from "../../runtime/registry.js";
 import type { HostJson } from "../../runtime/serialize.js";
 import { layerById, readNumber, requireComp, skipped, targets } from "../raw.js";
+import { unprecomposeOperation } from "./unprecompose.js";
 
 /**
  * Structural layer edits: duplicate, attributes, selection, precompose, split.
@@ -487,6 +488,7 @@ export const layerEditOperations: Operation[] = [
   setLayerAttributesOperation,
   selectLayersOperation,
   precomposeEachOperation,
+  unprecomposeOperation,
   splitLayerOperation,
   deepDuplicateOperation,
   deepDuplicateCompsOperation,

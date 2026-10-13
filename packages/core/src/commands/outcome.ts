@@ -43,6 +43,8 @@ interface Counts {
   /** Expressions naming a comp at runtime, which a deep duplicate cannot retarget. */
   dynamic: number;
   created: string[];
+  /** Plain-words remarks from the host, such as what a command could not carry over. */
+  notes: string[];
 }
 
 function collect(value: JsonValue, skips: Skip[], counts: Counts): void {
@@ -71,6 +73,8 @@ function collect(value: JsonValue, skips: Skip[], counts: Counts): void {
       counts.dynamic += entry;
     } else if (key === "createdNames" && Array.isArray(entry)) {
       for (const name of entry) if (typeof name === "string") counts.created.push(name);
+    } else if (key === "notes" && Array.isArray(entry)) {
+      for (const note of entry) if (typeof note === "string" && !counts.notes.includes(note)) counts.notes.push(note);
     } else if (typeof entry === "object" && entry !== null) {
       collect(entry, skips, counts);
     }
@@ -83,12 +87,18 @@ function collect(value: JsonValue, skips: Skip[], counts: Counts): void {
  * "Done" alone would hide that three of five layers were locked and skipped;
  * the user would assume all five changed.
  */
+/** Host remarks shown in one toast before the rest is cut short. */
+const MAX_NOTES = 3;
+
 export function summarizeResult(result: JsonValue): string {
   const skips: Skip[] = [];
-  const counts: Counts = { changed: 0, missing: 0, failures: 0, comps: 0, dynamic: 0, created: [] };
+  const counts: Counts = { changed: 0, missing: 0, failures: 0, comps: 0, dynamic: 0, created: [], notes: [] };
   collect(result, skips, counts);
 
   const notes: string[] = [];
+  if (counts.notes.length > 0) {
+    notes.push(counts.notes.slice(0, MAX_NOTES).join("; ") + (counts.notes.length > MAX_NOTES ? "; …" : ""));
+  }
   if (counts.created.length > 0) {
     const shown = counts.created.slice(0, 2).join(", ");
     const more = counts.created.length > 2 ? ` and ${String(counts.created.length - 2)} more` : "";

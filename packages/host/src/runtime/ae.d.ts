@@ -149,7 +149,12 @@ interface AeRawLayer {
   applyPreset?(file: AeFile): void;
   /** AVLayer: how a track matte applies, and (AE 23+) which layer is the matte. */
   trackMatteType?: number;
+  readonly trackMatteLayer?: AeRawLayer | null;
   setTrackMatte?(trackMatteLayer: AeRawLayer, trackMatteType: number): void;
+  /** AVLayer: true when the layer's time is remapped. */
+  readonly timeRemapEnabled?: boolean;
+  /** Copies the layer into another comp, as Edit ▸ Copy and Paste would; the copy is that comp's layer 1. */
+  copyToComp?(intoComp: AeRawComp): void;
   blendingMode?: number;
   readonly hasAudio?: boolean;
   /** AVLayer source dimensions. */
