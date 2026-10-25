@@ -110,12 +110,16 @@ h3 { font: 600 19px/1.3 var(--display); letter-spacing: -0.005em; }
   content: ""; position: absolute; inset: 0; z-index: -1;
   background: radial-gradient(60% 50% at 70% 30%, rgba(255, 143, 63, 0.16), transparent 70%);
 }
-/* The dot grid, with a cursor at work on it (drawn by the script below). */
+/* The dot grid, which answers the cursor, and the selection drawn over the
+   page when a visitor drags across it (both drawn by the script below). */
+.hero-grid, .hero-select { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .hero-grid {
-  position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none;
+  z-index: -1;
   mask-image: linear-gradient(to bottom, #000 50%, transparent 78%);
   -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 78%);
 }
+.hero-select { z-index: 2; }
+.marqueeing, .marqueeing * { user-select: none; -webkit-user-select: none; }
 .hero-top { display: grid; gap: 24px; justify-items: start; }
 .chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid var(--line-2); border-radius: 999px; font: 500 14px/1 var(--ui); color: var(--fg-2); background: rgba(22, 24, 29, 0.7); }
 .chip i { width: 8px; height: 8px; background: var(--amber); transform: rotate(45deg); }
@@ -269,23 +273,24 @@ h1 em { font-style: normal; color: var(--amber); }
 <main id="top">
   <section class="hero">
     <canvas class="hero-grid" id="hero-grid" aria-hidden="true"></canvas>
+    <canvas class="hero-select" id="hero-select" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="hero-top">
-        <p class="chip"><i></i>For Adobe After Effects 2022 and later</p>
-        <h1>Less busywork.<br><em>More motion.</em></h1>
-        <p class="lede">KVFX Tools puts 100+ one-click commands in a single After Effects panel. Resize comps, cut the pauses out of a voiceover, line layers up and stagger them in time, and undo any of it in one step.</p>
+        <p class="chip" data-layer><i></i>For Adobe After Effects 2022 and later</p>
+        <h1><span data-layer>Less</span> <span data-layer>busywork.</span><br><em><span data-layer>More</span> <span data-layer>motion.</span></em></h1>
+        <p class="lede" data-layer>KVFX Tools puts 100+ one-click commands in a single After Effects panel. Resize comps, cut the pauses out of a voiceover, line layers up and stagger them in time, and undo any of it in one step.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="#pricing" data-buy>Get KVFX Tools · <span data-price>$29</span></a>
-          <a class="btn btn-ghost" href="#features"><svg><use href="#playicon"/></svg>See the top 10</a>
+          <a class="btn btn-primary" href="#pricing" data-buy data-layer>Get KVFX Tools · <span data-price>$29</span></a>
+          <a class="btn btn-ghost" href="#features" data-layer><svg><use href="#playicon"/></svg>See the top 10</a>
         </div>
       </div>
       <ul class="facts" aria-label="At a glance">
-        <li><b>100+</b><span>one-click commands</span></li>
-        <li><b>8</b><span>tabs in one panel</span></li>
-        <li><b>1</b><span>undo per command</span></li>
-        <li><b>Win · Mac</b><span>installers included</span></li>
+        <li data-layer><b>100+</b><span>one-click commands</span></li>
+        <li data-layer><b>8</b><span>tabs in one panel</span></li>
+        <li data-layer><b>1</b><span>undo per command</span></li>
+        <li data-layer><b>Win · Mac</b><span>installers included</span></li>
       </ul>
-      <div class="viewer hero-media">
+      <div class="viewer hero-media" data-layer>
         <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
         <div class="viewer-bar"><span class="name">Composition · KVFX_TOUR</span><span class="tc" id="hero-tc">0:00:00:00</span></div>
         <div class="viewer-media">
@@ -470,173 +475,324 @@ h1 em { font-style: normal; color: var(--amber); }
     if (p && p.catch) p.catch(() => {});
   };
 
-  // Hero grid: a cursor works the dot grid, lighting the dots near it,
-  // clicking, and dragging a selection now and then. It draws only while the
-  // hero is on screen, and holds still for Reduce Motion.
+  // Hero grid: the dot grid answers the visitor's cursor, the way a comp
+  // answers the selection tool. Dots near the cursor light up and lean away,
+  // a click sends a ripple through the grid, and a drag draws a selection box
+  // that picks up the dots and the words it touches, as a marquee selects
+  // layers. It draws only while something is moving. With Reduce Motion the
+  // glow and the box stay; the ripple and the lean go.
   (() => {
-    const canvas = document.getElementById("hero-grid");
-    const heroBox = canvas.parentElement;
-    const g = canvas.getContext("2d");
+    const heroBox = document.querySelector(".hero");
+    const grid = document.getElementById("hero-grid");
+    const over = document.getElementById("hero-select");
+    const g = grid.getContext("2d");
+    const o = over.getContext("2d");
+    const layers = Array.from(heroBox.querySelectorAll("[data-layer]"));
+    const NO_DRAG = "a, button, input, select, textarea, .viewer";
+    const AMBER = "255, 143, 63";
     const GAP = 28;
-    const RADIUS = 150;
+    const RADIUS = 170;
+    const TAU = Math.PI * 2;
     let w = 0;
     let h = 0;
     let dpr = 1;
-    let base = null;
-    let region = { x: 0, y: 0, w: 1, h: 1 };
-    let running = false;
-    let visible = false;
-    let frame = 0;
     let soft = 1;
-    const t0 = performance.now();
+    let dots = [];
+    let client = null; // the pointer, in viewport coordinates, while it is over the hero
+    let touch = false;
+    let lastMove = 0;
+    const glow = { x: 0, y: 0, a: 0 };
+    const ripples = [];
+    let drag = null;
+    let release = null;
+    let selected = new Set();
+    let before = new Set();
+    let frame = 0;
+    let last = 0;
+    let inline = new Map();
 
     function size() {
       const r = heroBox.getBoundingClientRect();
       dpr = Math.min(2, window.devicePixelRatio || 1);
       w = r.width;
       h = r.height;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      base = document.createElement("canvas");
-      base.width = canvas.width;
-      base.height = canvas.height;
-      const b = base.getContext("2d");
-      b.scale(dpr, dpr);
-      b.fillStyle = "#1c1f26";
-      for (let y = GAP / 2; y < h; y += GAP) for (let x = GAP / 2; x < w; x += GAP) { b.beginPath(); b.arc(x, y, 1.3, 0, Math.PI * 2); b.fill(); }
-      // Wide screens: the open space right of the headline. Narrow ones: the top of the hero.
-      const top = Math.min(h * 0.5, 620);
-      region = w > 900 ? { x: w * 0.56, y: 40, w: w * 0.4, h: top - 40 } : { x: 24, y: 24, w: w - 48, h: Math.min(h * 0.4, 520) };
+      for (const c of [grid, over]) {
+        c.width = Math.round(w * dpr);
+        c.height = Math.round(h * dpr);
+      }
+      // Only where the grid shows: it fades out by 78% of the way down.
+      dots = [];
+      for (let y = GAP / 2; y < h * 0.8; y += GAP) for (let x = GAP / 2; x < w; x += GAP) dots.push(x, y);
       // On narrow screens the grid sits behind the text, so it glows less.
-      soft = w > 900 ? 1 : 0.55;
+      soft = w > 900 ? 1 : 0.7;
+      // A word's box is as tall as its font's whole line; the glyphs use about one em of it.
+      inline = new Map();
+      for (const el of layers) {
+        const cs = getComputedStyle(el);
+        if (cs.display === "inline") inline.set(el, parseFloat(cs.fontSize));
+      }
     }
 
-    // [time, x, y] waypoints in the region, 0–1; clicks and one drag per loop.
-    const PATH = [[0, 0.15, 0.35], [1.4, 0.72, 0.12], [2.8, 0.3, 0.5], [4.3, 0.92, 0.92], [5.9, 0.55, 0.32], [7.4, 0.12, 0.78], [9.0, 0.15, 0.35]];
-    const CLICKS = [1.55, 6.05, 7.55];
-    const DRAG = { from: 2.95, to: 4.3, fade: 5.4 };
-    const LOOP = 9.0;
-    const smooth = (u) => u * u * (3 - 2 * u);
-    const at = (t) => {
-      let i = 1;
-      while (i < PATH.length - 1 && t > PATH[i][0]) i++;
-      const [ta, xa, ya] = PATH[i - 1];
-      const [tb, xb, yb] = PATH[i];
-      const k = smooth(Math.min(1, Math.max(0, (t - ta) / (tb - ta))));
-      return [region.x + (xa + (xb - xa) * k) * region.w, region.y + (ya + (yb - ya) * k) * region.h];
+    const rectOf = (el, hr) => {
+      const r = el.getBoundingClientRect();
+      const em = inline.get(el);
+      if (!em) return { x: r.left - hr.left, y: r.top - hr.top, w: r.width, h: r.height };
+      return { x: r.left - hr.left, y: r.top - hr.top + (r.height - em) / 2 + em * 0.04, w: r.width, h: em };
     };
+    const boxOf = (d, ex, ey) => ({ x: Math.min(d.x, ex), y: Math.min(d.y, ey), w: Math.abs(ex - d.x), h: Math.abs(ey - d.y) });
+    const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-    function draw(t) {
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clearRect(0, 0, canvas.width, canvas.height);
-      g.drawImage(base, 0, 0);
-      g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const [cx, cy] = at(t);
-      // The selection being dragged, then held, then let go.
+    // A selected layer: its bounds, eight handles and the anchor point.
+    function bounds(r) {
+      const x = Math.round(r.x - 5) + 0.5;
+      const y = Math.round(r.y - 5) + 0.5;
+      const bw = Math.round(r.w + 10);
+      const bh = Math.round(r.h + 10);
+      o.lineWidth = 1;
+      o.strokeStyle = "rgba(" + AMBER + ", 0.95)";
+      o.strokeRect(x, y, bw, bh);
+      o.fillStyle = "#0b0c0f";
+      for (const [u, v] of [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]]) {
+        o.fillRect(Math.round(x + u * bw) - 3, Math.round(y + v * bh) - 3, 6, 6);
+        o.strokeRect(Math.round(x + u * bw) - 2.5, Math.round(y + v * bh) - 2.5, 5, 5);
+      }
+      const cx = Math.round(x + bw / 2);
+      const cy = Math.round(y + bh / 2);
+      o.beginPath();
+      o.arc(cx, cy, 4.5, 0, TAU);
+      o.moveTo(cx - 9, cy);
+      o.lineTo(cx + 9, cy);
+      o.moveTo(cx, cy - 9);
+      o.lineTo(cx, cy + 9);
+      o.stroke();
+    }
+
+    // The selection box: marching dashes, corner handles and its size.
+    function marquee(b, alpha, now) {
+      o.save();
+      o.globalAlpha = alpha;
+      o.fillStyle = "rgba(" + AMBER + ", 0.07)";
+      o.fillRect(b.x, b.y, b.w, b.h);
+      o.setLineDash([6, 5]);
+      o.lineDashOffset = motionOk ? -now / 45 : 0;
+      o.strokeStyle = "rgba(" + AMBER + ", 0.95)";
+      o.lineWidth = 1.5;
+      o.strokeRect(b.x, b.y, b.w, b.h);
+      o.setLineDash([]);
+      o.fillStyle = "#ff8f3f";
+      for (const [u, v] of [[0, 0], [1, 0], [0, 1], [1, 1]]) o.fillRect(b.x + u * b.w - 3.5, b.y + v * b.h - 3.5, 7, 7);
+      if (b.w > 70 && b.h > 20) {
+        o.font = '500 11px "JetBrains Mono", ui-monospace, monospace';
+        o.textAlign = "right";
+        o.textBaseline = "top";
+        o.fillText(Math.round(b.w) + " × " + Math.round(b.h), b.x + b.w, b.y + b.h + 9);
+      }
+      o.restore();
+    }
+
+    // One frame. Returns whether anything is still moving.
+    function draw(now) {
+      const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
+      last = now;
+      const hr = heroBox.getBoundingClientRect();
+      let want = 0;
+      if (client) {
+        const px = client.x - hr.left;
+        const py = client.y - hr.top;
+        if (glow.a < 0.02) {
+          glow.x = px;
+          glow.y = py;
+        }
+        // The light trails the cursor a little.
+        const k = motionOk ? 1 - Math.exp(-dt * 14) : 1;
+        glow.x += (px - glow.x) * k;
+        glow.y += (py - glow.y) * k;
+        want = 1;
+      }
+      glow.a += (want - glow.a) * (1 - Math.exp(-dt * (want ? 10 : 4)));
+      if (!want && glow.a < 0.01) glow.a = 0;
+      while (ripples.length && now - ripples[0].t > 1400) ripples.shift();
+
       let box = null;
       let boxAlpha = 0;
-      if (t >= DRAG.from && t < DRAG.fade + 0.6) {
-        const [ax, ay] = at(DRAG.from);
-        const [bx, by] = t < DRAG.to ? [cx, cy] : at(DRAG.to);
-        box = { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) };
-        boxAlpha = t < DRAG.fade ? 1 : 1 - (t - DRAG.fade) / 0.6;
-      }
-      // Dots near the cursor, and inside the selection, light up.
-      const reach = RADIUS + GAP;
-      const x0 = Math.max(GAP / 2, Math.floor((Math.min(cx, box ? box.x : cx) - reach) / GAP) * GAP + GAP / 2);
-      const x1 = Math.min(w, Math.max(cx, box ? box.x + box.w : cx) + reach);
-      const y0 = Math.max(GAP / 2, Math.floor((Math.min(cy, box ? box.y : cy) - reach) / GAP) * GAP + GAP / 2);
-      const y1 = Math.min(h, Math.max(cy, box ? box.y + box.h : cy) + reach);
-      for (let y = y0; y < y1; y += GAP) {
-        for (let x = x0; x < x1; x += GAP) {
-          const d = Math.hypot(x - cx, y - cy);
-          let a = d < RADIUS ? Math.pow(1 - d / RADIUS, 2) * 0.9 : 0;
-          if (box && x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h) a = Math.max(a, 0.75 * boxAlpha);
-          a *= soft;
-          if (a < 0.02) continue;
-          g.fillStyle = "rgba(255, 143, 63, " + a.toFixed(3) + ")";
-          g.beginPath();
-          g.arc(x, y, 1.3 + a * 1.4, 0, Math.PI * 2);
-          g.fill();
+      if (drag) {
+        box = boxOf(drag, drag.cx - hr.left, drag.cy - hr.top);
+        boxAlpha = 1;
+        if (box.w > 4 || box.h > 4) drag.moved = true;
+        if (drag.moved) {
+          selected = new Set(before);
+          for (const el of layers) {
+            if (!hits(box, rectOf(el, hr))) continue;
+            if (drag.shift && before.has(el)) selected.delete(el);
+            else selected.add(el);
+          }
         }
+        if (!drag.moved) box = null;
+      } else if (release) {
+        const age = (now - release.t) / 1000;
+        if (age < 0.35) {
+          box = release.box;
+          boxAlpha = 1 - age / 0.35;
+        } else release = null;
       }
-      if (box && boxAlpha > 0) {
-        g.save();
-        g.globalAlpha = boxAlpha;
-        g.setLineDash([6, 5]);
-        g.strokeStyle = "rgba(255, 143, 63, 0.9)";
-        g.lineWidth = 1.5;
-        g.strokeRect(box.x, box.y, box.w, box.h);
-        g.setLineDash([]);
-        g.fillStyle = "#ff8f3f";
-        for (const [hx, hy] of [[box.x, box.y], [box.x + box.w, box.y], [box.x, box.y + box.h], [box.x + box.w, box.y + box.h]]) g.fillRect(hx - 3.5, hy - 3.5, 7, 7);
-        g.restore();
-      }
-      // Click ripples.
-      for (const c of [...CLICKS, DRAG.from]) {
-        const age = t - c;
-        if (age < 0 || age > 0.5) continue;
-        const [rx, ry] = at(c);
-        g.strokeStyle = "rgba(255, 143, 63, " + (1 - age / 0.5).toFixed(3) + ")";
-        g.lineWidth = 2.5;
-        g.beginPath();
-        g.arc(rx, ry, 6 + age * 52, 0, Math.PI * 2);
-        g.stroke();
-      }
-      // The cursor: an arrow, pressed while dragging.
-      const down = (t >= DRAG.from && t < DRAG.to + 0.1) || CLICKS.some((c) => t >= c && t < c + 0.12);
-      g.save();
-      g.translate(cx, cy);
-      g.scale(down ? 0.88 : 1, down ? 0.88 : 1);
+
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, w, h);
+      const lit = [];
+      g.fillStyle = "#1c1f26";
       g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(0, 19);
-      g.lineTo(4.6, 14.8);
-      g.lineTo(7.8, 21.6);
-      g.lineTo(10.8, 20.2);
-      g.lineTo(7.7, 13.6);
-      g.lineTo(13.6, 13.6);
-      g.closePath();
-      g.fillStyle = "#f4f5f7";
-      g.strokeStyle = "#0b0c0f";
-      g.lineWidth = 1.4;
-      g.lineJoin = "round";
-      g.shadowColor = "rgba(0, 0, 0, 0.5)";
-      g.shadowBlur = 8;
-      g.shadowOffsetY = 2;
+      for (let i = 0; i < dots.length; i += 2) {
+        const bx = dots[i];
+        const by = dots[i + 1];
+        let x = bx;
+        let y = by;
+        let a = 0;
+        if (glow.a > 0) {
+          const dx = bx - glow.x;
+          const dy = by - glow.y;
+          const d = Math.hypot(dx, dy);
+          if (d < RADIUS) {
+            const f = Math.pow(1 - d / RADIUS, 2) * glow.a;
+            a = f * 0.95;
+            if (motionOk && d > 0.5) {
+              x += (dx / d) * f * 9;
+              y += (dy / d) * f * 9;
+            }
+          }
+        }
+        for (const r of ripples) {
+          const age = (now - r.t) / 1000;
+          const dx = bx - r.x;
+          const dy = by - r.y;
+          const d = Math.hypot(dx, dy);
+          const wave = Math.exp(-Math.pow((d - age * 560) / 44, 2)) * (1 - age / 1.4);
+          if (wave < 0.01) continue;
+          a = Math.max(a, wave * 0.9);
+          if (d > 0.5) {
+            x += (dx / d) * wave * 6;
+            y += (dy / d) * wave * 6;
+          }
+        }
+        if (box && bx >= box.x && bx <= box.x + box.w && by >= box.y && by <= box.y + box.h) a = Math.max(a, 0.8 * boxAlpha);
+        a *= soft;
+        if (a < 0.04) {
+          g.moveTo(x + 1.3, y);
+          g.arc(x, y, 1.3, 0, TAU);
+        } else lit.push(x, y, a);
+      }
       g.fill();
-      g.shadowColor = "transparent";
-      g.stroke();
-      g.restore();
+      // Lit dots in eight brightness steps, so they draw in a handful of fills.
+      for (let s = 1; s <= 8; s++) {
+        const lo = (s - 1) / 8;
+        const hi = s / 8;
+        const rad = 1.3 + hi * 1.8;
+        let any = false;
+        g.beginPath();
+        for (let j = 0; j < lit.length; j += 3) {
+          if (lit[j + 2] <= lo || lit[j + 2] > hi) continue;
+          g.moveTo(lit[j] + rad, lit[j + 1]);
+          g.arc(lit[j], lit[j + 1], rad, 0, TAU);
+          any = true;
+        }
+        if (!any) continue;
+        g.fillStyle = "rgba(" + AMBER + ", " + hi.toFixed(3) + ")";
+        g.fill();
+      }
+
+      o.setTransform(dpr, 0, 0, dpr, 0, 0);
+      o.clearRect(0, 0, w, h);
+      for (const el of selected) bounds(rectOf(el, hr));
+      if (box) marquee(box, boxAlpha, now);
+
+      return !!(drag || release || ripples.length || Math.abs(want - glow.a) > 0.005 || (client && now - lastMove < 500));
     }
 
     const tick = (now) => {
-      if (!running) return;
-      draw(((now - t0) / 1000) % LOOP);
+      frame = 0;
+      if (draw(now)) frame = requestAnimationFrame(tick);
+    };
+    const wake = () => {
+      if (frame) return;
+      last = performance.now();
       frame = requestAnimationFrame(tick);
     };
-    const start = () => {
-      if (running || !motionOk || !visible || document.hidden) return;
-      running = true;
-      frame = requestAnimationFrame(tick);
+
+    heroBox.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch" && !touch) return;
+      client = { x: e.clientX, y: e.clientY };
+      lastMove = performance.now();
+      if (drag && e.pointerId === drag.id) {
+        drag.cx = e.clientX;
+        drag.cy = e.clientY;
+      }
+      wake();
+    });
+    heroBox.addEventListener("pointerleave", () => {
+      if (drag) return;
+      client = null;
+      wake();
+    });
+    heroBox.addEventListener("pointerdown", (e) => {
+      const hr = heroBox.getBoundingClientRect();
+      const x = e.clientX - hr.left;
+      const y = e.clientY - hr.top;
+      touch = e.pointerType === "touch";
+      client = { x: e.clientX, y: e.clientY };
+      lastMove = performance.now();
+      if (motionOk) {
+        ripples.push({ x, y, t: performance.now() });
+        if (ripples.length > 5) ripples.shift();
+      }
+      // A drag starts anywhere but on a link, a button or the video.
+      if (e.pointerType !== "touch" && e.button === 0 && !e.target.closest(NO_DRAG)) {
+        e.preventDefault();
+        heroBox.setPointerCapture(e.pointerId);
+        drag = { id: e.pointerId, x, y, cx: e.clientX, cy: e.clientY, shift: e.shiftKey, moved: false, on: e.target.closest("[data-layer]") };
+        before = e.shiftKey ? new Set(selected) : new Set();
+        document.documentElement.classList.add("marqueeing");
+      }
+      wake();
+    });
+    const end = (e) => {
+      if (e.pointerType === "touch") {
+        client = null;
+        touch = false;
+      }
+      if (drag && e.pointerId === drag.id) {
+        if (drag.moved) {
+          const hr = heroBox.getBoundingClientRect();
+          release = { box: boxOf(drag, drag.cx - hr.left, drag.cy - hr.top), t: performance.now() };
+        } else if (drag.on) {
+          // A click picks the layer under it; Shift adds or removes it.
+          if (!drag.shift) selected = new Set([drag.on]);
+          else if (selected.has(drag.on)) selected.delete(drag.on);
+          else selected.add(drag.on);
+        } else if (!drag.shift) selected = new Set();
+        drag = null;
+        document.documentElement.classList.remove("marqueeing");
+      }
+      wake();
     };
-    const stop = () => {
-      running = false;
-      cancelAnimationFrame(frame);
-    };
-    size();
-    draw(1.0);
-    // The hero changes height as fonts load and the window resizes; keep the grid matched.
-    let pending = 0;
+    heroBox.addEventListener("pointerup", end);
+    heroBox.addEventListener("pointercancel", end);
+    document.addEventListener("selectstart", (e) => {
+      if (drag) e.preventDefault();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || !selected.size) return;
+      selected = new Set();
+      wake();
+    });
+    addEventListener("scroll", () => {
+      if (!client && !drag) return;
+      lastMove = performance.now();
+      wake();
+    }, { passive: true });
+    // The hero changes height as fonts load and the window resizes.
     new ResizeObserver(() => {
-      cancelAnimationFrame(pending);
-      pending = requestAnimationFrame(() => { size(); if (!running) draw(1.0); });
+      size();
+      wake();
     }).observe(heroBox);
-    new IntersectionObserver((entries) => {
-      for (const e of entries) visible = e.isIntersecting;
-      (visible ? start : stop)();
-    }).observe(heroBox);
-    document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
   })();
 
   // Hero: nothing loads until the page has, and it only plays while on screen.

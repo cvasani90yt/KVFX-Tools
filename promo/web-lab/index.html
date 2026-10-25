@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KVFX Motion Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@600;700&display=swap">
+<style>
+/* Layout: a bench of live examples, one per row. On wide screens the notes sit
+   left of each stage; on phones they stack. The look is the KVFX site's own:
+   dark pasteboard, amber selection, mono labels. One dark look on purpose. */
+:root {
+  color-scheme: dark;
+  --ink: #0b0c0f;
+  --ink-2: #111317;
+  --raised: #16181d;
+  --raised-2: #1c1f25;
+  --line: #262a33;
+  --line-2: #323744;
+  --fg: #eef0f2;
+  --fg-2: #a6acb6;
+  --mute: #7b828e;
+  --amber: #ff8f3f;
+  --amber-hi: #ffa45c;
+  --amber-ink: #241200;
+  --amber-soft: rgba(255, 143, 63, 0.12);
+  --amber-edge: rgba(255, 143, 63, 0.5);
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 14px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--fg);
+  font: 400 16px/1.6 var(--ui);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 6px; }
+[hidden] { display: none !important; }
+.wrap { width: 100%; max-width: 1200px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+
+/* Top */
+.top { padding-block: clamp(48px, 8vw, 96px) clamp(24px, 4vw, 40px); }
+.top .wrap { display: grid; gap: 18px; }
+.eyebrow { font: 700 12px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); }
+.top h1 { font: 700 clamp(40px, 7vw, 84px)/0.98 var(--display); letter-spacing: -0.025em; }
+.top h1 em { font-style: normal; color: var(--amber); }
+.lede { max-width: 62ch; font-size: clamp(17px, 1.6vw, 19px); color: var(--fg-2); }
+.note { display: flex; gap: 12px; align-items: baseline; max-width: 70ch; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--raised); color: var(--fg-2); font-size: 15px; }
+.note b { color: var(--fg); font-weight: 600; }
+.note i { flex: none; width: 8px; height: 8px; background: var(--amber); transform: rotate(45deg) translateY(-1px); }
+
+/* One example */
+.lab { display: grid; gap: clamp(20px, 3vw, 28px); padding-bottom: clamp(64px, 10vw, 120px); }
+.ex { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: clamp(18px, 3vw, 36px); padding: clamp(18px, 2.4vw, 28px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-2); }
+.ex-head { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.ex-id { font: 700 12px/1 var(--mono); color: var(--amber); letter-spacing: 0.1em; }
+.ex h2 { font: 700 clamp(22px, 2.4vw, 28px)/1.1 var(--display); letter-spacing: -0.01em; }
+.ex-head p { color: var(--fg-2); font-size: 15px; }
+.fit { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.fit span { font: 700 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); }
+.ex-head .fit p { color: var(--fg); }
+.ex-head .needs { font: 500 12px/1.4 var(--mono); color: var(--mute); }
+.ex-body { display: grid; gap: 12px; min-width: 0; }
+.stage { position: relative; min-height: 340px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--raised); overflow: hidden; }
+.stage-bar { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 12px; border-bottom: 1px solid var(--line); font: 500 12px/1 var(--mono); color: var(--fg-2); }
+.stage-bar::before { content: ""; width: 8px; height: 8px; background: var(--amber); flex: none; }
+.stage-bar .tc { margin-left: auto; color: var(--amber); font-variant-numeric: tabular-nums; }
+@media (max-width: 860px) { .ex { grid-template-columns: minmax(0, 1fr); } }
+
+/* Controls */
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button, .chipbtn {
+  min-height: 36px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 999px;
+  background: transparent; color: var(--fg-2); font: 500 14px/1 var(--ui); cursor: pointer;
+}
+.seg button:hover, .chipbtn:hover { color: var(--fg); border-color: var(--amber-edge); }
+.seg button[aria-pressed="true"] { background: var(--amber-soft); border-color: var(--amber-edge); color: var(--amber); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 26px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 600 16px/1 var(--ui); text-decoration: none; white-space: nowrap;
+}
+.btn-primary { background: var(--amber); color: var(--amber-ink); }
+.btn-ghost { border: 1.5px solid var(--line-2); background: transparent; color: var(--fg); }
+
+/* 01 Stagger Grid */
+.cells { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(15, 1fr); gap: 8px; padding: 22px; cursor: pointer; touch-action: manipulation; }
+.cell { aspect-ratio: 1; align-self: center; border-radius: 3px; background: var(--raised-2); border: 1px solid var(--line-2); }
+@media (max-width: 560px) { .cells { gap: 5px; padding: 14px; } }
+
+/* 02 Magnetic Buttons */
+.mag-stage { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 72px; padding: 40px 20px; }
+.mag { will-change: transform; }
+.mag > span { display: inline-flex; align-items: center; gap: 10px; pointer-events: none; will-change: transform; }
+.mag-play { width: 96px; height: 96px; padding: 0; border-radius: 50%; }
+.mag-play svg { width: 22px; height: 22px; fill: currentColor; }
+.ring-hint { position: absolute; left: 12px; bottom: 10px; font: 500 12px/1 var(--mono); color: var(--mute); }
+
+/* 03 Text presets */
+.say-stage { display: grid; place-items: center; padding: 32px 24px; }
+.say { font: 700 clamp(28px, 5vw, 58px)/1.08 var(--display); letter-spacing: -0.02em; text-align: center; max-width: 14ch; }
+.say .w { display: inline-block; white-space: nowrap; transform-origin: 50% 80%; }
+.say .c { display: inline-block; text-align: center; will-change: transform; }
+.say.clip .w { overflow: hidden; vertical-align: top; padding-bottom: 0.06em; margin-bottom: -0.06em; }
+.say .hot { color: var(--amber); }
+.caret { display: inline-block; width: 0.08em; height: 0.9em; margin-left: 0.04em; vertical-align: -0.08em; background: var(--amber); }
+
+/* 04 Curve */
+.curve-stage { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 18px; padding: 18px; min-height: 0; }
+.curve-svg { width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.curve-svg .grid line { stroke: var(--line); stroke-width: 1; }
+.curve-svg .box { fill: none; stroke: var(--line-2); }
+.curve-svg .arm { stroke: var(--mute); stroke-width: 1.5; }
+.curve-svg .path { fill: none; stroke: var(--amber); stroke-width: 3; stroke-linecap: round; }
+.curve-svg .end { fill: var(--fg); }
+.curve-svg .knob { fill: var(--ink); stroke: var(--amber); stroke-width: 2.5; cursor: grab; }
+.curve-svg .knob:hover, .curve-svg .knob.on { fill: var(--amber); }
+.curve-svg text { fill: var(--mute); font: 500 11px var(--mono); }
+.curve-side { display: grid; align-content: center; gap: 16px; min-width: 0; }
+.track { position: relative; height: 76px; border-bottom: 1px dashed var(--line-2); }
+.track svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.track .spacing circle { fill: var(--amber); opacity: 0.55; }
+.layer-chip { position: absolute; left: 0; top: 12px; width: 52px; height: 52px; border-radius: 12px; background: var(--amber); box-shadow: 0 10px 30px rgba(255, 143, 63, 0.3); display: grid; place-items: center; }
+.layer-chip::after { content: ""; width: 16px; height: 16px; background: var(--amber-ink); transform: rotate(45deg); }
+.readout { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font: 500 13px/1.4 var(--mono); color: var(--fg); }
+.readout code { padding: 6px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--ink-2); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .curve-stage { grid-template-columns: minmax(0, 1fr); } .curve-svg { max-width: 260px; justify-self: center; } }
+
+/* 05 Tilt */
+.tilt-stage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 28px; perspective: 900px; }
+.tilt {
+  --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%; --lit: 0;
+  position: relative; display: grid; align-content: end; gap: 8px; min-height: 230px; padding: 20px; border-radius: 14px;
+  border: 1px solid var(--line-2); transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  background:
+    radial-gradient(260px circle at var(--mx) var(--my), rgba(255, 143, 63, calc(0.18 * var(--lit))), transparent 60%),
+    linear-gradient(160deg, var(--raised-2), var(--ink-2));
+}
+.tilt::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: radial-gradient(220px circle at var(--mx) var(--my), rgba(255, 143, 63, calc(0.9 * var(--lit))), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.tilt .glyph { position: absolute; top: 20px; left: 20px; width: 44px; height: 44px; border-radius: 10px; background: var(--amber-soft); border: 1px solid var(--amber-edge); display: grid; place-items: center; transform: translateZ(40px); }
+.tilt .glyph i { width: 14px; height: 14px; background: var(--amber); transform: rotate(45deg); }
+.tilt h3 { font: 600 18px/1.2 var(--display); transform: translateZ(30px); }
+.tilt p { font-size: 14px; color: var(--fg-2); transform: translateZ(18px); }
+@media (max-width: 720px) { .tilt-stage { grid-template-columns: minmax(0, 1fr); padding: 18px; } .tilt { min-height: 150px; } }
+
+/* 06 Scroll timeline */
+.tl-stage { display: grid; grid-template-rows: auto auto; min-height: 0; }
+.comp { position: relative; height: 210px; margin: 14px; border: 1px solid var(--line-2); background: #0e0f12; overflow: hidden; }
+.comp .t-title { position: absolute; left: 8%; top: 22%; font: 700 clamp(30px, 6vw, 56px)/1 var(--display); letter-spacing: -0.02em; }
+.comp .t-dot { position: absolute; right: 12%; top: 18%; width: 92px; height: 92px; border-radius: 50%; background: var(--amber); }
+.comp .t-bar { position: absolute; left: 8%; bottom: 14%; height: 34px; width: 46%; background: var(--fg); transform-origin: left center; display: flex; align-items: center; padding: 0 12px; color: var(--ink); font: 700 13px/1 var(--mono); white-space: nowrap; overflow: hidden; }
+.timeline { position: relative; margin: 0 14px 14px; border: 1px solid var(--line); background: var(--ink-2); touch-action: none; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
+.ruler { position: relative; height: 24px; margin-left: 110px; border-bottom: 1px solid var(--line); }
+.ruler span { position: absolute; top: 6px; font: 500 10px/1 var(--mono); color: var(--mute); transform: translateX(-50%); }
+.row { display: grid; grid-template-columns: 110px 1fr; min-height: 30px; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.row b { display: flex; align-items: center; gap: 8px; padding: 0 10px; font: 500 12px/1 var(--mono); color: var(--fg-2); border-right: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+.row b::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c, var(--amber)); flex: none; }
+.lane { position: relative; }
+.lane .bar { position: absolute; top: 7px; bottom: 7px; border-radius: 3px; background: color-mix(in srgb, var(--c, var(--amber)) 22%, transparent); border: 1px solid color-mix(in srgb, var(--c, var(--amber)) 55%, transparent); }
+.lane .key { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: var(--line-2); transform: rotate(45deg); transition: background 0.15s ease, box-shadow 0.15s ease; }
+.lane .key.on { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+.playhead { position: absolute; top: 0; bottom: 0; left: 110px; width: 0; pointer-events: none; }
+.playhead::before { content: ""; position: absolute; top: 0; bottom: 0; left: -0.5px; width: 1px; background: var(--amber); }
+.playhead::after { content: ""; position: absolute; top: 2px; left: -6px; width: 12px; height: 14px; background: var(--amber); clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%); }
+
+/* 07 Velocity marquee */
+.mq-stage { display: grid; align-content: center; gap: 10px; min-height: 0; padding: 44px 0; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.mq-stage.grab { cursor: grabbing; }
+.mq-row { display: flex; width: max-content; will-change: transform; }
+.mq-row span { padding-right: 0.6em; font: 700 clamp(34px, 5.4vw, 64px)/1.15 var(--display); letter-spacing: -0.02em; white-space: nowrap; }
+.mq-row span i { display: inline-block; width: 0.32em; height: 0.32em; margin: 0 0.5em 0 0; vertical-align: 0.2em; background: var(--amber); transform: rotate(45deg); }
+.mq-row.outline span { color: transparent; -webkit-text-stroke: 1.5px var(--mute); }
+.mq-speed { position: absolute; right: 12px; bottom: 10px; font: 500 12px/1 var(--mono); color: var(--mute); font-variant-numeric: tabular-nums; }
+
+/* 08 Snap & throw */
+.snap-stage { padding: 14px; min-height: 0; }
+.snap-comp { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 420px; border: 1px solid var(--line-2); background: #0e0f12; overflow: hidden; touch-action: none; }
+.snap-comp::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#1c1f26 1.2px, transparent 1.3px); background-size: 24px 24px; }
+.slayer { position: absolute; left: 0; top: 0; display: grid; place-items: center; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; will-change: transform; }
+.slayer.drag { cursor: grabbing; outline: 1px solid var(--amber); outline-offset: 4px; }
+.slayer.s-title { font: 700 clamp(22px, 4vw, 40px)/1 var(--display); letter-spacing: -0.02em; padding: 4px 6px; }
+.slayer.s-logo { width: 72px; height: 72px; border-radius: 50%; background: var(--amber); }
+.slayer.s-logo::after { content: ""; width: 20px; height: 20px; background: var(--amber-ink); transform: rotate(45deg); }
+.slayer.s-third { height: 34px; padding: 0 14px; background: var(--fg); color: var(--ink); font: 700 13px/34px var(--mono); white-space: nowrap; }
+.guide { position: absolute; background: var(--amber); opacity: 0; transition: opacity 0.12s ease; pointer-events: none; }
+.guide.v { top: 0; bottom: 0; width: 1px; }
+.guide.h { left: 0; right: 0; height: 1px; }
+.guide.on { opacity: 1; }
+.info { display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 2px 0; font: 500 12px/1 var(--mono); color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.info b { color: var(--amber); font-weight: 500; }
+
+/* 09 Odometer */
+.odo-stage { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; min-height: 0; background: var(--line); }
+.odo { display: grid; align-content: center; gap: 8px; padding: 34px 20px; background: var(--raised); min-width: 0; }
+.num { display: flex; font: 700 clamp(30px, 3.6vw, 48px)/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.digit { display: inline-block; height: 1em; overflow: hidden; }
+.digit > span { display: flex; flex-direction: column; transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.digit > span > span { height: 1em; }
+.num .plus { color: var(--amber); }
+.odo p { font-size: 14px; color: var(--fg-2); }
+@media (max-width: 720px) { .odo-stage { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 10 Cursor follower */
+.cur-stage { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: center; padding: 26px; }
+@media (hover: hover) and (pointer: fine) { .cur-stage, .cur-stage * { cursor: none; } }
+.thumb { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--line-2); border-radius: 10px; background: linear-gradient(135deg, #1a1d23, #0e0f12); overflow: hidden; }
+.thumb::before { content: "KOVO"; position: absolute; left: 10%; top: 30%; font: 700 clamp(26px, 4vw, 44px)/1 var(--display); color: var(--fg); }
+.thumb::after { content: ""; position: absolute; left: 10%; bottom: 24%; width: 46%; height: 11%; background: var(--fg); opacity: 0.9; }
+.thumb span { position: absolute; left: 10px; bottom: 8px; font: 500 11px/1 var(--mono); color: var(--fg-2); }
+.cur-side { display: grid; gap: 14px; justify-items: start; }
+.cur-side a { color: var(--fg-2); }
+.cur-ring, .cur-dot { position: absolute; left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; z-index: 3; }
+.cur-ring { display: grid; place-items: center; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 1.5px solid var(--amber); border-radius: 999px; transition: opacity 0.2s ease, width 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), height 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), margin 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), background 0.2s ease; font: 700 12px/1 var(--mono); color: var(--amber-ink); letter-spacing: 0.06em; text-transform: uppercase; }
+.cur-ring span { opacity: 0; transition: opacity 0.15s ease; }
+.cur-ring.big { width: 86px; height: 86px; margin: -43px 0 0 -43px; background: var(--amber); }
+.cur-ring.big span { opacity: 1; }
+.cur-ring.btnhover { width: 64px; height: 64px; margin: -32px 0 0 -32px; background: var(--amber-soft); }
+.cur-dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--amber); }
+.cur-stage.inside .cur-ring, .cur-stage.inside .cur-dot { opacity: 1; }
+@media (max-width: 640px) { .cur-stage { grid-template-columns: minmax(0, 1fr); } }
+
+footer { padding-block: 0 48px; color: var(--mute); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">KVFX Tools · website</p>
+    <h1>Motion <em>Lab</em></h1>
+    <p class="lede">Ten interactions to choose from for the KVFX site. Each one is live: move, click, drag and scroll to try it. Pick the numbers you like and they can go on the site.</p>
+    <p class="note"><i></i><span><b>Already on the site:</b> the hero grid behind “Less busywork. More motion.” Hover to light the dots, click for a ripple, and drag to draw a selection box that picks up the words it touches.</span></p>
+  </div>
+</header>
+
+<main class="wrap lab">
+
+  <section class="ex" id="stagger" aria-labelledby="stagger-t">
+    <div class="ex-head">
+      <span class="ex-id">01</span>
+      <h2 id="stagger-t">Stagger Grid</h2>
+      <p>Click any square and a wave runs out from it, one square after another. The orders are the ones Sequence Layers offers, so the demo shows the feature as well as decorating the page.</p>
+      <div class="fit"><span>Fits</span><p>Sequence Layers in the top ten, or the background of the pricing card.</p></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage"><div class="cells" id="cells" aria-hidden="true"></div></div>
+      <div class="seg" role="group" aria-label="Stagger order" id="stagger-order">
+        <button type="button" data-order="click" aria-pressed="true">From the click</button>
+        <button type="button" data-order="centre" aria-pressed="false">Centre out</button>
+        <button type="button" data-order="edges" aria-pressed="false">Edges in</button>
+        <button type="button" data-order="reverse" aria-pressed="false">Reversed</button>
+        <button type="button" data-order="shuffle" aria-pressed="false">Shuffled</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="magnetic" aria-labelledby="magnetic-t">
+    <div class="ex-head">
+      <span class="ex-id">02</span>
+      <h2 id="magnetic-t">Magnetic Buttons</h2>
+      <p>Move toward a button and it leans to meet the cursor, its label a little further. Move away and it springs back with a small wobble.</p>
+      <div class="fit"><span>Fits</span><p>The hero's buy button, the pricing button and the play buttons.</p></div>
+      <p class="needs">Needs a mouse or trackpad.</p>
+    </div>
+    <div class="ex-body">
+      <div class="stage mag-stage" id="mag-stage">
+        <button class="btn btn-primary mag" type="button"><span>Get KVFX Tools · $29</span></button>
+        <button class="btn btn-ghost mag mag-play" type="button" aria-label="Play the tour"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></span></button>
+        <span class="ring-hint">pull radius 120 px</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="text" aria-labelledby="text-t">
+    <div class="ex-head">
+      <span class="ex-id">03</span>
+      <h2 id="text-t">Text Presets</h2>
+      <p>A headline that animates in by word or by letter, like the panel's Text Animate presets. Lift on hover raises the letters under the cursor.</p>
+      <div class="fit"><span>Fits</span><p>Every section heading as it scrolls into view, and the hero headline on load.</p></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage say-stage" id="say-stage"><p class="say" id="say">Make every word land.</p></div>
+      <div class="seg" role="group" aria-label="Text preset" id="say-presets">
+        <button type="button" data-preset="pop" aria-pressed="true">Pop by word</button>
+        <button type="button" data-preset="rise" aria-pressed="false">Rise by letter</button>
+        <button type="button" data-preset="decode" aria-pressed="false">Decode</button>
+        <button type="button" data-preset="type" aria-pressed="false">Typewriter</button>
+        <button type="button" data-preset="lift" aria-pressed="false">Lift on hover</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="curve" aria-labelledby="curve-t">
+    <div class="ex-head">
+      <span class="ex-id">04</span>
+      <h2 id="curve-t">Live Curve</h2>
+      <p>Drag the two handles and the layer moves with that ease straight away. The dots under it are its frames: bunched where it is slow, spread out where it is fast. Pull a handle past the box for overshoot.</p>
+      <div class="fit"><span>Fits</span><p>The Curve Editor slot in the top ten, next to its clip.</p></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage curve-stage">
+        <svg class="curve-svg" id="curve-svg" viewBox="0 0 300 400" role="img" aria-label="Ease curve with two draggable handles">
+          <g class="grid" id="curve-grid"></g>
+          <rect class="box" x="50" y="100" width="200" height="200"/>
+          <line class="arm" id="arm1"/>
+          <line class="arm" id="arm2"/>
+          <path class="path" id="curve-path"/>
+          <circle class="end" cx="50" cy="300" r="4"/>
+          <circle class="end" cx="250" cy="100" r="4"/>
+          <circle class="knob" id="knob1" r="9" tabindex="0" aria-label="First handle: arrow keys move it"/>
+          <circle class="knob" id="knob2" r="9" tabindex="0" aria-label="Second handle: arrow keys move it"/>
+          <text x="50" y="322">time</text>
+          <text x="18" y="96">value</text>
+        </svg>
+        <div class="curve-side">
+          <div class="track" id="track">
+            <svg aria-hidden="true"><g class="spacing" id="spacing"></g></svg>
+            <div class="layer-chip" id="layer-chip"></div>
+          </div>
+          <div class="readout"><code id="curve-css">cubic-bezier(0.80, 0.00, 0.20, 1.00)</code><button class="chipbtn" type="button" id="curve-copy">Copy</button></div>
+          <div class="seg" role="group" aria-label="Curve preset" id="curve-presets">
+            <button type="button" data-curve="0.80,0,0.20,1" aria-pressed="true">Smooth</button>
+            <button type="button" data-curve="0.16,1,0.30,1" aria-pressed="false">Ease out</button>
+            <button type="button" data-curve="0.34,1.56,0.64,1" aria-pressed="false">Overshoot</button>
+            <button type="button" data-curve="0.68,-0.55,0.27,1.55" aria-pressed="false">Back in-out</button>
+            <button type="button" data-curve="0,0,1,1" aria-pressed="false">Linear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="tilt" aria-labelledby="tilt-t">
+    <div class="ex-head">
+      <span class="ex-id">05</span>
+      <h2 id="tilt-t">Tilt Cards</h2>
+      <p>Cards turn toward the cursor in 3D, and a light follows it across the card and its edge. The icon and title float above the card, so the depth shows as it turns.</p>
+      <div class="fit"><span>Fits</span><p>The “Inside the panel” cards for the eight tabs.</p></div>
+      <p class="needs">Needs a mouse or trackpad.</p>
+    </div>
+    <div class="ex-body">
+      <div class="stage tilt-stage" id="tilt-stage">
+        <article class="tilt"><div class="glyph"><i></i></div><h3>Comp Resizer</h3><p>16:9 to vertical in one click.</p></article>
+        <article class="tilt"><div class="glyph"><i></i></div><h3>Silence Remover</h3><p>Cut the pauses from a voiceover.</p></article>
+        <article class="tilt"><div class="glyph"><i></i></div><h3>Follow Layer</h3><p>Follow without parenting.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="timeline" aria-labelledby="timeline-t">
+    <div class="ex-head">
+      <span class="ex-id">06</span>
+      <h2 id="timeline-t">Scroll Timeline</h2>
+      <p>Scrolling the page plays a comp. The playhead, the timecode and the keyframes all follow the scroll, and run backwards when you scroll back up. You can also drag along the timeline to scrub.</p>
+      <div class="fit"><span>Fits</span><p>A “How it works” section that walks through one command as visitors scroll.</p></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage tl-stage" id="tl-stage">
+        <div class="stage-bar"><span>Composition · KOVO_INTRO</span><span class="tc" id="tl-tc">0:00:00:00</span></div>
+        <div class="comp" aria-hidden="true">
+          <div class="t-title" id="t-title">KOVO</div>
+          <div class="t-dot" id="t-dot"></div>
+          <div class="t-bar" id="t-bar">NEW SEASON · 12.04</div>
+        </div>
+        <div class="timeline" id="tl" aria-label="Timeline: drag to scrub">
+          <div class="ruler" id="ruler"></div>
+          <div class="row" style="--c: var(--fg)"><b>Title</b><div class="lane" data-from="0.08" data-to="0.40"></div></div>
+          <div class="row" style="--c: var(--amber)"><b>Shape</b><div class="lane" data-from="0.30" data-to="0.62"></div></div>
+          <div class="row" style="--c: #7aa2ff"><b>Lower third</b><div class="lane" data-from="0.55" data-to="0.92"></div></div>
+          <div class="playhead" id="playhead"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="marquee" aria-labelledby="marquee-t">
+    <div class="ex-head">
+      <span class="ex-id">07</span>
+      <h2 id="marquee-t">Velocity Marquee</h2>
+      <p>Two bands of command names drift past. Scroll and they speed up and lean with the scroll; scroll up and they turn around. Grab a band and throw it.</p>
+      <div class="fit"><span>Fits</span><p>A band between the hero and the top ten, naming more of the 100+ commands.</p></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage mq-stage" id="mq-stage" role="marquee" aria-label="Command names">
+        <div class="mq-row" id="mq-a"></div>
+        <div class="mq-row outline" id="mq-b"></div>
+        <span class="mq-speed" id="mq-speed">1.0×</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="snap" aria-labelledby="snap-t">
+    <div class="ex-head">
+      <span class="ex-id">08</span>
+      <h2 id="snap-t">Snap and Throw</h2>
+      <p>Drag the layers around the comp. Near the centre, the thirds or the edges they snap, and an amber guide shows the line. Let go mid-drag and they glide, bounce off the comp edge and settle.</p>
+      <div class="fit"><span>Fits</span><p>Next to Align as Group, or as a small playground in the footer.</p></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage snap-stage">
+        <div class="snap-comp" id="snap-comp">
+          <div class="slayer s-title" data-name="Title">KOVO</div>
+          <div class="slayer s-logo" data-name="Logo" aria-label="Logo"></div>
+          <div class="slayer s-third" data-name="Lower third">NEW SEASON · 12.04</div>
+        </div>
+        <div class="info" id="snap-info"><span>Layer <b id="si-name">Title</b></span><span>X <b id="si-x">0</b></span><span>Y <b id="si-y">0</b></span><span id="si-snap">Snap: none</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="odometer" aria-labelledby="odometer-t">
+    <div class="ex-head">
+      <span class="ex-id">09</span>
+      <h2 id="odometer-t">Rolling Numbers</h2>
+      <p>The numbers roll into place when they scroll into view, each digit landing a moment after the one before.</p>
+      <div class="fit"><span>Fits</span><p>The hero's facts row: 100+ commands, 8 tabs, 1 undo.</p></div>
+      <div><button class="chipbtn" type="button" id="odo-replay">Roll again</button></div>
+    </div>
+    <div class="ex-body">
+      <div class="stage odo-stage" id="odo-stage">
+        <div class="odo"><div class="num" role="img" data-to="100" data-plus="+" aria-label="100+"></div><p>one-click commands</p></div>
+        <div class="odo"><div class="num" role="img" data-to="41" aria-label="41"></div><p>text presets</p></div>
+        <div class="odo"><div class="num" role="img" data-to="8" aria-label="8"></div><p>tabs in one panel</p></div>
+        <div class="odo"><div class="num" role="img" data-to="1" aria-label="1"></div><p>undo per command</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ex" id="cursor" aria-labelledby="cursor-t">
+    <div class="ex-head">
+      <span class="ex-id">10</span>
+      <h2 id="cursor-t">Cursor Follower</h2>
+      <p>Inside this box the cursor is an amber ring that trails a step behind. Over the clip it grows into a Play button; over buttons it swells; a click squeezes it.</p>
+      <div class="fit"><span>Fits</span><p>The feature player only, so the rest of the site keeps the normal cursor.</p></div>
+      <p class="needs">Needs a mouse or trackpad.</p>
+    </div>
+    <div class="ex-body">
+      <div class="stage cur-stage" id="cur-stage">
+        <div class="thumb" data-cursor="play"><span>Comp Resizer · 0:07</span></div>
+        <div class="cur-side">
+          <button class="btn btn-primary" type="button" data-cursor="button">Get KVFX Tools</button>
+          <button class="btn btn-ghost" type="button" data-cursor="button">See the top 10</button>
+        </div>
+        <div class="cur-ring" id="cur-ring"><span>Play</span></div>
+        <div class="cur-dot" id="cur-dot"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer><div class="wrap">Built for the KVFX Tools site in plain JavaScript, with no library to download.</div></footer>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const AMBER = "#ff8f3f";
+  const CELL = "#1c1f25";
+
+  // Runs fn(dt, now) on every frame while el is on screen.
+  function whileOnScreen(el, fn) {
+    let on = false;
+    let raf = 0;
+    let last = 0;
+    const tick = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      fn(dt, now);
+      if (on) raf = requestAnimationFrame(tick);
+    };
+    new IntersectionObserver(([e]) => {
+      cancelAnimationFrame(raf);
+      on = e.isIntersecting;
+      if (on) {
+        last = performance.now();
+        raf = requestAnimationFrame(tick);
+      }
+    }).observe(el);
+  }
+  // A spring that eases a value toward a target, with a little overshoot.
+  function spring(stiff = 170, damp = 14) {
+    const s = { x: 0, v: 0, to: 0 };
+    s.step = (dt) => {
+      for (let t = 0; t < dt; t += 1 / 240) {
+        const h = Math.min(1 / 240, dt - t);
+        s.v += (stiff * (s.to - s.x) - damp * s.v) * h;
+        s.x += s.v * h;
+      }
+      return Math.abs(s.v) > 0.01 || Math.abs(s.to - s.x) > 0.01;
+    };
+    return s;
+  }
+  function pressGroup(group, attr, onPick) {
+    group.addEventListener("click", (e) => {
+      const b = e.target.closest("button[" + attr + "]");
+      if (!b) return;
+      for (const x of $$("button", group)) x.setAttribute("aria-pressed", String(x === b));
+      onPick(b.getAttribute(attr));
+    });
+  }
+
+  // 01 Stagger Grid
+  (() => {
+    const box = $("#cells");
+    const COLS = 15;
+    const ROWS = 8;
+    for (let i = 0; i < COLS * ROWS; i++) box.append(Object.assign(document.createElement("div"), { className: "cell" }));
+    const cells = $$(".cell", box);
+    let order = "click";
+    function play(from) {
+      const fx = from % COLS;
+      const fy = Math.floor(from / COLS);
+      const cx = (COLS - 1) / 2;
+      const cy = (ROWS - 1) / 2;
+      const rank = cells.map((_, i) => {
+        const x = i % COLS;
+        const y = Math.floor(i / COLS);
+        if (order === "centre") return Math.hypot(x - cx, y - cy);
+        if (order === "edges") return Math.min(x, COLS - 1 - x, y, ROWS - 1 - y);
+        if (order === "reverse") return COLS * ROWS - 1 - i;
+        if (order === "shuffle") return Math.random();
+        return Math.hypot(x - fx, y - fy);
+      });
+      const max = Math.max(...rank) || 1;
+      const spread = order === "reverse" ? 1400 : 850;
+      cells.forEach((c, i) => {
+        for (const a of c.getAnimations()) a.cancel();
+        c.animate(
+          [
+            { transform: "scale(1) rotate(0deg)", backgroundColor: CELL, borderColor: "#323744" },
+            { transform: reduce ? "scale(1)" : "scale(0.35) rotate(45deg)", backgroundColor: AMBER, borderColor: AMBER, offset: 0.35 },
+            { transform: "scale(1) rotate(90deg)", backgroundColor: CELL, borderColor: "#323744" },
+          ],
+          { duration: 820, delay: (rank[i] / max) * spread, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+        );
+      });
+    }
+    box.addEventListener("pointerdown", (e) => {
+      const c = e.target.closest(".cell");
+      if (c) play(cells.indexOf(c));
+    });
+    pressGroup($("#stagger-order"), "data-order", (o) => {
+      order = o;
+      play(Math.floor(ROWS / 2) * COLS + Math.floor(COLS / 2));
+    });
+    // Once, when it first comes into view.
+    new IntersectionObserver(([e], io) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      play(Math.floor(ROWS / 2) * COLS + Math.floor(COLS / 2));
+    }, { threshold: 0.5 }).observe(box);
+  })();
+
+  // 02 Magnetic Buttons
+  (() => {
+    const stage = $("#mag-stage");
+    const R = 120;
+    for (const el of $$(".mag", stage)) {
+      const label = el.firstElementChild;
+      const sx = spring(170, 11);
+      const sy = spring(170, 11);
+      let raf = 0;
+      let last = 0;
+      const tick = (now) => {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        const moving = sx.step(dt) | sy.step(dt);
+        el.style.transform = "translate(" + sx.x.toFixed(2) + "px, " + sy.x.toFixed(2) + "px)";
+        label.style.transform = "translate(" + (sx.x * 0.45).toFixed(2) + "px, " + (sy.x * 0.45).toFixed(2) + "px)";
+        raf = moving ? requestAnimationFrame(tick) : 0;
+      };
+      const kick = () => {
+        if (raf) return;
+        last = performance.now();
+        raf = requestAnimationFrame(tick);
+      };
+      stage.addEventListener("pointermove", (e) => {
+        if (e.pointerType === "touch") return;
+        const r = el.getBoundingClientRect();
+        const cx = r.left + r.width / 2 - sx.x;
+        const cy = r.top + r.height / 2 - sy.x;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const reach = R + Math.max(r.width, r.height) / 2;
+        const d = Math.hypot(dx, dy);
+        // Pulled a third of the way to the cursor, never more than 26 px.
+        const pull = d < reach ? Math.min(0.38, 26 / Math.max(1, d)) : 0;
+        sx.to = dx * pull;
+        sy.to = dy * pull;
+        kick();
+      });
+      stage.addEventListener("pointerleave", () => {
+        sx.to = 0;
+        sy.to = 0;
+        kick();
+      });
+      el.addEventListener("click", () => {
+        el.animate([{ scale: 1 }, { scale: 0.92 }, { scale: 1 }], { duration: 260, easing: "ease-out" });
+      });
+    }
+  })();
+
+  // 03 Text presets
+  (() => {
+    const say = $("#say");
+    const stage = $("#say-stage");
+    const text = say.textContent;
+    say.setAttribute("aria-label", text);
+    say.innerHTML = text.split(" ").map((w) => '<span class="w" aria-hidden="true">' + Array.from(w).map((c) => '<span class="c">' + c + "</span>").join("") + "</span>").join(" ");
+    const words = $$(".w", say);
+    const chars = $$(".c", say);
+    const finals = chars.map((c) => c.textContent);
+    let preset = "pop";
+    let raf = 0;
+    const lift = chars.map(() => 0);
+    let pointerX = null;
+
+    function reset() {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      for (const a of say.getAnimations({ subtree: true })) a.cancel();
+      say.classList.remove("clip");
+      chars.forEach((c, i) => {
+        c.textContent = finals[i];
+        c.classList.remove("hot");
+        c.style.transform = "";
+        c.style.visibility = "";
+        c.style.width = "";
+      });
+      const caret = $(".caret", say);
+      if (caret) caret.remove();
+    }
+    const run = (fn) => {
+      const t0 = performance.now();
+      const loop = (now) => {
+        if (fn(now - t0) !== false) raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+    };
+    const PLAY = {
+      pop() {
+        words.forEach((w, i) => w.animate(
+          [{ transform: "scale(0)", opacity: 0 }, { transform: "scale(1.18)", opacity: 1, offset: 0.6 }, { transform: "scale(1)", opacity: 1 }],
+          { duration: 560, delay: i * 110, easing: "cubic-bezier(0.2, 0.9, 0.3, 1)", fill: "backwards" },
+        ));
+      },
+      rise() {
+        say.classList.add("clip");
+        chars.forEach((c, i) => c.animate(
+          [{ transform: "translateY(110%)" }, { transform: "translateY(0)" }],
+          { duration: 760, delay: i * 30, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" },
+        ));
+      },
+      decode() {
+        const GLYPHS = "abcdeghknopqrsuvxyz0123456789#*";
+        // Each letter keeps its own width, so the line doesn't jump, and only
+        // stand-ins that fit the letter's slot are used.
+        const widths = chars.map((c) => c.getBoundingClientRect().width);
+        chars.forEach((c, i) => (c.style.width = widths[i] + "px"));
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.font = getComputedStyle(say).font;
+        const sized = Array.from(GLYPHS).map((ch) => [ch, ctx.measureText(ch).width]);
+        const fits = widths.map((w) => {
+          const list = sized.filter(([, gw]) => gw <= w * 1.08).map(([ch]) => ch);
+          return list.length ? list : ["·"];
+        });
+        run((ms) => {
+          let done = true;
+          chars.forEach((c, i) => {
+            const settle = 260 + i * 42;
+            if (ms >= settle) {
+              c.textContent = finals[i];
+              c.classList.remove("hot");
+            } else {
+              done = false;
+              if (finals[i] === ".") return;
+              c.textContent = fits[i][Math.floor(Math.random() * fits[i].length)];
+              c.classList.add("hot");
+            }
+          });
+          if (done) chars.forEach((c) => (c.style.width = ""));
+          return !done;
+        });
+      },
+      type() {
+        const caret = Object.assign(document.createElement("span"), { className: "caret" });
+        caret.setAttribute("aria-hidden", "true");
+        chars.forEach((c) => (c.style.visibility = "hidden"));
+        say.append(caret);
+        run((ms) => {
+          const n = Math.floor(ms / 55);
+          chars.forEach((c, i) => (c.style.visibility = i < n ? "" : "hidden"));
+          const lastShown = chars[Math.min(n, chars.length) - 1];
+          if (lastShown) lastShown.after(caret);
+          else say.prepend(caret);
+          caret.style.opacity = Math.floor(ms / 400) % 2 && n >= chars.length ? "0" : "1";
+          return ms < chars.length * 55 + 1600;
+        });
+      },
+      lift() {
+        run((ms) => {
+          const sr = say.getBoundingClientRect();
+          chars.forEach((c, i) => {
+            let to = 0;
+            if (pointerX !== null) {
+              const r = c.getBoundingClientRect();
+              const d = Math.abs(r.left + r.width / 2 - pointerX);
+              to = Math.pow(Math.max(0, 1 - d / 140), 2);
+            }
+            lift[i] += (to - lift[i]) * (reduce ? 1 : 0.18);
+            c.style.transform = "translateY(" + (-lift[i] * sr.height * 0.28).toFixed(2) + "px)";
+            c.classList.toggle("hot", lift[i] > 0.35);
+          });
+          return preset === "lift";
+        });
+      },
+    };
+    const start = (p) => {
+      preset = p;
+      reset();
+      PLAY[p]();
+    };
+    pressGroup($("#say-presets"), "data-preset", start);
+    stage.addEventListener("pointermove", (e) => (pointerX = e.clientX));
+    stage.addEventListener("pointerleave", () => (pointerX = null));
+    stage.addEventListener("click", () => {
+      if (preset !== "lift") start(preset);
+    });
+    new IntersectionObserver(([e], io) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      start("pop");
+    }, { threshold: 0.6 }).observe(stage);
+  })();
+
+  // 04 Live Curve
+  (() => {
+    const svg = $("#curve-svg");
+    const k1 = $("#knob1");
+    const k2 = $("#knob2");
+    const chip = $("#layer-chip");
+    const track = $("#track");
+    const spacing = $("#spacing");
+    const css = $("#curve-css");
+    const P = (x, y) => [50 + x * 200, 300 - y * 200];
+    let c = [0.8, 0, 0.2, 1];
+    let anim = null;
+    const grid = $("#curve-grid");
+    for (let i = 1; i < 4; i++) {
+      const v = 50 + i * 50;
+      grid.insertAdjacentHTML("beforeend", '<line x1="' + v + '" y1="100" x2="' + v + '" y2="300"/><line x1="50" y1="' + (350 - v) + '" x2="250" y2="' + (350 - v) + '"/>');
+    }
+    // y for a given x on the curve: find t by Newton's method, then bisection if needed.
+    function easeAt(x, [x1, y1, x2, y2]) {
+      const bx = (t) => 3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t;
+      const by = (t) => 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t;
+      const dx = (t) => 3 * (1 - t) * (1 - t) * x1 + 6 * (1 - t) * t * (x2 - x1) + 3 * t * t * (1 - x2);
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const e = bx(t) - x;
+        const d = dx(t);
+        if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break;
+        t -= e / d;
+      }
+      if (t < 0 || t > 1 || Math.abs(bx(t) - x) > 1e-4) {
+        let lo = 0;
+        let hi = 1;
+        t = x;
+        for (let i = 0; i < 40; i++) {
+          if (bx(t) < x) lo = t;
+          else hi = t;
+          t = (lo + hi) / 2;
+        }
+      }
+      return by(t);
+    }
+    function render(restart) {
+      const [x1, y1, x2, y2] = c;
+      const a = P(0, 0);
+      const b = P(x1, y1);
+      const d = P(x2, y2);
+      const e = P(1, 1);
+      $("#curve-path").setAttribute("d", "M" + a + " C" + b + " " + d + " " + e);
+      $("#arm1").setAttribute("x1", a[0]); $("#arm1").setAttribute("y1", a[1]); $("#arm1").setAttribute("x2", b[0]); $("#arm1").setAttribute("y2", b[1]);
+      $("#arm2").setAttribute("x1", e[0]); $("#arm2").setAttribute("y1", e[1]); $("#arm2").setAttribute("x2", d[0]); $("#arm2").setAttribute("y2", d[1]);
+      k1.setAttribute("cx", b[0]); k1.setAttribute("cy", b[1]);
+      k2.setAttribute("cx", d[0]); k2.setAttribute("cy", d[1]);
+      const str = "cubic-bezier(" + c.map((v) => v.toFixed(2)).join(", ") + ")";
+      css.textContent = str;
+      const W = track.clientWidth - chip.offsetWidth;
+      // 24 frames of motion, as dots along the track.
+      let dots = "";
+      for (let f = 0; f <= 24; f++) dots += '<circle cx="' + (26 + easeAt(f / 24, c) * W).toFixed(1) + '" cy="72" r="2.6"/>';
+      spacing.innerHTML = dots;
+      if (!restart && anim) return;
+      if (anim) anim.cancel();
+      anim = chip.animate(
+        [{ transform: "translateX(0)", easing: str }, { transform: "translateX(" + W + "px)", offset: 0.75 }, { transform: "translateX(" + W + "px)" }],
+        { duration: 2000, iterations: Infinity, direction: "alternate" },
+      );
+    }
+    function drag(knob, i) {
+      const move = (e) => {
+        const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+        c[i] = Number(clamp((pt.x - 50) / 200, 0, 1).toFixed(2));
+        c[i + 1] = Number(clamp((300 - pt.y) / 200, -0.5, 1.5).toFixed(2));
+        render(true);
+      };
+      knob.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        knob.setPointerCapture(e.pointerId);
+        knob.classList.add("on");
+        for (const b of $$("#curve-presets button")) b.setAttribute("aria-pressed", "false");
+        knob.addEventListener("pointermove", move);
+      });
+      const up = () => {
+        knob.classList.remove("on");
+        knob.removeEventListener("pointermove", move);
+      };
+      knob.addEventListener("pointerup", up);
+      knob.addEventListener("pointercancel", up);
+      knob.addEventListener("keydown", (e) => {
+        const step = e.shiftKey ? 0.1 : 0.02;
+        const keys = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+        if (!keys[e.key]) return;
+        e.preventDefault();
+        c[i] = Number(clamp(c[i] + keys[e.key][0], 0, 1).toFixed(2));
+        c[i + 1] = Number(clamp(c[i + 1] + keys[e.key][1], -0.5, 1.5).toFixed(2));
+        render(true);
+      });
+    }
+    drag(k1, 0);
+    drag(k2, 2);
+    pressGroup($("#curve-presets"), "data-curve", (v) => {
+      c = v.split(",").map(Number);
+      render(true);
+    });
+    $("#curve-copy").addEventListener("click", () => {
+      const btn = $("#curve-copy");
+      const done = () => {
+        btn.textContent = "Copied";
+        setTimeout(() => (btn.textContent = "Copy"), 1400);
+      };
+      const select = () => {
+        const range = document.createRange();
+        range.selectNodeContents(css);
+        getSelection().removeAllRanges();
+        getSelection().addRange(range);
+        btn.textContent = "Selected: press Ctrl+C";
+        setTimeout(() => (btn.textContent = "Copy"), 2200);
+      };
+      try {
+        navigator.clipboard.writeText(css.textContent).then(done, select);
+      } catch {
+        select();
+      }
+    });
+    new ResizeObserver(() => render(true)).observe(track);
+  })();
+
+  // 05 Tilt Cards
+  (() => {
+    for (const card of $$(".tilt")) {
+      const s = { rx: 0, ry: 0, mx: 50, my: 50, lit: 0 };
+      const to = { rx: 0, ry: 0, mx: 50, my: 50, lit: 0 };
+      let raf = 0;
+      const tick = () => {
+        let moving = false;
+        for (const k in s) {
+          s[k] += (to[k] - s[k]) * (reduce ? 1 : 0.14);
+          if (Math.abs(to[k] - s[k]) > 0.01) moving = true;
+        }
+        card.style.setProperty("--rx", s.rx.toFixed(2) + "deg");
+        card.style.setProperty("--ry", s.ry.toFixed(2) + "deg");
+        card.style.setProperty("--mx", s.mx.toFixed(1) + "%");
+        card.style.setProperty("--my", s.my.toFixed(1) + "%");
+        card.style.setProperty("--lit", s.lit.toFixed(3));
+        raf = moving ? requestAnimationFrame(tick) : 0;
+      };
+      const kick = () => {
+        if (!raf) raf = requestAnimationFrame(tick);
+      };
+      card.addEventListener("pointermove", (e) => {
+        const r = card.getBoundingClientRect();
+        const u = (e.clientX - r.left) / r.width;
+        const v = (e.clientY - r.top) / r.height;
+        to.ry = reduce ? 0 : (u - 0.5) * 16;
+        to.rx = reduce ? 0 : (0.5 - v) * 16;
+        to.mx = u * 100;
+        to.my = v * 100;
+        to.lit = 1;
+        kick();
+      });
+      card.addEventListener("pointerleave", () => {
+        Object.assign(to, { rx: 0, ry: 0, lit: 0 });
+        kick();
+      });
+    }
+  })();
+
+  // 06 Scroll Timeline
+  (() => {
+    const stage = $("#tl-stage");
+    const tl = $("#tl");
+    const head = $("#playhead");
+    const tcEl = $("#tl-tc");
+    const title = $("#t-title");
+    const dot = $("#t-dot");
+    const bar = $("#t-bar");
+    const ruler = $("#ruler");
+    const SECONDS = 4;
+    for (let s = 0; s <= SECONDS; s++) {
+      const shift = s === 0 ? "0" : s === SECONDS ? "-100%" : "-50%";
+      ruler.insertAdjacentHTML("beforeend", '<span style="left:' + (s / SECONDS) * 100 + "%;transform:translateX(" + shift + ')">' + s + "s</span>");
+    }
+    const keys = [];
+    for (const lane of $$(".lane", tl)) {
+      const a = Number(lane.dataset.from);
+      const b = Number(lane.dataset.to);
+      lane.insertAdjacentHTML("beforeend", '<div class="bar" style="left:' + a * 100 + "%;width:" + (b - a) * 100 + '%"></div>');
+      for (const t of [a, b]) {
+        const k = Object.assign(document.createElement("div"), { className: "key" });
+        k.style.left = t * 100 + "%";
+        lane.append(k);
+        keys.push([t, k]);
+      }
+    }
+    const ease = (u) => 1 - Math.pow(1 - clamp(u, 0, 1), 3);
+    const span = (p, a, b) => ease((p - a) / (b - a));
+    let shown = 0;
+    let target = 0;
+    let scrub = null;
+    // From the stage's middle at 90% of the way down the window to 10%.
+    const fromScroll = () => {
+      const r = stage.getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      return clamp((innerHeight * 0.9 - mid) / (innerHeight * 0.8), 0, 1);
+    };
+    function paint(p) {
+      const lane = tl.querySelector(".lane");
+      head.style.transform = "translateX(" + (p * lane.clientWidth).toFixed(1) + "px)";
+      const f = Math.round(p * SECONDS * 30);
+      tcEl.textContent = "0:00:" + String(Math.floor(f / 30)).padStart(2, "0") + ":" + String(f % 30).padStart(2, "0");
+      const a = span(p, 0.08, 0.4);
+      title.style.opacity = a.toFixed(3);
+      title.style.transform = "translateY(" + ((1 - a) * 40).toFixed(1) + "px)";
+      const b = span(p, 0.3, 0.62);
+      dot.style.transform = "scale(" + b.toFixed(3) + ") rotate(" + (b * 180).toFixed(0) + "deg)";
+      dot.style.borderRadius = (50 - b * 30).toFixed(0) + "%";
+      const c = span(p, 0.55, 0.92);
+      bar.style.transform = "scaleX(" + c.toFixed(3) + ")";
+      for (const [t, k] of keys) k.classList.toggle("on", p >= t - 0.001);
+    }
+    whileOnScreen(stage, () => {
+      target = scrub ?? fromScroll();
+      shown += (target - shown) * (reduce ? 1 : 0.12);
+      paint(shown);
+    });
+    addEventListener("scroll", () => (scrub = null), { passive: true });
+    const scrubTo = (e) => {
+      const lane = tl.querySelector(".lane").getBoundingClientRect();
+      scrub = clamp((e.clientX - lane.left) / lane.width, 0, 1);
+    };
+    tl.addEventListener("pointerdown", (e) => {
+      tl.setPointerCapture(e.pointerId);
+      scrubTo(e);
+      tl.addEventListener("pointermove", scrubTo);
+    });
+    tl.addEventListener("pointerup", () => tl.removeEventListener("pointermove", scrubTo));
+    tl.addEventListener("pointercancel", () => tl.removeEventListener("pointermove", scrubTo));
+    paint(0.6);
+  })();
+
+  // 07 Velocity Marquee
+  (() => {
+    const stage = $("#mq-stage");
+    const NAMES_A = ["Comp Resizer", "Silence Remover", "Follow Layer", "Curve Editor", "Text Animate", "Effects Manager", "Unprecompose"];
+    const NAMES_B = ["Sequence Layers", "Align as Group", "Even Gaps", "Duplicate Comp", "Anchor Grid", "Kinetic Title", "Layouts"];
+    const fill = (el, names) => {
+      const run = names.map((n) => "<span><i></i>" + n + "</span>").join("");
+      el.innerHTML = run + run + run;
+      el.setAttribute("aria-hidden", "true");
+    };
+    const rows = [$("#mq-a"), $("#mq-b")];
+    fill(rows[0], NAMES_A);
+    fill(rows[1], NAMES_B);
+    stage.setAttribute("aria-label", "Command names: " + NAMES_A.concat(NAMES_B).join(", "));
+    const pos = [0, 0];
+    let dir = 1;
+    let boost = 0;
+    let lastY = scrollY;
+    let hover = false;
+    let grab = null;
+    let throwV = 0;
+    const speedEl = $("#mq-speed");
+    addEventListener("scroll", () => {
+      const dy = scrollY - lastY;
+      lastY = scrollY;
+      if (dy) dir = dy > 0 ? 1 : -1;
+      boost = clamp(boost + Math.abs(dy) * 0.9, 0, 900);
+    }, { passive: true });
+    stage.addEventListener("pointerenter", () => (hover = true));
+    stage.addEventListener("pointerleave", () => (hover = false));
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "touch") return;
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add("grab");
+      throwV = 0;
+      grab = { x: e.clientX, t: performance.now(), v: 0 };
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!grab) return;
+      const now = performance.now();
+      const dx = e.clientX - grab.x;
+      grab.v = (dx / Math.max(1, now - grab.t)) * 1000;
+      grab.x = e.clientX;
+      grab.t = now;
+      pos[0] += dx;
+      pos[1] -= dx;
+    });
+    const drop = () => {
+      if (!grab) return;
+      throwV = grab.v;
+      grab = null;
+      stage.classList.remove("grab");
+    };
+    stage.addEventListener("pointerup", drop);
+    stage.addEventListener("pointercancel", drop);
+    const BASE = reduce ? 0 : 50;
+    whileOnScreen(stage, (dt) => {
+      boost *= Math.exp(-dt * 3);
+      throwV *= Math.exp(-dt * 2.2);
+      const speed = grab ? 0 : (BASE * (hover ? 0.35 : 1) + boost) * dir;
+      pos[0] -= speed * dt - throwV * dt;
+      pos[1] += speed * dt - throwV * dt;
+      const skew = reduce ? 0 : clamp(((boost * dir) / 900) * -10 + throwV / -300, -12, 12);
+      rows.forEach((row, i) => {
+        const third = row.scrollWidth / 3;
+        pos[i] = ((pos[i] % third) + third) % third - third;
+        row.style.transform = "translateX(" + pos[i].toFixed(1) + "px) skewX(" + (i ? -skew : skew).toFixed(2) + "deg)";
+      });
+      speedEl.textContent = (BASE ? (Math.abs(speed) + Math.abs(throwV)) / BASE : 0).toFixed(1) + "×";
+    });
+  })();
+
+  // 08 Snap and Throw
+  (() => {
+    const comp = $("#snap-comp");
+    const layers = $$(".slayer", comp);
+    const SNAP = 8;
+    const guides = {};
+    for (const [k, cls] of [["v", "guide v"], ["h", "guide h"]]) {
+      guides[k] = Object.assign(document.createElement("div"), { className: cls });
+      comp.append(guides[k]);
+    }
+    const st = new Map();
+    function place() {
+      const W = comp.clientWidth;
+      const H = comp.clientHeight;
+      const at = [[0.1, 0.22], [0.68, 0.18], [0.08, 0.72]];
+      layers.forEach((el, i) => {
+        const s = st.get(el) || { vx: 0, vy: 0, raf: 0 };
+        s.x = at[i][0] * W;
+        s.y = at[i][1] * H;
+        st.set(el, s);
+        el.style.transform = "translate(" + s.x + "px, " + s.y + "px)";
+      });
+    }
+    const info = (el, snap) => {
+      const s = st.get(el);
+      $("#si-name").textContent = el.dataset.name;
+      $("#si-x").textContent = String(Math.round(s.x + el.offsetWidth / 2));
+      $("#si-y").textContent = String(Math.round(s.y + el.offsetHeight / 2));
+      $("#si-snap").textContent = "Snap: " + (snap || "none");
+    };
+    // The lines a layer can snap to: the comp's edges, centre and thirds.
+    function snapLines(size, total) {
+      return [
+        [0, 0, "edge"], [total / 3 - size / 2, total / 3, "third"], [total / 2 - size / 2, total / 2, "centre"],
+        [(2 * total) / 3 - size / 2, (2 * total) / 3, "third"], [total - size, total, "edge"],
+      ];
+    }
+    function snap(el, s) {
+      const W = comp.clientWidth;
+      const H = comp.clientHeight;
+      let label = "";
+      guides.v.classList.remove("on");
+      guides.h.classList.remove("on");
+      for (const [pos, line, name] of snapLines(el.offsetWidth, W)) {
+        if (Math.abs(s.x - pos) < SNAP) {
+          s.x = pos;
+          guides.v.style.left = clamp(line, 0, W - 1) + "px";
+          guides.v.classList.add("on");
+          label = name + " (x)";
+          break;
+        }
+      }
+      for (const [pos, line, name] of snapLines(el.offsetHeight, H)) {
+        if (Math.abs(s.y - pos) < SNAP) {
+          s.y = pos;
+          guides.h.style.top = clamp(line, 0, H - 1) + "px";
+          guides.h.classList.add("on");
+          label = (label ? label + ", " : "") + name + " (y)";
+          break;
+        }
+      }
+      return label;
+    }
+    for (const el of layers) {
+      let grab = null;
+      el.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        const s = st.get(el);
+        cancelAnimationFrame(s.raf);
+        // On top of the others first: moving it in the page after capturing would drop the capture.
+        comp.append(el);
+        el.setPointerCapture(e.pointerId);
+        el.classList.add("drag");
+        grab = { dx: e.clientX - s.x, dy: e.clientY - s.y, samples: [[e.clientX, e.clientY, performance.now()]] };
+      });
+      el.addEventListener("pointermove", (e) => {
+        if (!grab) return;
+        const s = st.get(el);
+        const W = comp.clientWidth;
+        const H = comp.clientHeight;
+        s.x = clamp(e.clientX - grab.dx, 0, W - el.offsetWidth);
+        s.y = clamp(e.clientY - grab.dy, 0, H - el.offsetHeight);
+        grab.samples.push([e.clientX, e.clientY, performance.now()]);
+        if (grab.samples.length > 5) grab.samples.shift();
+        const label = snap(el, s);
+        el.style.transform = "translate(" + s.x + "px, " + s.y + "px)";
+        info(el, label);
+      });
+      const drop = () => {
+        if (!grab) return;
+        const s = st.get(el);
+        const [a, b] = [grab.samples[0], grab.samples[grab.samples.length - 1]];
+        const dt = Math.max(16, b[2] - a[2]) / 1000;
+        s.vx = reduce ? 0 : (b[0] - a[0]) / dt;
+        s.vy = reduce ? 0 : (b[1] - a[1]) / dt;
+        grab = null;
+        el.classList.remove("drag");
+        let last = performance.now();
+        // Glide, bounce off the comp's edges, and snap if it settles near a line.
+        const glide = (now) => {
+          const t = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          const W = comp.clientWidth - el.offsetWidth;
+          const H = comp.clientHeight - el.offsetHeight;
+          s.x += s.vx * t;
+          s.y += s.vy * t;
+          if (s.x < 0 || s.x > W) { s.x = clamp(s.x, 0, W); s.vx *= -0.5; }
+          if (s.y < 0 || s.y > H) { s.y = clamp(s.y, 0, H); s.vy *= -0.5; }
+          const f = Math.exp(-t * 4.5);
+          s.vx *= f;
+          s.vy *= f;
+          const slow = Math.hypot(s.vx, s.vy) < 30;
+          const label = slow ? snap(el, s) : "";
+          if (!slow) { guides.v.classList.remove("on"); guides.h.classList.remove("on"); }
+          el.style.transform = "translate(" + s.x.toFixed(1) + "px, " + s.y.toFixed(1) + "px)";
+          info(el, label);
+          if (slow) {
+            setTimeout(() => { guides.v.classList.remove("on"); guides.h.classList.remove("on"); }, 500);
+            return;
+          }
+          s.raf = requestAnimationFrame(glide);
+        };
+        s.raf = requestAnimationFrame(glide);
+      };
+      el.addEventListener("pointerup", drop);
+      el.addEventListener("pointercancel", drop);
+    }
+    place();
+    info(layers[0], "");
+    let lastW = comp.clientWidth;
+    new ResizeObserver(() => {
+      if (Math.abs(comp.clientWidth - lastW) < 2) return;
+      lastW = comp.clientWidth;
+      place();
+    }).observe(comp);
+  })();
+
+  // 09 Rolling Numbers
+  (() => {
+    const nums = $$(".num");
+    const build = (el) => {
+      const digits = String(el.dataset.to).split("");
+      el.innerHTML = digits.map(() => '<span class="digit" aria-hidden="true"><span>' + "0123456789".repeat(3).split("").map((d) => "<span>" + d + "</span>").join("") + "</span></span>").join("") + (el.dataset.plus ? '<span class="plus" aria-hidden="true">' + el.dataset.plus + "</span>" : "");
+    };
+    const roll = (instant) => {
+      for (const el of nums) {
+        const digits = String(el.dataset.to).split("").map(Number);
+        $$(".digit > span", el).forEach((col, i) => {
+          col.style.transition = "none";
+          col.style.transform = "translateY(0)";
+          void col.offsetHeight;
+          col.style.transition = instant || reduce ? "none" : "";
+          col.style.transitionDelay = i * 0.12 + "s";
+          // Two full turns, then the digit: 20 + d tenths of the column down.
+          col.style.transform = "translateY(-" + ((20 + digits[i]) / 30) * 100 + "%)";
+        });
+      }
+    };
+    nums.forEach(build);
+    roll(true);
+    let seen = false;
+    new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting || seen) return;
+      seen = true;
+      roll(false);
+    }, { threshold: 0.6 }).observe($("#odo-stage"));
+    $("#odo-replay").addEventListener("click", () => roll(false));
+  })();
+
+  // 10 Cursor Follower
+  (() => {
+    const stage = $("#cur-stage");
+    const ring = $("#cur-ring");
+    const dot = $("#cur-dot");
+    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      ring.hidden = true;
+      dot.hidden = true;
+      return;
+    }
+    const p = { x: 0, y: 0 };
+    const r = { x: 0, y: 0 };
+    let raf = 0;
+    let inside = false;
+    const tick = () => {
+      const k = reduce ? 1 : 0.2;
+      r.x += (p.x - r.x) * k;
+      r.y += (p.y - r.y) * k;
+      ring.style.transform = "translate(" + r.x.toFixed(1) + "px, " + r.y.toFixed(1) + "px)";
+      dot.style.transform = "translate(" + p.x + "px, " + p.y + "px)";
+      raf = inside || Math.hypot(p.x - r.x, p.y - r.y) > 0.2 ? requestAnimationFrame(tick) : 0;
+    };
+    stage.addEventListener("pointermove", (e) => {
+      const b = stage.getBoundingClientRect();
+      p.x = e.clientX - b.left;
+      p.y = e.clientY - b.top;
+      if (!inside) {
+        r.x = p.x;
+        r.y = p.y;
+      }
+      inside = true;
+      stage.classList.add("inside");
+      const over = e.target.closest("[data-cursor]");
+      ring.classList.toggle("big", !!over && over.dataset.cursor === "play");
+      ring.classList.toggle("btnhover", !!over && over.dataset.cursor === "button");
+      if (!raf) raf = requestAnimationFrame(tick);
+    });
+    stage.addEventListener("pointerleave", () => {
+      inside = false;
+      stage.classList.remove("inside");
+    });
+    stage.addEventListener("pointerdown", () => ring.animate([{ scale: 1 }, { scale: 0.78 }, { scale: 1 }], { duration: 280, easing: "ease-out" }));
+  })();
+})();
+</script>
+</body>
+</html>

@@ -98,13 +98,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `website/` is a one-page sales site: a hero tour across the panel's tabs,
   the top ten features in one player (led by the Curve Editor, Text Animate,
   Duplicate Comp and the Effects Manager), the eight tabs, pricing and
-  questions. A cursor moves over the hero's dot grid, lighting the dots and
-  dragging a selection; it rests while the hero is off screen and stays still
-  for visitors who ask for reduced motion. The clips are 32–180 KB (AV1 WebM
-  with an H.264 MP4 fallback) and load only after the page, one at a time as
-  they scroll into view; `scripts/website-clips.mjs` makes them from the
-  feature videos. The README covers hosting, checkout providers, and using
-  the page on WordPress or Shopify
+  questions. The hero's dot grid answers the visitor's cursor: dots light up
+  and lean away from it, a click sends a ripple, and a drag draws a live
+  selection box that selects the words and cards it touches. The clips are
+  32–180 KB (AV1 WebM with an H.264 MP4 fallback) and load only after the
+  page, one at a time as they scroll into view; `scripts/website-clips.mjs`
+  makes them from the feature videos. The README covers hosting, checkout
+  providers, and using the page on WordPress or Shopify
+- `promo/web-lab/` is a Motion Lab of ten more interactions to choose from
+  for the site, each live and in plain JavaScript: stagger grid, magnetic
+  buttons, text presets, live ease curve, tilt cards, scroll timeline,
+  velocity marquee, snap and throw, rolling numbers and a cursor follower
 - The walkthrough's Polish recording now really switches the align bar to Grp;
   the capture had been aiming at Distribute Vertically
 

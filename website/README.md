@@ -7,9 +7,14 @@ and can be hosted anywhere.
 
 The top ten, in order: Curve Editor, Text Animate, Duplicate Comp + Nested,
 Effects Manager, Comp Resizer, Silence Remover, Follow Layer, Unprecompose,
-Sequence Layers and Align as Group. Behind the headline, a cursor moves over
-the dot grid, lights the dots near it, clicks and drags a selection. It is
-drawn on a canvas, so it costs no download.
+Sequence Layers and Align as Group.
+
+The dot grid behind the headline answers the visitor's own cursor: the dots
+near it light up and lean away, a click sends a ripple through the grid, and
+a drag draws a selection box, like a marquee in a comp, that selects the
+headline words, the text and the cards it touches (Escape or a click on empty
+space clears it). Links and buttons work as usual, and on phones a tap sends
+the ripple. It is drawn on two canvases, so it costs no download.
 
 ## Why it loads fast
 
@@ -29,9 +34,10 @@ drawn on a canvas, so it costs no download.
   * The browser downloads only the format it can play.
 * **Visitors who ask for less get less.** With *Reduce motion* or *Data
   Saver* turned on, nothing plays until the visitor presses play. With
-  *Reduce motion*, the grid cursor stays still too.
-* **Nothing runs off screen.** The grid cursor stops when the hero scrolls
-  away or the tab is hidden.
+  *Reduce motion*, the grid still lights up and selects, without the ripple
+  or the lean.
+* **Nothing runs when nothing moves.** The grid draws only while the cursor
+  is moving over it or a ripple is still spreading.
 
 ## Before you go live
 
@@ -127,6 +133,12 @@ Each feature gives `<id>.webm` (AV1), `<id>.mp4` (H.264) and `<id>.webp`
 `node scripts/feature-videos.mjs --only text,ease,fx,generate`. `hero.*` is
 the tour at the top of the page: Text Animate, the Ease curve, the Effects
 Manager, Layouts, Comp Resizer and Follow Layer.
+
+More interactions to choose from are in `promo/web-lab/index.html` (the
+Motion Lab): a stagger grid, magnetic buttons, text presets, a live ease
+curve, tilt cards, a scroll-driven timeline, a velocity marquee, snap and
+throw, rolling numbers and a cursor follower. Each is plain JavaScript in its
+own block, ready to move into this page.
 
 To change the order of the top ten, move the items in the `#fp-list` list in
 `index.html` (and their numbers), and set the player's default `poster`,
