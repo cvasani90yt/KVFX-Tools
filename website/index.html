@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KVFX Tools for After Effects</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="KVFX Tools is a panel for Adobe After Effects with 100+ one-click commands: Comp Resizer, Silence Remover, Follow Layer, Unprecompose, Even Gaps and more. Every command is one undo.">
+<meta name="theme-color" content="#0b0c0f">
+<meta property="og:type" content="website">
+<meta property="og:title" content="KVFX Tools for After Effects">
+<meta property="og:description" content="100+ one-click commands for layout, timing, text and cleanup, in one panel. Every command is one undo.">
+<meta property="og:image" content="assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@600;700&display=swap">
+<link rel="preload" as="image" href="assets/clips/hero.webp" type="image/webp">
+<style>
+/* Layout: a comp viewer you scroll through. Dark pasteboard, amber selection
+   handles and keyframe diamonds, mono labels like After Effects' timecode.
+   One dark look on purpose: it is the panel's own. */
+:root {
+  color-scheme: dark;
+  --ink: #0b0c0f;
+  --ink-2: #111317;
+  --raised: #16181d;
+  --raised-2: #1c1f25;
+  --line: #262a33;
+  --line-2: #323744;
+  --fg: #eef0f2;
+  --fg-2: #a6acb6;
+  --mute: #7b828e;
+  --amber: #ff8f3f;
+  --amber-hi: #ffa45c;
+  --amber-ink: #241200;
+  --amber-soft: rgba(255, 143, 63, 0.12);
+  --amber-edge: rgba(255, 143, 63, 0.5);
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 14px;
+  --gutter: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--fg);
+  font: 400 16px/1.6 var(--ui);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 30;
+  background: var(--ink);
+}
+img, video { max-width: 100%; display: block; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 6px; }
+.wrap { width: 100%; max-width: 1200px; margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter-r); }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Type */
+.eyebrow { margin: 0; font: 700 12px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h2 { font: 700 clamp(30px, 4.4vw, 52px)/1.06 var(--display); letter-spacing: -0.015em; }
+h3 { font: 600 19px/1.3 var(--display); letter-spacing: -0.005em; }
+.lede { margin: 0; max-width: 62ch; font-size: clamp(17px, 1.6vw, 19px); color: var(--fg-2); }
+.section { padding-block: clamp(72px, 10vw, 128px); }
+.section-head { display: grid; gap: 16px; margin-bottom: clamp(32px, 5vw, 56px); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 26px; border-radius: 999px;
+  font: 600 16px/1 var(--ui); text-decoration: none; white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.btn-primary { background: var(--amber); color: var(--amber-ink); }
+.btn-primary:hover { background: var(--amber-hi); transform: translateY(-1px); }
+.btn-ghost { border: 1.5px solid var(--line-2); color: var(--fg); }
+.btn-ghost:hover { border-color: var(--amber-edge); }
+.btn svg { width: 16px; height: 16px; }
+
+/* Navigation */
+.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: rgba(11, 12, 15, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(38, 42, 51, 0.7); }
+.nav .wrap { display: flex; align-items: center; gap: 28px; min-height: 68px; }
+.brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font: 700 18px/1 var(--display); letter-spacing: 0.01em; }
+.mark { width: 22px; height: 22px; flex: none; }
+.nav-links { display: flex; gap: 26px; margin-left: auto; font-size: 15px; font-weight: 500; }
+.nav-links a { text-decoration: none; color: var(--fg-2); }
+.nav-links a:hover { color: var(--fg); }
+.nav .btn { min-height: 42px; padding: 0 20px; font-size: 15px; }
+@media (max-width: 820px) { .nav-links { display: none; } .nav .btn { margin-left: auto; } }
+
+/* Hero */
+.hero { position: relative; isolation: isolate; padding-top: clamp(48px, 8vw, 96px); overflow: hidden; }
+.hero::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(60% 50% at 70% 30%, rgba(255, 143, 63, 0.16), transparent 70%),
+    radial-gradient(#1a1d23 1.2px, transparent 1.4px) 0 0 / 28px 28px;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+.hero-top { display: grid; gap: 24px; justify-items: start; }
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid var(--line-2); border-radius: 999px; font: 500 14px/1 var(--ui); color: var(--fg-2); background: rgba(22, 24, 29, 0.7); }
+.chip i { width: 8px; height: 8px; background: var(--amber); transform: rotate(45deg); }
+h1 { font: 700 clamp(42px, 7.4vw, 96px)/0.98 var(--display); letter-spacing: -0.025em; }
+h1 em { font-style: normal; color: var(--amber); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 44px 0 0; padding: 0; list-style: none; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.facts li { display: grid; gap: 4px; padding: 18px 20px; background: var(--ink-2); }
+.facts b { font: 700 clamp(22px, 2.6vw, 30px)/1.1 var(--display); }
+.facts span { font-size: 14px; color: var(--fg-2); }
+@media (max-width: 700px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* The viewer frame used for every clip */
+.viewer { position: relative; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--raised); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
+.viewer-bar { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px; border-bottom: 1px solid var(--line); font: 500 13px/1 var(--mono); color: var(--fg); }
+.viewer-bar::before { content: ""; width: 9px; height: 9px; background: var(--amber); flex: none; }
+.viewer-bar .tc { margin-left: auto; color: var(--amber); font-variant-numeric: tabular-nums; }
+.viewer-bar .name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.viewer-media { position: relative; overflow: hidden; border-radius: 0 0 var(--radius) var(--radius); background: #15171b; }
+.viewer-media video { width: 100%; height: 100%; object-fit: cover; }
+.handles span { position: absolute; width: 9px; height: 9px; background: var(--amber); }
+.handles span:nth-child(1) { left: -5px; top: -5px; }
+.handles span:nth-child(2) { right: -5px; top: -5px; }
+.handles span:nth-child(3) { left: -5px; bottom: -5px; }
+.handles span:nth-child(4) { right: -5px; bottom: -5px; }
+.play {
+  position: absolute; inset: 0; margin: auto; width: 76px; height: 76px; border: 0; border-radius: 50%;
+  background: var(--amber); color: var(--amber-ink); cursor: pointer; display: grid; place-items: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.play svg { width: 26px; height: 26px; margin-left: 4px; }
+.hero-media { margin-top: clamp(40px, 6vw, 64px); }
+.hero-media .viewer-media { aspect-ratio: 16 / 9; }
+
+/* Top ten */
+.player-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr); gap: clamp(20px, 3vw, 40px); align-items: start; }
+.fp-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.fp-item {
+  position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 2px 12px; width: 100%;
+  padding: 14px 16px; border: 1px solid transparent; border-radius: 12px; background: transparent;
+  color: inherit; font: inherit; text-align: left; cursor: pointer; overflow: hidden;
+}
+.fp-item:hover { background: var(--ink-2); }
+.fp-item[aria-current="true"] { background: var(--raised); border-color: var(--line-2); }
+.fp-item .n { grid-row: span 2; font: 700 15px/1.5 var(--mono); color: var(--mute); }
+.fp-item[aria-current="true"] .n { color: var(--amber); }
+.fp-item .t { font: 600 17px/1.35 var(--display); letter-spacing: -0.005em; }
+.fp-item .p { font-size: 14.5px; line-height: 1.45; color: var(--fg-2); }
+.fp-item .bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--amber); }
+.fp-stage { position: sticky; top: 96px; display: grid; gap: 18px; }
+.fp-stage .viewer-media { aspect-ratio: 960 / 688; }
+.fp-desc { display: grid; gap: 8px; }
+.fp-desc h3 { font-size: 22px; }
+.fp-desc p { margin: 0; color: var(--fg-2); max-width: 60ch; }
+.fp-where { font: 600 13px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber); }
+.fp-more { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; color: var(--fg-2); font-size: 15px; }
+@media (max-width: 900px) {
+  .player-grid { grid-template-columns: minmax(0, 1fr); }
+  .fp-stage { position: static; order: -1; }
+}
+
+/* Inside the panel */
+.tabs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.tab-card { display: grid; align-content: start; gap: 14px; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-2); }
+.tab-card .k { font: 700 13px/1 var(--mono); letter-spacing: 0.12em; color: var(--amber); }
+.tab-card ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 15px; color: var(--fg-2); }
+.tab-card li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; }
+.tab-card li::before { content: ""; width: 7px; height: 7px; margin-top: 8px; background: var(--line-2); transform: rotate(45deg); }
+@media (max-width: 1000px) { .tabs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .tabs-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Safe on real projects */
+.safe { background: var(--ink-2); border-block: 1px solid var(--line); }
+.safe-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+.safe-item { display: grid; gap: 10px; align-content: start; }
+.safe-item p { margin: 0; color: var(--fg-2); font-size: 15.5px; }
+.key { width: 14px; height: 14px; background: var(--amber); transform: rotate(45deg); margin: 4px 0 6px 2px; }
+@media (max-width: 900px) { .safe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .safe-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Pricing */
+.price-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 20px; align-items: stretch; }
+.price-card { position: relative; display: grid; gap: 22px; padding: clamp(24px, 4vw, 40px); border: 1px solid var(--amber-edge); border-radius: 20px; background: linear-gradient(160deg, rgba(255, 143, 63, 0.10), transparent 55%), var(--raised); }
+.price { display: flex; align-items: baseline; gap: 12px; }
+.price b { font: 700 clamp(48px, 7vw, 72px)/1 var(--display); letter-spacing: -0.02em; }
+.price span { color: var(--fg-2); }
+.includes { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.includes li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; color: var(--fg); }
+.includes svg { width: 20px; height: 20px; margin-top: 2px; color: var(--amber); }
+.price-card .btn { width: 100%; }
+.fine { margin: 0; font-size: 13.5px; color: var(--mute); }
+.watch-card { display: grid; align-content: space-between; gap: 22px; padding: clamp(24px, 4vw, 40px); border: 1px solid var(--line); border-radius: 20px; background: var(--ink-2); }
+.watch-card p { margin: 0; color: var(--fg-2); }
+@media (max-width: 860px) { .price-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* FAQ */
+.faq { display: grid; gap: 10px; max-width: 860px; }
+.faq details { border: 1px solid var(--line); border-radius: 12px; background: var(--ink-2); }
+.faq summary { display: flex; align-items: center; gap: 16px; padding: 18px 20px; cursor: pointer; list-style: none; font: 600 17px/1.4 var(--ui); }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: ""; flex: none; width: 10px; height: 10px; margin-left: auto; border-right: 2px solid var(--fg-2); border-bottom: 2px solid var(--fg-2); transform: rotate(45deg); transition: transform 0.2s ease; }
+.faq details[open] summary::after { transform: rotate(-135deg); }
+.faq details p { margin: 0; padding: 0 20px 20px; color: var(--fg-2); max-width: 70ch; }
+
+/* Footer */
+.footer { padding-block: 48px calc(48px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); color: var(--mute); font-size: 14px; }
+.footer .wrap { display: grid; gap: 18px; }
+.footer-top { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; }
+.footer-top a { color: var(--fg-2); text-decoration: none; }
+.footer-top a:hover { color: var(--fg); }
+.footer-top .brand { margin-right: auto; color: var(--fg); }
+.footer p { margin: 0; max-width: 90ch; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .faq summary::after { transition: none; }
+}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "KVFX Tools",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Windows, macOS",
+  "description": "A panel for Adobe After Effects 2022 and later with 100+ one-click commands for layout, timing, text and cleanup.",
+  "offers": { "@type": "Offer", "price": "29", "priceCurrency": "USD" }
+}
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="kvfx-mark" viewBox="0 0 24 24"><rect x="4.2" y="4.2" width="15.6" height="15.6" transform="rotate(45 12 12)" fill="#ff8f3f"/><rect x="9" y="9" width="6" height="6" transform="rotate(45 12 12)" fill="#0b0c0f"/></symbol>
+  <symbol id="tick" viewBox="0 0 20 20"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="playicon" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="KVFX Tools, back to top"><svg class="mark"><use href="#kvfx-mark"/></svg>KVFX Tools</a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#inside">Inside</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-primary" href="#pricing" data-buy>Get KVFX Tools</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-top">
+        <p class="chip"><i></i>For Adobe After Effects 2022 and later</p>
+        <h1>Less busywork.<br><em>More motion.</em></h1>
+        <p class="lede">KVFX Tools puts 100+ one-click commands in a single After Effects panel. Resize comps, cut the pauses out of a voiceover, line layers up and stagger them in time, and undo any of it in one step.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#pricing" data-buy>Get KVFX Tools · <span data-price>$29</span></a>
+          <a class="btn btn-ghost" href="#features"><svg><use href="#playicon"/></svg>See the top 10</a>
+        </div>
+      </div>
+      <ul class="facts" aria-label="At a glance">
+        <li><b>100+</b><span>one-click commands</span></li>
+        <li><b>8</b><span>tabs in one panel</span></li>
+        <li><b>1</b><span>undo per command</span></li>
+        <li><b>Win · Mac</b><span>installers included</span></li>
+      </ul>
+      <div class="viewer hero-media">
+        <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="viewer-bar"><span class="name">Composition · KVFX_TOUR</span><span class="tc" id="hero-tc">0:00:00:00</span></div>
+        <div class="viewer-media">
+          <video id="hero-video" muted playsinline loop preload="none" width="1280" height="720" poster="assets/clips/hero.webp" aria-label="The KVFX panel at work: Follow Layer, Comp Resizer, Sequence Layers and Unprecompose" data-clip="assets/clips/hero"></video>
+          <button class="play" type="button" id="hero-play" hidden aria-label="Play the tour"><svg><use href="#playicon"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">The top 10</p>
+        <h2 id="features-title">Ten tools you'll reach for every day</h2>
+        <p class="lede">Each one does a job that normally takes a dozen clicks, a script or a workaround. Pick one to see it work.</p>
+      </div>
+      <div class="player-grid">
+        <ol class="fp-list" id="fp-list">
+          <li><button class="fp-item" type="button" aria-current="true" data-id="resize" data-where="Tools ▸ Comp Resizer" data-desc="Turn a 16:9 edit into 9:16, 1:1, 4:5 or any size. Keep, Fit, Fill or Stretch, pinned to any of nine spots. Backgrounds grow to fill the new frame, and comps that use it are fixed so nothing jumps."><span class="n">01</span><span class="t">Comp Resizer</span><span class="p">16:9 to vertical in one click.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="silence" data-where="Tools ▸ Silence Remover" data-desc="Finds the pauses in a voice track and cuts them from every selected layer at once, so the picture stays in sync. Close the gaps, keep them, or just mark them. Layers are trimmed and split, never deleted."><span class="n">02</span><span class="t">Silence Remover</span><span class="p">Cut the pauses from a voiceover, in sync.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="follow" data-where="Tools ▸ Follow Layer" data-desc="Layers follow a leader without parenting: position always, and rotation, scale or opacity if you choose, with a delay in frames for a natural lag. Each follower keeps its own animation."><span class="n">03</span><span class="t">Follow Layer</span><span class="p">Follow without parenting, with a delay.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="unprecomp" data-where="Tools ▸ Layer" data-desc="Brings a precomp's layers back into the comp, in order and timed as they were, and switches the precomp layer off instead of deleting it. Precomp goes the other way, giving each layer a precomp of its own."><span class="n">04</span><span class="t">Unprecompose</span><span class="p">Get a precomp's layers back.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="duplicate" data-where="Tools ▸ Duplicate Comp" data-desc="Copies a comp together with every comp nested inside it, and points expressions at the copies, so editing the copy never changes the original. Footage stays shared."><span class="n">05</span><span class="t">Duplicate Comp + Nested</span><span class="p">Copies that never touch the original.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="sequence" data-where="Tools ▸ Sequence" data-desc="Offsets layers by a step in frames, or chains them end to end: first to last, last to first, centre out, edges in or random. Trims and keyframes move with each layer."><span class="n">06</span><span class="t">Sequence Layers</span><span class="p">Stagger in time, in any order.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="align" data-where="Align bar" data-desc="Line layers up and distribute them from the align bar. Switch it to Grp, and the whole selection moves as one block, keyframes and all, so your layout stays exactly as it was."><span class="n">07</span><span class="t">Align as Group</span><span class="p">Move a whole layout as one block.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="gaps" data-where="Tools ▸ Arrange" data-desc="Equal space between edges, so layers of different widths sit evenly. Leave the gap empty to share the space between the outer two, or type the exact gap you want."><span class="n">08</span><span class="t">Even Gaps</span><span class="p">Equal edges, or the exact gap you type.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="anchor" data-where="Top of the panel" data-desc="Moves the anchor point to any of nine spots on the layer, and the layer stays exactly where it is. Rotate from a corner, grow from the floor, or spin in place."><span class="n">09</span><span class="t">Anchor Point Grid</span><span class="p">Move the anchor. The layer stays put.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="gradient" data-where="Tools ▸ Colour" data-desc="A gradient whose ends stay pinned to the layer's edges, so it stretches and shrinks with the layer: top to bottom, left to right or corner to corner."><span class="n">10</span><span class="t">Gradient Lock</span><span class="p">A gradient that sticks to the edges.</span><span class="bar"></span></button></li>
+        </ol>
+        <div class="fp-stage">
+          <div class="viewer">
+            <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <div class="viewer-bar"><span class="name" id="fp-where">Tools ▸ Comp Resizer</span><span class="tc" id="fp-tc">0:00:00:00</span></div>
+            <div class="viewer-media">
+              <video id="fp-video" muted playsinline preload="none" width="960" height="688" poster="assets/clips/resize.webp" aria-describedby="fp-text"></video>
+              <button class="play" type="button" id="fp-play" hidden aria-label="Play this feature"><svg><use href="#playicon"/></svg></button>
+            </div>
+          </div>
+          <div class="fp-desc" aria-live="polite">
+            <h3 id="fp-title">Comp Resizer</h3>
+            <p id="fp-text">Turn a 16:9 edit into 9:16, 1:1, 4:5 or any size. Keep, Fit, Fill or Stretch, pinned to any of nine spots. Backgrounds grow to fill the new frame, and comps that use it are fixed so nothing jumps.</p>
+          </div>
+        </div>
+      </div>
+      <div class="fp-more">
+        <span>Every one of these has its own short video.</span>
+        <a class="btn btn-ghost" href="https://www.youtube.com/" data-youtube rel="noopener"><svg><use href="#playicon"/></svg>Watch the series on YouTube</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="inside" aria-labelledby="inside-title" style="padding-top: 0">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Inside the panel</p>
+        <h2 id="inside-title">Eight tabs. Over a hundred commands.</h2>
+        <p class="lede">Everything is one click from the panel or from search (Ctrl+Space), and every command works on the layers you have selected.</p>
+      </div>
+      <div class="tabs-grid">
+        <article class="tab-card"><span class="k">TOOLS</span><ul><li>Comp Resizer and Silence Remover</li><li>Align, Even Gaps, Sequence, Follow</li><li>Precomp, Unprecompose, Split, Trim</li><li>A transform inspector for the selection</li></ul></article>
+        <article class="tab-card"><span class="k">EASE</span><ul><li>A curve editor that writes to your keyframes</li><li>Presets, plus curves you save</li><li>Elastic, Bounce, Wiggle and loops in one click</li></ul></article>
+        <article class="tab-card"><span class="k">TEXT</span><ul><li>41 animation presets, in, out or both</li><li>Kinetic titles with accent-coloured words</li><li>Explode into letters, words or lines</li><li>Replace fonts across the project</li></ul></article>
+        <article class="tab-card"><span class="k">FX</span><ul><li>Common effects and expression controls in one click</li><li>An effects manager for many layers at once</li></ul></article>
+        <article class="tab-card"><span class="k">GENERATE</span><ul><li>14 interface layouts: charts, cards, chat, pricing</li><li>UI motion: stagger, cursor, carousel, hover, input bar</li><li>Backdrops, dot pulse, frosted glass, wipes, code glyphs</li><li>Number counter, 3D carousel, 3D extrude</li></ul></article>
+        <article class="tab-card"><span class="k">LABELS</span><ul><li>Sixteen label colours in one click</li><li>Select every layer with the same label</li></ul></article>
+        <article class="tab-card"><span class="k">LIBRARY</span><ul><li>Your folders of footage, templates and presets</li><li>Click to import, open or apply</li><li>Find and relink missing footage</li></ul></article>
+        <article class="tab-card"><span class="k">MEDIA</span><ul><li>Paste or drop images, video and audio into the comp</li><li>Saved beside your project, never overwritten</li></ul></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section safe" aria-labelledby="safe-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Made for real projects</p>
+        <h2 id="safe-title">Fast, and careful with your work</h2>
+      </div>
+      <div class="safe-grid">
+        <div class="safe-item"><div class="key" aria-hidden="true"></div><h3>One undo, every time</h3><p>However much a command does, it's a single step in Edit ▸ Undo.</p></div>
+        <div class="safe-item"><div class="key" aria-hidden="true"></div><h3>Asks before big changes</h3><p>Resizing comps, cutting pauses and relinking footage show what will change, then wait for you.</p></div>
+        <div class="safe-item"><div class="key" aria-hidden="true"></div><h3>Nothing thrown away</h3><p>Unprecompose switches the precomp off. Silence Remover trims and splits. Explode hides the original text.</p></div>
+        <div class="safe-item"><div class="key" aria-hidden="true"></div><h3>Only what you select</h3><p>Commands act on the layers selected when you click, and leave the rest of the comp alone.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="pricing" aria-labelledby="pricing-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Pricing</p>
+        <h2 id="pricing-title">One panel. Pay once.</h2>
+      </div>
+      <div class="price-grid">
+        <div class="price-card">
+          <h3>KVFX Tools</h3>
+          <div class="price"><b data-price>$29</b><span>one-time</span></div>
+          <ul class="includes">
+            <li><svg aria-hidden="true"><use href="#tick"/></svg>All eight tabs and 100+ commands</li>
+            <li><svg aria-hidden="true"><use href="#tick"/></svg>Installers for Windows and macOS</li>
+            <li><svg aria-hidden="true"><use href="#tick"/></svg>After Effects 2022 or later</li>
+            <li><svg aria-hidden="true"><use href="#tick"/></svg>No account and no activation</li>
+            <li><svg aria-hidden="true"><use href="#tick"/></svg>Free updates for version 1</li>
+          </ul>
+          <a class="btn btn-primary" href="#pricing" data-buy>Buy KVFX Tools</a>
+          <p class="fine">Instant download after checkout.</p>
+        </div>
+        <div class="watch-card">
+          <div style="display:grid;gap:12px">
+            <h3>See it before you buy</h3>
+            <p>Every feature on this page has a short video showing the panel and the result side by side. Watch the ones you'd use most.</p>
+          </div>
+          <a class="btn btn-ghost" href="https://www.youtube.com/" data-youtube rel="noopener"><svg><use href="#playicon"/></svg>Watch on YouTube</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-title" style="padding-top: 0">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Questions</p>
+        <h2 id="faq-title">Good to know</h2>
+      </div>
+      <div class="faq">
+        <details><summary>Which versions of After Effects does it work with?</summary><p>After Effects 2022 (version 22) and later, on Windows and macOS. Replace Fonts needs After Effects 24.5 or later.</p></details>
+        <details><summary>How do I install it?</summary><p>Unzip the download and run the installer for your system. Restart After Effects, then open Window ▸ Extensions ▸ KVFX Tools.</p></details>
+        <details><summary>Will it change my project without asking?</summary><p>No. Commands only act on the layers you have selected, and the ones that change a lot at once, like resizing comps, cutting pauses or relinking footage, show you what will happen and wait for you to confirm.</p></details>
+        <details><summary>Can I undo a command?</summary><p>Yes. Every command is a single step in Edit ▸ Undo, however many changes it made.</p></details>
+        <details><summary>Does it work in other languages of After Effects?</summary><p>Yes. Commands work in every language of After Effects. The panel itself is in English, and Split uses After Effects' English menu name.</p></details>
+        <details><summary>Do I need an account or an internet connection?</summary><p>No. There's nothing to sign in to or activate. Install it and it works offline.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <a class="brand" href="#top"><svg class="mark"><use href="#kvfx-mark"/></svg>KVFX Tools</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://www.youtube.com/" data-youtube rel="noopener">YouTube</a>
+    </div>
+    <p>Adobe and After Effects are either registered trademarks or trademarks of Adobe in the United States and/or other countries. KVFX Tools is not made by or affiliated with Adobe.</p>
+    <p>© <span id="year">2026</span> KVFX Tools</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // EDIT: your checkout link, YouTube channel and price, all in one place.
+  const CONFIG = {
+    buyUrl: "#pricing",
+    youtubeUrl: "https://www.youtube.com/",
+    price: "$29",
+  };
+  for (const a of document.querySelectorAll("[data-buy]")) a.href = CONFIG.buyUrl;
+  for (const a of document.querySelectorAll("[data-youtube]")) a.href = CONFIG.youtubeUrl;
+  for (const el of document.querySelectorAll("[data-price]")) el.textContent = CONFIG.price;
+  document.getElementById("year").textContent = String(new Date().getFullYear());
+
+  const motionOk = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  const autoplay = motionOk && !saveData;
+
+  // A clip is two files: AV1 in WebM where the browser plays it, H.264 in MP4 otherwise.
+  function setClip(video, base) {
+    video.innerHTML =
+      '<source src="' + base + '.webm" type=\'video/webm; codecs="av01.0.08M.08"\'>' +
+      '<source src="' + base + '.mp4" type="video/mp4">';
+    video.load();
+  }
+  const tc = (t) => {
+    const f = Math.floor(t * 30);
+    const s = Math.floor(f / 30);
+    return "0:00:" + String(s).padStart(2, "0") + ":" + String(f % 30).padStart(2, "0");
+  };
+  const tryPlay = (video) => {
+    const p = video.play();
+    if (p && p.catch) p.catch(() => {});
+  };
+
+  // Hero: nothing loads until the page has, and it only plays while on screen.
+  const hero = document.getElementById("hero-video");
+  const heroPlay = document.getElementById("hero-play");
+  const heroTc = document.getElementById("hero-tc");
+  let heroArmed = false;
+  let heroSeen = false;
+  const armHero = () => {
+    if (heroArmed) return;
+    heroArmed = true;
+    setClip(hero, hero.dataset.clip);
+    if (heroSeen) tryPlay(hero);
+  };
+  hero.addEventListener("timeupdate", () => { heroTc.textContent = tc(hero.currentTime); });
+  if (autoplay) {
+    const later = () => ("requestIdleCallback" in window ? requestIdleCallback(armHero, { timeout: 1500 }) : setTimeout(armHero, 300));
+    if (document.readyState === "complete") later();
+    else addEventListener("load", later, { once: true });
+  } else {
+    heroPlay.hidden = false;
+    heroPlay.addEventListener("click", () => { heroPlay.hidden = true; armHero(); hero.controls = true; tryPlay(hero); });
+  }
+  new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      heroSeen = e.isIntersecting;
+      if (!heroArmed) continue;
+      if (e.isIntersecting && autoplay) tryPlay(hero);
+      else if (!e.isIntersecting) hero.pause();
+    }
+  }, { threshold: 0.25 }).observe(hero);
+
+  // Top ten: one player, one clip loaded at a time, next one when it ends.
+  const items = [...document.querySelectorAll(".fp-item")];
+  const video = document.getElementById("fp-video");
+  const fpPlay = document.getElementById("fp-play");
+  const fpTc = document.getElementById("fp-tc");
+  const where = document.getElementById("fp-where");
+  const title = document.getElementById("fp-title");
+  const text = document.getElementById("fp-text");
+  let index = 0;
+  let visible = false;
+  let started = autoplay;
+  function select(i, play) {
+    index = (i + items.length) % items.length;
+    items.forEach((b, n) => {
+      b.setAttribute("aria-current", String(n === index));
+      b.querySelector(".bar").style.width = "0";
+    });
+    const item = items[index];
+    video.poster = "assets/clips/" + item.dataset.id + ".webp";
+    where.textContent = item.dataset.where;
+    title.textContent = item.querySelector(".t").textContent;
+    text.textContent = item.dataset.desc;
+    setClip(video, "assets/clips/" + item.dataset.id);
+    if (play && started && visible) tryPlay(video);
+  }
+  items.forEach((b, n) => b.addEventListener("click", () => {
+    started = true;
+    fpPlay.hidden = true;
+    select(n, true);
+    if (window.matchMedia("(max-width: 900px)").matches) video.closest(".viewer").scrollIntoView({ behavior: motionOk ? "smooth" : "auto", block: "center" });
+  }));
+  video.addEventListener("timeupdate", () => {
+    fpTc.textContent = tc(video.currentTime);
+    if (video.duration) items[index].querySelector(".bar").style.width = (100 * video.currentTime / video.duration).toFixed(1) + "%";
+  });
+  video.addEventListener("ended", () => select(index + 1, true));
+  if (!autoplay) {
+    fpPlay.hidden = false;
+    fpPlay.addEventListener("click", () => { started = true; fpPlay.hidden = true; tryPlay(video); });
+  }
+  let fpArmed = false;
+  new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      visible = e.isIntersecting;
+      if (visible && !fpArmed) { fpArmed = true; select(index, true); }
+      else if (visible && started) tryPlay(video);
+      else if (!visible) video.pause();
+    }
+  }, { threshold: 0.35 }).observe(video);
+})();
+</script>
+</body>
+</html>
