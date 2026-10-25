@@ -1111,6 +1111,24 @@ select:focus-visible,
   display: none;
 }
 
+/* Transitions: a 16:9 preview over the preset grid. */
+.kvfx-trans-stage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--kvfx-radius-md);
+  border: 1px solid var(--kvfx-border);
+  background: var(--kvfx-surface-base);
+}
+
+.kvfx-trans-about {
+  min-height: 2.8em;
+}
+
+.kvfx-trans-tiles {
+  max-height: 168px;
+}
+
 /* A long preset library scrolls in place, so the controls under it stay in reach. */
 .kvfx-tiles--scroll {
   max-height: 116px;

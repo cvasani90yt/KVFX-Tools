@@ -135,6 +135,61 @@ const EFFECT_PARAMS: Readonly<Record<string, readonly LeafDef[]>> = {
     leaf("ADBE Geometry2-0006", "Skew Axis", PVT.OneD, 0),
     leaf("ADBE Geometry2-0007", "Rotation", PVT.OneD, 0),
     leaf("ADBE Geometry2-0008", "Opacity", PVT.OneD, 100),
+    leaf("ADBE Geometry2-0009", "Use Composition's Shutter Angle", PVT.OneD, 1),
+    leaf("ADBE Geometry2-0010", "Shutter Angle", PVT.OneD, 0),
+  ],
+  "ADBE Tile": [
+    leaf("ADBE Tile-0001", "Tile Center", PVT.TwoD_SPATIAL, [50, 25], true),
+    leaf("ADBE Tile-0002", "Tile Width", PVT.OneD, 100),
+    leaf("ADBE Tile-0003", "Tile Height", PVT.OneD, 100),
+    leaf("ADBE Tile-0004", "Output Width", PVT.OneD, 100),
+    leaf("ADBE Tile-0005", "Output Height", PVT.OneD, 100),
+    leaf("ADBE Tile-0006", "Mirror Edges", PVT.OneD, 0),
+    leaf("ADBE Tile-0007", "Phase", PVT.OneD, 0),
+    leaf("ADBE Tile-0008", "Horizontal Phase Shift", PVT.OneD, 0),
+  ],
+  "ADBE Optics Compensation": [
+    leaf("ADBE Optics Compensation-0001", "Field Of View (FOV)", PVT.OneD, 0),
+    leaf("ADBE Optics Compensation-0002", "Reverse Lens Distortion", PVT.OneD, 0),
+  ],
+  "ADBE Twirl": [
+    leaf("ADBE Twirl-0001", "Angle", PVT.OneD, 0),
+    leaf("ADBE Twirl-0002", "Twirl Radius", PVT.OneD, 30),
+    leaf("ADBE Twirl-0003", "Twirl Center", PVT.TwoD_SPATIAL, [50, 25], true),
+  ],
+  "ADBE Turbulent Displace": [
+    leaf("ADBE Turbulent Displace-0001", "Displacement", PVT.OneD, 1),
+    leaf("ADBE Turbulent Displace-0002", "Amount", PVT.OneD, 50),
+    leaf("ADBE Turbulent Displace-0003", "Size", PVT.OneD, 100),
+  ],
+  "ADBE Mosaic": [
+    leaf("ADBE Mosaic-0001", "Horizontal Blocks", PVT.OneD, 10),
+    leaf("ADBE Mosaic-0002", "Vertical Blocks", PVT.OneD, 10),
+    leaf("ADBE Mosaic-0003", "Sharp Colors", PVT.OneD, 0),
+  ],
+  "ADBE Wave Warp": [
+    leaf("ADBE Wave Warp-0001", "Wave Type", PVT.OneD, 1),
+    leaf("ADBE Wave Warp-0002", "Wave Height", PVT.OneD, 10),
+    leaf("ADBE Wave Warp-0003", "Wave Width", PVT.OneD, 40),
+    leaf("ADBE Wave Warp-0004", "Direction", PVT.OneD, 90),
+    leaf("ADBE Wave Warp-0005", "Wave Speed", PVT.OneD, 1),
+    leaf("ADBE Wave Warp-0006", "Pinning", PVT.OneD, 1),
+    leaf("ADBE Wave Warp-0007", "Phase", PVT.OneD, 0),
+  ],
+  "ADBE Channel Blur": [
+    leaf("ADBE Channel Blur-0001", "Red Blurriness", PVT.OneD, 0),
+    leaf("ADBE Channel Blur-0002", "Green Blurriness", PVT.OneD, 0),
+    leaf("ADBE Channel Blur-0003", "Blue Blurriness", PVT.OneD, 0),
+    leaf("ADBE Channel Blur-0004", "Alpha Blurriness", PVT.OneD, 0),
+    leaf("ADBE Channel Blur-0005", "Edge Behavior", PVT.OneD, 0),
+  ],
+  "ADBE Invert": [
+    leaf("ADBE Invert-0001", "Channel", PVT.OneD, 1),
+    leaf("ADBE Invert-0002", "Blend With Original", PVT.OneD, 0),
+  ],
+  "ADBE Brightness & Contrast 2": [
+    leaf("ADBE Brightness & Contrast 2-0001", "Brightness", PVT.OneD, 0),
+    leaf("ADBE Brightness & Contrast 2-0002", "Contrast", PVT.OneD, 0),
   ],
   "ADBE Noise": [
     leaf("ADBE Noise-0001", "Amount of Noise", PVT.OneD, 0),
@@ -242,7 +297,14 @@ function effectDef(matchName: string): GroupDef | undefined {
   const params = EFFECT_PARAMS[matchName];
   if (params === undefined) return undefined;
   const display = matchName.replace(/^ADBE /, "").replace(/ 2$/, "");
-  return { kind: "group", matchName, name: display, isEffect: true, children: params };
+  // Every effect ends with Compositing Options, where its own opacity lives.
+  const compositing: GroupDef = {
+    kind: "group",
+    matchName: "ADBE Effect Built In Params",
+    name: "Compositing Options",
+    children: [leaf("ADBE Effect Mask Opacity", "Effect Opacity", PVT.OneD, 100)],
+  };
+  return { kind: "group", matchName, name: display, isEffect: true, children: [...params, compositing] };
 }
 
 function transformDef(): GroupDef {

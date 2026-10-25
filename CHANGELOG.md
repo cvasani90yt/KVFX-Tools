@@ -26,6 +26,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Kinetic Title**: a phrase as big type in eight styles, starred words in
   accent colours, in this comp or a new 16:9, 9:16, 1:1 or 4:5 comp
 
+### Added — Transitions (Generate)
+- **Add Transition**: 27 presets placed across the cut at the playhead, each
+  built from After Effects' own effects: whips in four directions, zoom in and
+  out, spin, roll, two stretches and an impact shake; blur, lens warp, twist,
+  liquid, pixelate and wave; flash, light leak and dip to black; glitch and
+  signal loss; and bars, circle, split, slash and blinds wipes in your colour
+- Snaps to the nearest selected cut, sits above the selected clips, runs on
+  its own layer length (trim to retime) and has a KVFX Strength slider; moves
+  land a whole frame away on Motion Tile so the new shot settles exactly, and
+  wipes stay closed either side of the cut
+- A live preview in the panel, posed by the same maths as the expressions;
+  the tests evaluate every expression against it
+
 ### Added — Generate
 - **Layouts**: fourteen interface scenes (chat, notification, metrics, bar and
   line charts, progress ring, feature, card stack, pricing, testimonial,

@@ -154,7 +154,35 @@ generated expression runs unchanged on both After Effects expression engines.
 | **3D Carousel** | The selected layers — or copies of one — on a ring around a **KVFX Carousel** null, each facing outwards. | **Radius** and **Spin** sliders on the null; rotate the null itself to tilt the ring. |
 | **3D Extrude** | Depth for the selected layers: stacked, parented slices behind each face, filled with the side colour. | **KVFX Extrude** slider on the face layer. |
 
-Chips at the top filter the tab: **Layouts**, **UI Motion**, **Scenes**, **Builders**.
+Chips at the top filter the tab: **Transitions**, **Layouts**, **UI Motion**, **Scenes**, **Builders**.
+
+### Transitions
+
+Twenty-seven transitions, each built from After Effects' own effects — no
+third-party plugins, no stock footage — and placed across the cut in one undo
+step. Hover a preset to see it in the preview, click to pick it, then **Add
+Transition**.
+
+| Group | Presets | Built as |
+|---|---|---|
+| **Moves** | Whip Left, Whip Right, Whip Up, Whip Down, Zoom In, Zoom Out, Spin, Roll, Stretch, Stretch Up, Impact | An adjustment layer: Motion Tile and the Transform effect, with the Transform effect's own motion blur. |
+| **Optical** | Blur, Lens Warp, Twist, Liquid, Pixelate, Wave | An adjustment layer: Gaussian Blur, Optics Compensation, Twirl, Turbulent Displace, Mosaic or Wave Warp. |
+| **Light** | Flash, Light Leak, Dip to Black | A solid in Add, Screen or Normal mode; the light leak is a moving 4-Color Gradient. |
+| **Glitch** | Glitch, Signal Loss | An adjustment layer: tearing Wave Warp, jumps, colour fringing (Channel Blur), inverted frames, noise and tone. |
+| **Graphic** | Bars, Circle, Split, Slash, Blinds | A shape layer in your colour, in three tones of it. |
+
+* **Where it goes.** Centred on the cut nearest the playhead — a selected
+  clip's in or out point within reach — or on the playhead itself, and placed
+  above the selected clips. With **Snap to cut** off it always uses the playhead.
+* **How it moves.** Moves pass the cut at full speed and land exactly one
+  frame (or one turn) from where they began, on a Motion Tile copy, so the new
+  shot comes to rest where it belongs. Everything else peaks at the cut and
+  returns to nothing, so the first and last frames are untouched. Graphic wipes
+  stay closed over the frames either side of the cut, so the switch never shows.
+* **Afterwards.** Trim the layer to retime it — every value runs on the
+  layer's own length. Its **KVFX Strength** slider sets the amount (motion
+  blur, distortion, brightness). Glitch, Impact and Signal Loss come out
+  different each time you add them.
 
 ### Layouts
 
@@ -307,6 +335,13 @@ are on the first real-host checklist ([TESTING.md](../TESTING.md)):
   Drop Shadow, Fill, Noise and Transform effect parameter order (addressed by
   value type and position, not by name).
 * `setTrackMatte` on After Effects 23+ and the adjacent-matte fallback before it.
+* Transitions: the parameter match names they address — Motion Tile
+  (`ADBE Tile-0004/5` output size), Transform (`ADBE Geometry2-0009/10`
+  shutter), Optics Compensation, Twirl, Turbulent Displace, Mosaic, Wave Warp
+  (wave types 1 = sine, 2 = square, 9 = smooth noise), Channel Blur, Invert,
+  Brightness & Contrast — and the Compositing Options effect opacity
+  (`ADBE Effect Built In Params` ▸ `ADBE Effect Mask Opacity`) that fades
+  Mosaic in and out.
 * Convert Audio to Keyframes analysing the selected layer within the work area,
   and its slider names.
 * `CompItem.openInViewer()` making the new comp the active item for the rest of

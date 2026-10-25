@@ -4,12 +4,14 @@ import type { SessionState } from "../app/session.js";
 import { CommandButtons, Section, colorField, hint, numberField, row, selectField, textField } from "../ui/controls.js";
 import { h, setText, toggleClass } from "../ui/dom.js";
 import { buildLayoutsSection } from "./layouts-section.js";
+import { buildTransitionsSection } from "./transitions-section.js";
 import { buildUiKitSections } from "./ui-kit-sections.js";
 import { buildUiMotionSections } from "./ui-motion-sections.js";
 
 /**
  * GENERATE: rigs built in one undo step.
  *
+ *   Transitions    — 27 presets placed across the cut at the playhead.
  *   Number Counter — a text layer counting between two numbers, eased.
  *   3D Carousel    — the selected layers (or copies of one) on a spinning ring.
  *   3D Extrude     — depth from stacked, parented slices.
@@ -23,13 +25,15 @@ const COUNTER_PAUSE_MS = 700;
 /** Generator groups, for the chips at the top of the tab. */
 const FILTERS: readonly (readonly [string, string])[] = [
   ["all", "All"],
+  ["trans", "Transitions"],
   ["layout", "Layouts"],
   ["ui", "UI Motion"],
   ["scene", "Scenes"],
   ["build", "Builders"],
 ];
-const GROUP_ORDER = ["layout", "ui", "scene", "build"];
+const GROUP_ORDER = ["trans", "layout", "ui", "scene", "build"];
 const SECTION_GROUP: Readonly<Record<string, string>> = {
+  "gen.transitions": "trans",
   "gen.layouts": "layout",
   "gen.uistagger": "ui",
   "gen.cursor": "ui",
@@ -65,6 +69,7 @@ export class GenerateView implements View {
   readonly #sections: Section[] = [];
   readonly #counterPreview: HTMLElement;
   readonly #readCounter: () => CounterOptions;
+  readonly #transitions: { shown: () => void };
   #animating = false;
 
   constructor(panel: Panel) {
@@ -174,6 +179,7 @@ export class GenerateView implements View {
     );
 
     const make = (id: string, title: string, hintText?: string): Section => this.#section(id, title, hintText);
+    this.#transitions = buildTransitionsSection(panel, this.#buttons, make);
     buildLayoutsSection(panel, this.#buttons, make);
     buildUiMotionSections(panel, this.#buttons, make);
     buildUiKitSections(panel, this.#buttons, make);
@@ -245,6 +251,7 @@ export class GenerateView implements View {
 
   shown(): void {
     this.#animateCounter();
+    this.#transitions.shown();
   }
 
   update(state: SessionState, availability: Availability): void {

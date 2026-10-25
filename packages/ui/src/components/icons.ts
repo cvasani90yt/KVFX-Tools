@@ -95,6 +95,8 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   "dot-pulse": [dot(8, 8, 2.2), ring(8, 8, 5), dot(2, 2, 1), dot(14, 2, 1), dot(2, 14, 1), dot(14, 14, 1)],
   glass: [box(1.5, 2.5, 13, 11), rule(4, 11, 9, 5), rule(7, 12, 12, 6)],
   wipe: [box(1.5, 2.5, 13, 11), bar(1.5, 2.5, 7, 11), rule(10.5, 1, 10.5, 15)],
+  // Two shots and the cut between them.
+  transition: [box(1, 4, 7, 8), bar(8, 4, 7, 8), rule(5.5, 15, 10.5, 1)],
   code: [line("M5 4 L1.8 8 L5 12"), line("M11 4 L14.2 8 L11 12"), rule(9.2, 3, 6.8, 13)],
   "input-bar": [box(0.8, 4.5, 14.4, 7), bar(3, 7.25, 1.2, 2.5), dot(12.3, 8, 1.6)],
   resize: [box(1.5, 4.5, 10, 10), line("M8.5 1.5 H14.5 V7.5"), rule(14.5, 1.5, 9, 7)],

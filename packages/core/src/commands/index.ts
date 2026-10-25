@@ -9,6 +9,7 @@ import { orderCommands } from "./layer/order.js";
 import { toolCommands } from "./layer/tools.js";
 import { rigCommands } from "./rig/index.js";
 import { templateCommands } from "./rig/templates.js";
+import { transitionCommands } from "./rig/transitions.js";
 import { uiKitCommands } from "./rig/ui-kit.js";
 import { uiMotionCommands } from "./rig/ui-motion.js";
 import { projectCommands } from "./project/resize.js";
@@ -28,6 +29,7 @@ export * from "./rig/index.js";
 export * from "./rig/ui-motion.js";
 export * from "./rig/ui-kit.js";
 export * from "./rig/templates.js";
+export * from "./rig/transitions.js";
 export * from "./text/index.js";
 export * from "./keyframe/index.js";
 export * from "./color/labels.js";
@@ -58,6 +60,7 @@ export function createProductionCommandRegistry(): CommandRegistry {
     ...uiMotionCommands,
     ...uiKitCommands,
     ...templateCommands,
+    ...transitionCommands,
     ...projectCommands,
     ...labelCommands,
     selectSameLabel,
