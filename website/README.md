@@ -18,7 +18,8 @@ and can be hosted anywhere.
 * **The clips are tiny.**
   * Each feature clip is 33–130 KB in AV1/WebM, which Chrome, Edge and
     Firefox play, or 46–180 KB in H.264/MP4, which Safari uses.
-  * The hero tour is 330 KB.
+  * The hero tour, across the Text, Ease, FX, Generate and Tools tabs, is
+    460 KB.
   * The browser downloads only the format it can play.
 * **Visitors who ask for less get less.** With *Reduce motion* or *Data
   Saver* turned on, nothing plays until the visitor presses play.
@@ -112,4 +113,6 @@ node scripts/website-clips.mjs
 ```
 
 Each feature gives `<id>.webm` (AV1), `<id>.mp4` (H.264) and `<id>.webp`
-(poster). `hero.*` is the four-feature tour at the top of the page.
+(poster). `hero.*` is the tour at the top of the page: Text Animate, the Ease
+curve, the Effects Manager, Layouts, Comp Resizer and Follow Layer, from the
+tour videos (`node scripts/feature-videos.mjs --only text,ease,fx,generate`).
