@@ -72,8 +72,10 @@ async function fonts() {
  * soft spring, a little ahead of it, and stays still while the cursor is
  * comfortably inside the window.
  */
-function panelTops(track, visible) {
+function panelTops(track, clicks, visible) {
   const n = track.length;
+  // After the last click the cursor only drifts; the window stays on the feature.
+  const settle = Math.round(((clicks.length ? Math.max(...clicks) : 0) + 0.8) * FPS);
   const ys = new Array(n);
   let last = PANEL.h / 2;
   for (let i = 0; i < n; i++) {
@@ -94,7 +96,7 @@ function panelTops(track, visible) {
     const y = ys[Math.min(n - 1, i + lead)];
     const inside = y > top + visible * 0.18 && y < top + visible * 0.78;
     // Still while the cursor waits at its starting spot.
-    const target = inside || i < 1.6 * FPS ? top : want(i);
+    const target = inside || i < 1.6 * FPS || i > settle ? top : want(i);
     v += (omega * omega * (target - top) - 2 * omega * v) * dt;
     top += v * dt;
     tops[i] = clamp(top, 0, maxTop);
@@ -112,7 +114,7 @@ async function load(id, layoutName = "16x9", framesBase = "") {
   const response = await fetch(`./assets/clips/${state.feature.clip}.json`);
   state.track = await response.json();
   const visible = state.layout.panel.h / (state.layout.panel.w / PANEL.w);
-  state.tops = panelTops(state.track.cursor, visible);
+  state.tops = panelTops(state.track.cursor, state.track.clicks, visible);
   state.duration = state.track.cursor.length / FPS;
   state.frames = framesBase;
   state.cache.clear();
