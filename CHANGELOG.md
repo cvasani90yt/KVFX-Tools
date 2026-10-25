@@ -93,11 +93,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   renders them, with click and whoosh sounds it generates itself
 - `scripts/promo-capture.mjs` saves the cursor's path and the click times
   next to each feature recording, so the edit can follow the cursor
-- `website/` is a one-page sales site: a hero tour, the top ten features in
-  one player, the eight tabs, pricing and questions. Its clips are 33–330 KB
-  (AV1 WebM with an H.264 MP4 fallback) and load only after the page, one at
-  a time as they scroll into view; `scripts/website-clips.mjs` makes them from
-  the feature videos. The README covers hosting, checkout providers, and using
+- `promo/features/` also makes four tour videos, one each for the Text,
+  Ease, FX and Generate tabs (`--only text,ease,fx,generate`)
+- `website/` is a one-page sales site: a hero tour across the panel's tabs,
+  the top ten features in one player (led by the Curve Editor, Text Animate,
+  Duplicate Comp and the Effects Manager), the eight tabs, pricing and
+  questions. A cursor moves over the hero's dot grid, lighting the dots and
+  dragging a selection; it rests while the hero is off screen and stays still
+  for visitors who ask for reduced motion. The clips are 32–180 KB (AV1 WebM
+  with an H.264 MP4 fallback) and load only after the page, one at a time as
+  they scroll into view; `scripts/website-clips.mjs` makes them from the
+  feature videos. The README covers hosting, checkout providers, and using
   the page on WordPress or Shopify
 - The walkthrough's Polish recording now really switches the align bar to Grp;
   the capture had been aiming at Distribute Vertically

@@ -108,11 +108,13 @@ h3 { font: 600 19px/1.3 var(--display); letter-spacing: -0.005em; }
 .hero { position: relative; isolation: isolate; padding-top: clamp(48px, 8vw, 96px); overflow: hidden; }
 .hero::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
-  background:
-    radial-gradient(60% 50% at 70% 30%, rgba(255, 143, 63, 0.16), transparent 70%),
-    radial-gradient(#1a1d23 1.2px, transparent 1.4px) 0 0 / 28px 28px;
-  mask-image: linear-gradient(to bottom, #000 55%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  background: radial-gradient(60% 50% at 70% 30%, rgba(255, 143, 63, 0.16), transparent 70%);
+}
+/* The dot grid, with a cursor at work on it (drawn by the script below). */
+.hero-grid {
+  position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none;
+  mask-image: linear-gradient(to bottom, #000 50%, transparent 78%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 78%);
 }
 .hero-top { display: grid; gap: 24px; justify-items: start; }
 .chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid var(--line-2); border-radius: 999px; font: 500 14px/1 var(--ui); color: var(--fg-2); background: rgba(22, 24, 29, 0.7); }
@@ -266,6 +268,7 @@ h1 em { font-style: normal; color: var(--amber); }
 
 <main id="top">
   <section class="hero">
+    <canvas class="hero-grid" id="hero-grid" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="hero-top">
         <p class="chip"><i></i>For Adobe After Effects 2022 and later</p>
@@ -302,29 +305,29 @@ h1 em { font-style: normal; color: var(--amber); }
       </div>
       <div class="player-grid">
         <ol class="fp-list" id="fp-list">
-          <li><button class="fp-item" type="button" aria-current="true" data-id="resize" data-where="Tools ▸ Comp Resizer" data-desc="Turn a 16:9 edit into 9:16, 1:1, 4:5 or any size. Keep, Fit, Fill or Stretch, pinned to any of nine spots. Backgrounds grow to fill the new frame, and comps that use it are fixed so nothing jumps."><span class="n">01</span><span class="t">Comp Resizer</span><span class="p">16:9 to vertical in one click.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="silence" data-where="Tools ▸ Silence Remover" data-desc="Finds the pauses in a voice track and cuts them from every selected layer at once, so the picture stays in sync. Close the gaps, keep them, or just mark them. Layers are trimmed and split, never deleted."><span class="n">02</span><span class="t">Silence Remover</span><span class="p">Cut the pauses from a voiceover, in sync.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="follow" data-where="Tools ▸ Follow Layer" data-desc="Layers follow a leader without parenting: position always, and rotation, scale or opacity if you choose, with a delay in frames for a natural lag. Each follower keeps its own animation."><span class="n">03</span><span class="t">Follow Layer</span><span class="p">Follow without parenting, with a delay.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="unprecomp" data-where="Tools ▸ Layer" data-desc="Brings a precomp's layers back into the comp, in order and timed as they were, and switches the precomp layer off instead of deleting it. Precomp goes the other way, giving each layer a precomp of its own."><span class="n">04</span><span class="t">Unprecompose</span><span class="p">Get a precomp's layers back.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="duplicate" data-where="Tools ▸ Duplicate Comp" data-desc="Copies a comp together with every comp nested inside it, and points expressions at the copies, so editing the copy never changes the original. Footage stays shared."><span class="n">05</span><span class="t">Duplicate Comp + Nested</span><span class="p">Copies that never touch the original.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="sequence" data-where="Tools ▸ Sequence" data-desc="Offsets layers by a step in frames, or chains them end to end: first to last, last to first, centre out, edges in or random. Trims and keyframes move with each layer."><span class="n">06</span><span class="t">Sequence Layers</span><span class="p">Stagger in time, in any order.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="align" data-where="Align bar" data-desc="Line layers up and distribute them from the align bar. Switch it to Grp, and the whole selection moves as one block, keyframes and all, so your layout stays exactly as it was."><span class="n">07</span><span class="t">Align as Group</span><span class="p">Move a whole layout as one block.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="gaps" data-where="Tools ▸ Arrange" data-desc="Equal space between edges, so layers of different widths sit evenly. Leave the gap empty to share the space between the outer two, or type the exact gap you want."><span class="n">08</span><span class="t">Even Gaps</span><span class="p">Equal edges, or the exact gap you type.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="anchor" data-where="Top of the panel" data-desc="Moves the anchor point to any of nine spots on the layer, and the layer stays exactly where it is. Rotate from a corner, grow from the floor, or spin in place."><span class="n">09</span><span class="t">Anchor Point Grid</span><span class="p">Move the anchor. The layer stays put.</span><span class="bar"></span></button></li>
-          <li><button class="fp-item" type="button" data-id="gradient" data-where="Tools ▸ Colour" data-desc="A gradient whose ends stay pinned to the layer's edges, so it stretches and shrinks with the layer: top to bottom, left to right or corner to corner."><span class="n">10</span><span class="t">Gradient Lock</span><span class="p">A gradient that sticks to the edges.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" aria-current="true" data-id="ease" data-where="Ease ▸ Curve" data-desc="Drag two handles or pick a preset, then Apply to Keys turns the curve into After Effects' speed and influence on your selected keyframes. Elastic, Bounce, Wiggle and loops are one click each."><span class="n">01</span><span class="t">Curve Editor</span><span class="p">Draw an ease, apply it to your keys.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="text" data-where="Text ▸ Animate" data-desc="41 presets by letter, word or line, in, out or both, in any order, with your own ease. The preview plays as you hover, and the text stays live, so you can change the words later."><span class="n">02</span><span class="t">Text Animate</span><span class="p">41 presets, by letter, word or line.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="duplicate" data-where="Tools ▸ Duplicate Comp" data-desc="Copies a comp together with every comp nested inside it, and points expressions at the copies, so editing the copy never changes the original. Footage stays shared."><span class="n">03</span><span class="t">Duplicate Comp + Nested</span><span class="p">Copies that never touch the original.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="fx" data-where="FX ▸ Effects Manager" data-desc="Scan the selected layers to see every effect in one list. Switch effects on or off, one at a time or all at once, or remove them, and Edit ▸ Undo brings them back. Common effects and expression controls are one click each."><span class="n">04</span><span class="t">Effects Manager</span><span class="p">Every effect on the selection, in one list.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="resize" data-where="Tools ▸ Comp Resizer" data-desc="Turn a 16:9 edit into 9:16, 1:1, 4:5 or any size. Keep, Fit, Fill or Stretch, pinned to any of nine spots. Backgrounds grow to fill the new frame, and comps that use it are fixed so nothing jumps."><span class="n">05</span><span class="t">Comp Resizer</span><span class="p">16:9 to vertical in one click.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="silence" data-where="Tools ▸ Silence Remover" data-desc="Finds the pauses in a voice track and cuts them from every selected layer at once, so the picture stays in sync. Close the gaps, keep them, or just mark them. Layers are trimmed and split, never deleted."><span class="n">06</span><span class="t">Silence Remover</span><span class="p">Cut the pauses from a voiceover, in sync.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="follow" data-where="Tools ▸ Follow Layer" data-desc="Layers follow a leader without parenting: position always, and rotation, scale or opacity if you choose, with a delay in frames for a natural lag. Each follower keeps its own animation."><span class="n">07</span><span class="t">Follow Layer</span><span class="p">Follow without parenting, with a delay.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="unprecomp" data-where="Tools ▸ Layer" data-desc="Brings a precomp's layers back into the comp, in order and timed as they were, and switches the precomp layer off instead of deleting it. Precomp goes the other way, giving each layer a precomp of its own."><span class="n">08</span><span class="t">Unprecompose</span><span class="p">Get a precomp's layers back.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="sequence" data-where="Tools ▸ Sequence" data-desc="Offsets layers by a step in frames, or chains them end to end: first to last, last to first, centre out, edges in or random. Trims and keyframes move with each layer."><span class="n">09</span><span class="t">Sequence Layers</span><span class="p">Stagger in time, in any order.</span><span class="bar"></span></button></li>
+          <li><button class="fp-item" type="button" data-id="align" data-where="Align bar" data-desc="Line layers up and distribute them from the align bar. Switch it to Grp, and the whole selection moves as one block, keyframes and all, so your layout stays exactly as it was."><span class="n">10</span><span class="t">Align as Group</span><span class="p">Move a whole layout as one block.</span><span class="bar"></span></button></li>
         </ol>
         <div class="fp-stage">
           <div class="viewer">
             <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-            <div class="viewer-bar"><span class="name" id="fp-where">Tools ▸ Comp Resizer</span><span class="tc" id="fp-tc">0:00:00:00</span></div>
+            <div class="viewer-bar"><span class="name" id="fp-where">Ease ▸ Curve</span><span class="tc" id="fp-tc">0:00:00:00</span></div>
             <div class="viewer-media">
-              <video id="fp-video" muted playsinline preload="none" width="960" height="688" poster="assets/clips/resize.webp" aria-describedby="fp-text"></video>
+              <video id="fp-video" muted playsinline preload="none" width="960" height="688" poster="assets/clips/ease.webp" aria-describedby="fp-text"></video>
               <button class="play" type="button" id="fp-play" hidden aria-label="Play this feature"><svg><use href="#playicon"/></svg></button>
             </div>
           </div>
           <div class="fp-desc" aria-live="polite">
-            <h3 id="fp-title">Comp Resizer</h3>
-            <p id="fp-text">Turn a 16:9 edit into 9:16, 1:1, 4:5 or any size. Keep, Fit, Fill or Stretch, pinned to any of nine spots. Backgrounds grow to fill the new frame, and comps that use it are fixed so nothing jumps.</p>
+            <h3 id="fp-title">Curve Editor</h3>
+            <p id="fp-text">Drag two handles or pick a preset, then Apply to Keys turns the curve into After Effects' speed and influence on your selected keyframes. Elastic, Bounce, Wiggle and loops are one click each.</p>
           </div>
         </div>
       </div>
@@ -466,6 +469,175 @@ h1 em { font-style: normal; color: var(--amber); }
     const p = video.play();
     if (p && p.catch) p.catch(() => {});
   };
+
+  // Hero grid: a cursor works the dot grid, lighting the dots near it,
+  // clicking, and dragging a selection now and then. It draws only while the
+  // hero is on screen, and holds still for Reduce Motion.
+  (() => {
+    const canvas = document.getElementById("hero-grid");
+    const heroBox = canvas.parentElement;
+    const g = canvas.getContext("2d");
+    const GAP = 28;
+    const RADIUS = 150;
+    let w = 0;
+    let h = 0;
+    let dpr = 1;
+    let base = null;
+    let region = { x: 0, y: 0, w: 1, h: 1 };
+    let running = false;
+    let visible = false;
+    let frame = 0;
+    let soft = 1;
+    const t0 = performance.now();
+
+    function size() {
+      const r = heroBox.getBoundingClientRect();
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = r.width;
+      h = r.height;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      base = document.createElement("canvas");
+      base.width = canvas.width;
+      base.height = canvas.height;
+      const b = base.getContext("2d");
+      b.scale(dpr, dpr);
+      b.fillStyle = "#1c1f26";
+      for (let y = GAP / 2; y < h; y += GAP) for (let x = GAP / 2; x < w; x += GAP) { b.beginPath(); b.arc(x, y, 1.3, 0, Math.PI * 2); b.fill(); }
+      // Wide screens: the open space right of the headline. Narrow ones: the top of the hero.
+      const top = Math.min(h * 0.5, 620);
+      region = w > 900 ? { x: w * 0.56, y: 40, w: w * 0.4, h: top - 40 } : { x: 24, y: 24, w: w - 48, h: Math.min(h * 0.4, 520) };
+      // On narrow screens the grid sits behind the text, so it glows less.
+      soft = w > 900 ? 1 : 0.55;
+    }
+
+    // [time, x, y] waypoints in the region, 0–1; clicks and one drag per loop.
+    const PATH = [[0, 0.15, 0.35], [1.4, 0.72, 0.12], [2.8, 0.3, 0.5], [4.3, 0.92, 0.92], [5.9, 0.55, 0.32], [7.4, 0.12, 0.78], [9.0, 0.15, 0.35]];
+    const CLICKS = [1.55, 6.05, 7.55];
+    const DRAG = { from: 2.95, to: 4.3, fade: 5.4 };
+    const LOOP = 9.0;
+    const smooth = (u) => u * u * (3 - 2 * u);
+    const at = (t) => {
+      let i = 1;
+      while (i < PATH.length - 1 && t > PATH[i][0]) i++;
+      const [ta, xa, ya] = PATH[i - 1];
+      const [tb, xb, yb] = PATH[i];
+      const k = smooth(Math.min(1, Math.max(0, (t - ta) / (tb - ta))));
+      return [region.x + (xa + (xb - xa) * k) * region.w, region.y + (ya + (yb - ya) * k) * region.h];
+    };
+
+    function draw(t) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, canvas.width, canvas.height);
+      g.drawImage(base, 0, 0);
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const [cx, cy] = at(t);
+      // The selection being dragged, then held, then let go.
+      let box = null;
+      let boxAlpha = 0;
+      if (t >= DRAG.from && t < DRAG.fade + 0.6) {
+        const [ax, ay] = at(DRAG.from);
+        const [bx, by] = t < DRAG.to ? [cx, cy] : at(DRAG.to);
+        box = { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) };
+        boxAlpha = t < DRAG.fade ? 1 : 1 - (t - DRAG.fade) / 0.6;
+      }
+      // Dots near the cursor, and inside the selection, light up.
+      const reach = RADIUS + GAP;
+      const x0 = Math.max(GAP / 2, Math.floor((Math.min(cx, box ? box.x : cx) - reach) / GAP) * GAP + GAP / 2);
+      const x1 = Math.min(w, Math.max(cx, box ? box.x + box.w : cx) + reach);
+      const y0 = Math.max(GAP / 2, Math.floor((Math.min(cy, box ? box.y : cy) - reach) / GAP) * GAP + GAP / 2);
+      const y1 = Math.min(h, Math.max(cy, box ? box.y + box.h : cy) + reach);
+      for (let y = y0; y < y1; y += GAP) {
+        for (let x = x0; x < x1; x += GAP) {
+          const d = Math.hypot(x - cx, y - cy);
+          let a = d < RADIUS ? Math.pow(1 - d / RADIUS, 2) * 0.9 : 0;
+          if (box && x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h) a = Math.max(a, 0.75 * boxAlpha);
+          a *= soft;
+          if (a < 0.02) continue;
+          g.fillStyle = "rgba(255, 143, 63, " + a.toFixed(3) + ")";
+          g.beginPath();
+          g.arc(x, y, 1.3 + a * 1.4, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+      if (box && boxAlpha > 0) {
+        g.save();
+        g.globalAlpha = boxAlpha;
+        g.setLineDash([6, 5]);
+        g.strokeStyle = "rgba(255, 143, 63, 0.9)";
+        g.lineWidth = 1.5;
+        g.strokeRect(box.x, box.y, box.w, box.h);
+        g.setLineDash([]);
+        g.fillStyle = "#ff8f3f";
+        for (const [hx, hy] of [[box.x, box.y], [box.x + box.w, box.y], [box.x, box.y + box.h], [box.x + box.w, box.y + box.h]]) g.fillRect(hx - 3.5, hy - 3.5, 7, 7);
+        g.restore();
+      }
+      // Click ripples.
+      for (const c of [...CLICKS, DRAG.from]) {
+        const age = t - c;
+        if (age < 0 || age > 0.5) continue;
+        const [rx, ry] = at(c);
+        g.strokeStyle = "rgba(255, 143, 63, " + (1 - age / 0.5).toFixed(3) + ")";
+        g.lineWidth = 2.5;
+        g.beginPath();
+        g.arc(rx, ry, 6 + age * 52, 0, Math.PI * 2);
+        g.stroke();
+      }
+      // The cursor: an arrow, pressed while dragging.
+      const down = (t >= DRAG.from && t < DRAG.to + 0.1) || CLICKS.some((c) => t >= c && t < c + 0.12);
+      g.save();
+      g.translate(cx, cy);
+      g.scale(down ? 0.88 : 1, down ? 0.88 : 1);
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(0, 19);
+      g.lineTo(4.6, 14.8);
+      g.lineTo(7.8, 21.6);
+      g.lineTo(10.8, 20.2);
+      g.lineTo(7.7, 13.6);
+      g.lineTo(13.6, 13.6);
+      g.closePath();
+      g.fillStyle = "#f4f5f7";
+      g.strokeStyle = "#0b0c0f";
+      g.lineWidth = 1.4;
+      g.lineJoin = "round";
+      g.shadowColor = "rgba(0, 0, 0, 0.5)";
+      g.shadowBlur = 8;
+      g.shadowOffsetY = 2;
+      g.fill();
+      g.shadowColor = "transparent";
+      g.stroke();
+      g.restore();
+    }
+
+    const tick = (now) => {
+      if (!running) return;
+      draw(((now - t0) / 1000) % LOOP);
+      frame = requestAnimationFrame(tick);
+    };
+    const start = () => {
+      if (running || !motionOk || !visible || document.hidden) return;
+      running = true;
+      frame = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(frame);
+    };
+    size();
+    draw(1.0);
+    // The hero changes height as fonts load and the window resizes; keep the grid matched.
+    let pending = 0;
+    new ResizeObserver(() => {
+      cancelAnimationFrame(pending);
+      pending = requestAnimationFrame(() => { size(); if (!running) draw(1.0); });
+    }).observe(heroBox);
+    new IntersectionObserver((entries) => {
+      for (const e of entries) visible = e.isIntersecting;
+      (visible ? start : stop)();
+    }).observe(heroBox);
+    document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
+  })();
 
   // Hero: nothing loads until the page has, and it only plays while on screen.
   const hero = document.getElementById("hero-video");

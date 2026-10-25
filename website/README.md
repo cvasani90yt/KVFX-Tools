@@ -5,10 +5,16 @@ one player, everything inside the panel, pricing and questions. It is plain
 HTML with its CSS and JavaScript inline, and no framework, so it loads fast
 and can be hosted anywhere.
 
+The top ten, in order: Curve Editor, Text Animate, Duplicate Comp + Nested,
+Effects Manager, Comp Resizer, Silence Remover, Follow Layer, Unprecompose,
+Sequence Layers and Align as Group. Behind the headline, a cursor moves over
+the dot grid, lights the dots near it, clicks and drags a selection. It is
+drawn on a canvas, so it costs no download.
+
 ## Why it loads fast
 
-* **The first view is light.** It needs only the page (about 35 KB), the
-  fonts and a 39 KB poster image.
+* **The first view is light.** It needs only the page (about 43 KB), the
+  fonts and a 34 KB poster image.
 * **Videos wait their turn.**
   * Every `<video>` is `preload="none"` with a WebP poster.
   * The hero clip starts loading only after the page has finished, when the
@@ -16,13 +22,16 @@ and can be hosted anywhere.
   * The feature player loads one clip at a time, when it scrolls into view.
   * Clips pause whenever they are off screen.
 * **The clips are tiny.**
-  * Each feature clip is 33–130 KB in AV1/WebM, which Chrome, Edge and
-    Firefox play, or 46–180 KB in H.264/MP4, which Safari uses.
+  * Each feature clip is 32–130 KB in AV1/WebM, which Chrome, Edge and
+    Firefox play, or 47–180 KB in H.264/MP4, which Safari uses.
   * The hero tour, across the Text, Ease, FX, Generate and Tools tabs, is
     460 KB.
   * The browser downloads only the format it can play.
 * **Visitors who ask for less get less.** With *Reduce motion* or *Data
-  Saver* turned on, nothing plays until the visitor presses play.
+  Saver* turned on, nothing plays until the visitor presses play. With
+  *Reduce motion*, the grid cursor stays still too.
+* **Nothing runs off screen.** The grid cursor stops when the hero scrolls
+  away or the tab is hidden.
 
 ## Before you go live
 
@@ -113,6 +122,12 @@ node scripts/website-clips.mjs
 ```
 
 Each feature gives `<id>.webm` (AV1), `<id>.mp4` (H.264) and `<id>.webp`
-(poster). `hero.*` is the tour at the top of the page: Text Animate, the Ease
-curve, the Effects Manager, Layouts, Comp Resizer and Follow Layer, from the
-tour videos (`node scripts/feature-videos.mjs --only text,ease,fx,generate`).
+(poster). The Curve Editor, Text Animate and Effects Manager clips (`ease`,
+`text`, `fx`) come from the tour videos, which render with
+`node scripts/feature-videos.mjs --only text,ease,fx,generate`. `hero.*` is
+the tour at the top of the page: Text Animate, the Ease curve, the Effects
+Manager, Layouts, Comp Resizer and Follow Layer.
+
+To change the order of the top ten, move the items in the `#fp-list` list in
+`index.html` (and their numbers), and set the player's default `poster`,
+title and text to the new first item.

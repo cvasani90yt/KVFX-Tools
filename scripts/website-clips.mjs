@@ -26,19 +26,19 @@ const BG = "0x0e0f12";
 const STAGE = "crop=1180:846:680:150,scale=960:688:flags=lanczos";
 
 // Times are seconds into the rendered 16:9 video (2.6 s of title card first).
+// In the order of the website's top ten.
 const CLIPS = [
+  { id: "ease", file: "tour-ease", from: 8.4, to: 13.4, poster: 12.4 },
+  { id: "text", file: "tour-text", from: 10.6, to: 14.2, poster: 12.8 },
+  { id: "duplicate", file: "05-duplicate", from: 11.2, to: 18.2, poster: 17.5 },
+  { id: "fx", file: "tour-fx", from: 7.0, to: 14.6, poster: 8.2 },
   { id: "resize", file: "01-resize", from: 11.0, to: 17.8, poster: 17.5 },
   { id: "silence", file: "02-silence", from: 6.4, to: 15.6, poster: 15.4 },
   { id: "follow", file: "03-follow", from: 10.2, to: 18.0, poster: 16.0 },
   { id: "unprecomp", file: "04-unprecomp", from: 5.2, to: 11.2, poster: 10.0 },
-  { id: "duplicate", file: "05-duplicate", from: 11.2, to: 18.2, poster: 17.5 },
   { id: "sequence", file: "06-sequence", from: 6.4, to: 12.2, poster: 12.0 },
   { id: "align", file: "07-align", from: 15.4, to: 21.2, poster: 21.0 },
-  { id: "gaps", file: "08-gaps", from: 5.2, to: 10.0, poster: 9.8 },
-  { id: "anchor", file: "09-anchor", from: 5.0, to: 12.0, poster: 9.0 },
-  { id: "gradient", file: "10-gradient", from: 8.6, to: 15.6, poster: 12.0 },
 ];
-
 // The tour: one moment from each tab, then two from Tools.
 const HERO = [
   { file: "tour-text", from: 10.7, to: 13.6 },
@@ -47,7 +47,8 @@ const HERO = [
   { file: "tour-generate", from: 9.6, to: 12.6 },
   { file: "01-resize", from: 13.2, to: 16.4 },
   { file: "03-follow", from: 11.2, to: 14.2 },
-];const XFADE = 0.4;
+];
+const XFADE = 0.4;
 
 function run(args) {
   return new Promise((resolve, reject) => {
