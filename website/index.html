@@ -129,7 +129,8 @@ h1 em { font-style: normal; color: var(--amber); }
 .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 44px 0 0; padding: 0; list-style: none; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .facts li { display: grid; gap: 4px; padding: 18px 20px; background: var(--ink-2); }
 .facts b { font: 700 clamp(22px, 2.6vw, 30px)/1.1 var(--display); }
-.facts span { font-size: 14px; color: var(--fg-2); }
+.facts li > span { font-size: 14px; color: var(--fg-2); }
+.facts b { white-space: nowrap; }
 @media (max-width: 700px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* The viewer frame used for every clip */
@@ -233,6 +234,125 @@ h1 em { font-style: normal; color: var(--amber); }
 .footer-top .brand { margin-right: auto; color: var(--fg); }
 .footer p { margin: 0; max-width: 90ch; }
 
+/* Motion: magnetic buttons, headings that rise in, rolling numbers */
+.mag { transition-property: background, border-color; will-change: transform; }
+.mag-in { display: inline-flex; align-items: center; gap: inherit; pointer-events: none; will-change: transform; }
+.rv { display: inline-block; }
+h1 [data-layer] { white-space: nowrap; }
+.rv-wait .rv { opacity: 0; }
+.odo { display: inline-block; height: 1.1em; clip-path: inset(0 -0.5em); vertical-align: top; }
+.odo > span { display: flex; flex-direction: column; align-items: center; transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.odo > span > span { height: 1.1em; }
+
+/* Inside the panel: the cards turn toward the cursor, with a light that follows it */
+.tab-card {
+  --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%; --lit: 0;
+  position: relative;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+  background: radial-gradient(260px circle at var(--mx) var(--my), rgba(255, 143, 63, calc(0.12 * var(--lit))), transparent 60%), var(--ink-2);
+}
+.tab-card::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: radial-gradient(200px circle at var(--mx) var(--my), rgba(255, 143, 63, calc(0.85 * var(--lit))), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+/* How it works: a comp that the scroll plays */
+.how-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(28px, 4vw, 56px); align-items: center; }
+.how-copy .section-head { margin-bottom: 20px; }
+.how-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.how-steps li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; padding: 14px 16px; border: 1px solid transparent; border-radius: 12px; opacity: 0.55; transition: background 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
+.how-steps li.on { opacity: 1; background: var(--raised); border-color: var(--line-2); }
+.how-steps li.done { opacity: 0.85; }
+.how-n { display: grid; place-items: center; width: 30px; height: 30px; border: 1.5px solid var(--line-2); border-radius: 50%; font: 700 13px/1 var(--mono); color: var(--fg-2); }
+.how-steps li.on .how-n { border-color: var(--amber); color: var(--amber); }
+.how-steps li.done .how-n { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.how-steps b { display: block; font: 600 17px/1.35 var(--display); }
+.how-steps p { margin: 4px 0 0; font-size: 15px; color: var(--fg-2); }
+.how-hint { margin: 16px 0 0; font: 500 13px/1.4 var(--mono); color: var(--mute); }
+.how-comp { position: relative; height: clamp(180px, 20vw, 240px); margin: 14px; border: 1px solid var(--line-2); background: #0e0f12; overflow: hidden; }
+.how-slot { position: absolute; bottom: 12%; width: 10%; border: 1px dashed var(--line-2); }
+.how-slot.sel { border: 1px solid var(--amber); }
+.how-slot.live { border-color: transparent; }
+.how-slot.sel::before, .how-slot.sel::after { content: ""; position: absolute; width: 6px; height: 6px; background: var(--amber); }
+.how-slot.sel::before { left: -4px; top: -4px; }
+.how-slot.sel::after { right: -4px; bottom: -4px; }
+.how-bar { position: absolute; inset: 0; background: linear-gradient(var(--amber-hi), var(--amber)); transform-origin: 50% 100%; transform: scaleY(0); }
+.how-cmd { position: absolute; right: 12px; top: 12px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--raised); font: 700 12px/1 var(--mono); color: var(--fg); opacity: 0; transform: translateY(-6px); transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+.how-cmd.show { opacity: 1; transform: none; }
+.how-cmd.press { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.how-tl { position: relative; margin: 0 14px 14px; border: 1px solid var(--line); background: var(--ink-2); cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.how-ruler { position: relative; height: 22px; margin-left: 84px; }
+.how-ruler span { position: absolute; top: 5px; font: 500 10px/1 var(--mono); color: var(--mute); }
+.how-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); min-height: 26px; border-top: 1px solid var(--line); }
+.how-row b { display: flex; align-items: center; gap: 8px; padding: 0 10px; border-right: 1px solid var(--line); font: 500 11.5px/1 var(--mono); color: var(--fg-2); white-space: nowrap; }
+.how-row b::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--amber); }
+.how-row.sel { background: rgba(255, 143, 63, 0.07); }
+.how-row.sel b { color: var(--fg); }
+.how-lane { position: relative; }
+.how-span { position: absolute; top: 6px; bottom: 6px; border-radius: 3px; background: rgba(255, 143, 63, 0.18); border: 1px solid rgba(255, 143, 63, 0.5); }
+.how-kf { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; background: var(--line-2); transform: rotate(45deg); }
+.how-kf.on { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.how-head { position: absolute; top: 0; bottom: 0; left: 84px; width: 0; pointer-events: none; }
+.how-head::before { content: ""; position: absolute; top: 0; bottom: 0; left: -0.5px; width: 1px; background: var(--amber); }
+.how-head::after { content: ""; position: absolute; top: 2px; left: -6px; width: 12px; height: 13px; background: var(--amber); clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%); }
+@media (max-width: 900px) { .how-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Try it here: three tools to play with */
+.try-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.try-tab { min-height: 44px; padding: 0 18px; border: 1px solid var(--line-2); border-radius: 999px; background: transparent; color: var(--fg-2); font: 600 15px/1 var(--ui); cursor: pointer; }
+.try-tab:hover { color: var(--fg); border-color: var(--amber-edge); }
+.try-tab[aria-selected="true"] { background: var(--amber-soft); border-color: var(--amber-edge); color: var(--amber); }
+.try-grid { display: grid; grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.4fr); gap: clamp(20px, 3vw, 40px); align-items: start; }
+.try-copy { display: grid; gap: 14px; align-content: start; }
+.try-copy h3 { font-size: 22px; }
+.try-copy p { margin: 0; color: var(--fg-2); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button, .chipbtn { min-height: 36px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 999px; background: transparent; color: var(--fg-2); font: 500 14px/1 var(--ui); cursor: pointer; }
+.seg button:hover, .chipbtn:hover { color: var(--fg); border-color: var(--amber-edge); }
+.seg button[aria-pressed="true"] { background: var(--amber-soft); border-color: var(--amber-edge); color: var(--amber); }
+.readout { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.readout code { padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--ink-2); font: 500 13px/1.3 var(--mono); color: var(--fg); overflow-wrap: anywhere; }
+@media (max-width: 900px) { .try-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.seq-cells { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 8px; padding: 22px; cursor: pointer; touch-action: manipulation; }
+.seq-cell { aspect-ratio: 1; border-radius: 3px; background: var(--raised-2); border: 1px solid var(--line-2); }
+@media (max-width: 560px) { .seq-cells { gap: 4px; padding: 14px; } }
+
+.curve-stage { display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: 20px; align-items: center; padding: 18px 22px; }
+.curve-svg { width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.curve-svg .grid line { stroke: var(--line); stroke-width: 1; }
+.curve-svg .box { fill: none; stroke: var(--line-2); }
+.curve-svg .arm { stroke: var(--mute); stroke-width: 1.5; }
+.curve-svg .path { fill: none; stroke: var(--amber); stroke-width: 3; stroke-linecap: round; }
+.curve-svg .end { fill: var(--fg); }
+.curve-svg .knob { fill: var(--ink); stroke: var(--amber); stroke-width: 2.5; cursor: grab; }
+.curve-svg .knob:hover, .curve-svg .knob.on { fill: var(--amber); }
+.curve-svg text { fill: var(--mute); font: 500 11px var(--mono); }
+.track { position: relative; height: 76px; border-bottom: 1px dashed var(--line-2); }
+.track svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.track circle { fill: var(--amber); opacity: 0.55; }
+.layer-chip { position: absolute; left: 0; top: 12px; width: 52px; height: 52px; border-radius: 12px; background: var(--amber); box-shadow: 0 10px 30px rgba(255, 143, 63, 0.3); display: grid; place-items: center; }
+.layer-chip::after { content: ""; width: 16px; height: 16px; background: var(--amber-ink); transform: rotate(45deg); }
+@media (max-width: 640px) { .curve-stage { grid-template-columns: minmax(0, 1fr); } .curve-svg { max-width: 240px; justify-self: center; } }
+
+.snap-wrap { padding: 14px; }
+.snap-comp { position: relative; width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--line-2); background: #0e0f12; overflow: hidden; touch-action: none; }
+.snap-comp::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#1c1f26 1.2px, transparent 1.3px); background-size: 24px 24px; }
+.slayer { position: absolute; left: 0; top: 0; display: grid; place-items: center; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; will-change: transform; }
+.slayer.drag { cursor: grabbing; outline: 1px solid var(--amber); outline-offset: 4px; }
+.s-title { padding: 4px 6px; font: 700 clamp(22px, 3.6vw, 40px)/1 var(--display); letter-spacing: -0.02em; }
+.s-logo { width: clamp(48px, 7vw, 72px); aspect-ratio: 1; border-radius: 50%; background: var(--amber); }
+.s-logo::after { content: ""; width: 28%; height: 28%; background: var(--amber-ink); transform: rotate(45deg); }
+.s-third { height: 34px; padding: 0 14px; background: var(--fg); color: var(--ink); font: 700 13px/34px var(--mono); white-space: nowrap; }
+.guide { position: absolute; background: var(--amber); opacity: 0; transition: opacity 0.12s ease; pointer-events: none; }
+.guide.v { top: 0; bottom: 0; width: 1px; }
+.guide.h { left: 0; right: 0; height: 1px; }
+.guide.on { opacity: 1; box-shadow: 0 0 6px var(--amber); }
+.snap-info { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 2px 0; font: 500 12px/1.2 var(--mono); color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.snap-info b { color: var(--amber); font-weight: 500; }
+
 @media (prefers-reduced-motion: reduce) {
   .btn, .faq summary::after { transition: none; }
 }
@@ -262,6 +382,7 @@ h1 em { font-style: normal; color: var(--amber); }
     <a class="brand" href="#top" aria-label="KVFX Tools, back to top"><svg class="mark"><use href="#kvfx-mark"/></svg>KVFX Tools</a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#features">Features</a>
+      <a href="#try">Try it</a>
       <a href="#inside">Inside</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
@@ -296,6 +417,32 @@ h1 em { font-style: normal; color: var(--amber); }
         <div class="viewer-media">
           <video id="hero-video" muted playsinline loop preload="none" width="1280" height="720" poster="assets/clips/hero.webp" aria-label="A tour of the KVFX panel: Text Animate, the Ease curve editor, the Effects Manager, Layouts, Comp Resizer and Follow Layer" data-clip="assets/clips/hero"></video>
           <button class="play" type="button" id="hero-play" hidden aria-label="Play the tour"><svg><use href="#playicon"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how" aria-labelledby="how-title">
+    <div class="wrap how-grid">
+      <div class="how-copy">
+        <div class="section-head">
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-title">Select. Click. Done.</h2>
+        </div>
+        <ol class="how-steps" id="how-steps">
+          <li class="on"><span class="how-n">1</span><div><b>Select your layers</b><p>In the comp or the timeline, the way you always do.</p></div></li>
+          <li><span class="how-n">2</span><div><b>Click a command</b><p>Here it's Sequence ▸ Centre out, from the Tools tab or from search.</p></div></li>
+          <li><span class="how-n">3</span><div><b>Play it back</b><p>The layers start one after another from the middle out, keyframes and all. One undo puts them back.</p></div></li>
+        </ol>
+        <p class="how-hint">Scroll to play it, or drag along the timeline.</p>
+      </div>
+      <div class="viewer" id="how-stage">
+        <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="viewer-bar"><span class="name">Composition · KVFX_SEQUENCE</span><span class="tc" id="how-tc">0:00:00:00</span></div>
+        <div class="how-comp" id="how-comp" aria-hidden="true"><div class="how-cmd" id="how-cmd">Sequence ▸ Centre out</div></div>
+        <div class="how-tl" id="how-tl" role="slider" tabindex="0" aria-label="Timeline: drag or use the arrow keys to scrub" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="how-ruler" id="how-ruler" aria-hidden="true"></div>
+          <div class="how-head" id="how-head"></div>
         </div>
       </div>
     </div>
@@ -339,6 +486,109 @@ h1 em { font-style: normal; color: var(--amber); }
       <div class="fp-more">
         <span>Every one of these has its own short video.</span>
         <a class="btn btn-ghost" href="https://www.youtube.com/" data-youtube rel="noopener"><svg><use href="#playicon"/></svg>Watch the series on YouTube</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="try" aria-labelledby="try-title" style="padding-top: 0">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Try it here</p>
+        <h2 id="try-title">Three of the tools, in your browser</h2>
+        <p class="lede">Drag, click and throw. These run right on this page, so you can get a feel for the panel before you open After Effects.</p>
+      </div>
+      <div class="try-tabs" role="tablist" aria-label="Pick a tool to try" id="try-tabs">
+        <button class="try-tab" type="button" role="tab" id="try-tab-curve" aria-controls="try-curve" aria-selected="true">Curve Editor</button>
+        <button class="try-tab" type="button" role="tab" id="try-tab-seq" aria-controls="try-seq" aria-selected="false" tabindex="-1">Sequence</button>
+        <button class="try-tab" type="button" role="tab" id="try-tab-snap" aria-controls="try-snap" aria-selected="false" tabindex="-1">Snap to the comp</button>
+      </div>
+
+      <div class="try-panel" role="tabpanel" id="try-curve" aria-labelledby="try-tab-curve">
+        <div class="try-grid">
+          <div class="try-copy">
+            <p class="fp-where">Ease ▸ Curve</p>
+            <h3>Draw the ease</h3>
+            <p>Drag the two handles or pick a preset, and the layer moves with that ease straight away. The dots are its frames: close together where it's slow, far apart where it's fast. Pull a handle past the box for overshoot.</p>
+            <p>In the panel, Apply to Keys puts the curve on your keyframes.</p>
+            <div class="seg" role="group" aria-label="Curve preset" id="curve-presets">
+              <button type="button" data-curve="0.80,0,0.20,1" aria-pressed="true">Smooth</button>
+              <button type="button" data-curve="0.16,1,0.30,1" aria-pressed="false">Ease out</button>
+              <button type="button" data-curve="0.34,1.56,0.64,1" aria-pressed="false">Overshoot</button>
+              <button type="button" data-curve="0.68,-0.55,0.27,1.55" aria-pressed="false">Back in-out</button>
+              <button type="button" data-curve="0,0,1,1" aria-pressed="false">Linear</button>
+            </div>
+            <div class="readout"><code id="curve-css">cubic-bezier(0.80, 0.00, 0.20, 1.00)</code><button class="chipbtn" type="button" id="curve-copy">Copy</button></div>
+          </div>
+          <div class="viewer">
+            <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <div class="viewer-bar"><span class="name">Graph · Position speed</span></div>
+            <div class="curve-stage">
+              <svg class="curve-svg" id="curve-svg" viewBox="0 0 300 400" role="img" aria-label="Ease curve with two draggable handles">
+                <g class="grid" id="curve-grid"></g>
+                <rect class="box" x="50" y="100" width="200" height="200"/>
+                <line class="arm" id="arm1"/>
+                <line class="arm" id="arm2"/>
+                <path class="path" id="curve-path"/>
+                <circle class="end" cx="50" cy="300" r="4"/>
+                <circle class="end" cx="250" cy="100" r="4"/>
+                <circle class="knob" id="knob1" r="10" tabindex="0" aria-label="First handle: the arrow keys move it"/>
+                <circle class="knob" id="knob2" r="10" tabindex="0" aria-label="Second handle: the arrow keys move it"/>
+                <text x="50" y="322">time</text>
+                <text x="18" y="94">value</text>
+              </svg>
+              <div class="track" id="track" aria-hidden="true">
+                <svg><g id="spacing"></g></svg>
+                <div class="layer-chip" id="layer-chip"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="try-panel" role="tabpanel" id="try-seq" aria-labelledby="try-tab-seq" hidden>
+        <div class="try-grid">
+          <div class="try-copy">
+            <p class="fp-where">Tools ▸ Sequence</p>
+            <h3>Stagger in any order</h3>
+            <p>Click any square and a wave starts there. Or pick one of the panel's own orders and watch the layers go one after another.</p>
+            <div class="seg" role="group" aria-label="Order" id="seq-order">
+              <button type="button" data-order="click" aria-pressed="true">From your click</button>
+              <button type="button" data-order="first" aria-pressed="false">First to last</button>
+              <button type="button" data-order="last" aria-pressed="false">Last to first</button>
+              <button type="button" data-order="centre" aria-pressed="false">Centre out</button>
+              <button type="button" data-order="edges" aria-pressed="false">Edges in</button>
+              <button type="button" data-order="random" aria-pressed="false">Random</button>
+            </div>
+          </div>
+          <div class="viewer">
+            <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <div class="viewer-bar"><span class="name">Composition · 120 layers</span></div>
+            <div class="seq-cells" id="seq-cells" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="try-panel" role="tabpanel" id="try-snap" aria-labelledby="try-tab-snap" hidden>
+        <div class="try-grid">
+          <div class="try-copy">
+            <p class="fp-where">Align bar</p>
+            <h3>Snap to the comp</h3>
+            <p>Drag the layers around. Near the comp's edges, centre or thirds they snap, and an amber guide shows the line. Let go while moving and they glide, bounce off the edge and settle.</p>
+            <p>In the panel, the align bar lines layers up on the comp's edges and centre in one click, and Grp moves a whole selection as one block.</p>
+          </div>
+          <div class="viewer">
+            <div class="handles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <div class="viewer-bar"><span class="name">Composition · KOVO_INTRO</span></div>
+            <div class="snap-wrap">
+              <div class="snap-comp" id="snap-comp">
+                <div class="slayer s-title" data-name="Title">KOVO</div>
+                <div class="slayer s-logo" data-name="Logo" role="img" aria-label="Logo"></div>
+                <div class="slayer s-third" data-name="Lower third">NEW SEASON · 12.04</div>
+              </div>
+              <div class="snap-info"><span>Layer <b id="si-name">Title</b></span><span>X <b id="si-x">0</b></span><span>Y <b id="si-y">0</b></span><span id="si-snap">Snap: none</span></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -874,6 +1124,706 @@ h1 em { font-style: normal; color: var(--amber); }
       else if (!visible) video.pause();
     }
   }, { threshold: 0.35 }).observe(video);
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  // A spring that eases a value toward a target, with a little overshoot.
+  function spring(stiff, damp) {
+    const s = { x: 0, v: 0, to: 0 };
+    s.step = (dt) => {
+      for (let t = 0; t < dt; t += 1 / 240) {
+        const h = Math.min(1 / 240, dt - t);
+        s.v += (stiff * (s.to - s.x) - damp * s.v) * h;
+        s.x += s.v * h;
+      }
+      return Math.abs(s.v) > 0.01 || Math.abs(s.to - s.x) > 0.01;
+    };
+    return s;
+  }
+  // Buttons in a group act like radio buttons.
+  function pressGroup(group, attr, onPick) {
+    group.addEventListener("click", (e) => {
+      const b = e.target.closest("button[" + attr + "]");
+      if (!b) return;
+      for (const x of group.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+      onPick(b.getAttribute(attr));
+    });
+  }
+
+  // Headline and headings: the hero's headline rises in letter by letter as
+  // the page opens; the other headings rise in word by word as they scroll
+  // into view. Headings already on screen are never hidden first.
+  if (motionOk) {
+    const h1 = document.querySelector(".hero h1");
+    h1.setAttribute("aria-label", h1.textContent.replace(/\s+/g, " ").trim());
+    let n = 0;
+    for (const word of h1.querySelectorAll("[data-layer]")) {
+      const letters = Array.from(word.textContent);
+      word.textContent = "";
+      for (const ch of letters) {
+        const s = document.createElement("span");
+        s.className = "rv";
+        s.textContent = ch;
+        word.append(s);
+        s.animate(
+          [{ transform: "translateY(0.45em)", opacity: 0 }, { transform: "none", opacity: 1 }],
+          { duration: 900, delay: 100 + n++ * 34, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" },
+        );
+      }
+    }
+
+    const reveal = (h) => {
+      h.classList.remove("rv-wait");
+      h.querySelectorAll(".rv").forEach((w, i) => w.animate(
+        [{ transform: "translateY(0.6em)", opacity: 0 }, { transform: "none", opacity: 1 }],
+        { duration: 800, delay: i * 70, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" },
+      ));
+    };
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        io.unobserve(e.target);
+        reveal(e.target);
+      }
+    }, { rootMargin: "0px 0px -10% 0px" });
+    for (const h of document.querySelectorAll("main h2")) {
+      if (h.getBoundingClientRect().top < innerHeight) continue;
+      const words = h.textContent.trim().split(/\s+/);
+      h.textContent = "";
+      words.forEach((w, i) => {
+        if (i) h.append(" ");
+        h.append(Object.assign(document.createElement("span"), { className: "rv", textContent: w }));
+      });
+      h.classList.add("rv-wait");
+      io.observe(h);
+    }
+  }
+
+  // Facts: the numbers roll up into place, each digit a moment after the last.
+  (() => {
+    const nums = [...document.querySelectorAll(".facts b")].filter((b) => /^\d+\+?$/.test(b.textContent.trim()));
+    if (!motionOk || !nums.length) return;
+    const cols = [];
+    for (const b of nums) {
+      const text = b.textContent.trim();
+      const digits = text.replace("+", "").split("").map(Number);
+      const column = "<span>" + "0123456789".repeat(3).split("").map((d) => "<span>" + d + "</span>").join("") + "</span>";
+      b.innerHTML = '<span class="sr">' + text + "</span>" + digits.map(() => '<span class="odo" aria-hidden="true">' + column + "</span>").join("") + (text.endsWith("+") ? '<span aria-hidden="true">+</span>' : "");
+      b.querySelectorAll(".odo > span").forEach((c, i) => cols.push([c, digits[i], i]));
+    }
+    // Two full turns, then the digit: (20 + d) of the column's 30 rows.
+    const set = (rolled) => {
+      for (const [c, d, i] of cols) {
+        c.style.transition = "none";
+        c.style.transform = "translateY(-" + (rolled ? ((20 + d) / 30) * 100 : 0) + "%)";
+        void c.offsetHeight;
+        c.style.transition = "";
+        c.style.transitionDelay = i * 0.12 + "s";
+      }
+    };
+    const roll = () => {
+      for (const [c, d] of cols) c.style.transform = "translateY(-" + ((20 + d) / 30) * 100 + "%)";
+    };
+    // Each column is as wide as the digit it lands on, so "100" keeps its own spacing.
+    document.fonts.ready.then(() => {
+      for (const [c, d] of cols) {
+        const probe = document.createElement("span");
+        probe.textContent = String(d);
+        c.parentElement.after(probe);
+        const em = parseFloat(getComputedStyle(probe).fontSize);
+        c.parentElement.style.width = (probe.getBoundingClientRect().width / em).toFixed(3) + "em";
+        probe.remove();
+      }
+    });
+    const row = document.querySelector(".facts");
+    set(false);
+    new IntersectionObserver(([e], io) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      requestAnimationFrame(roll);
+    }, { threshold: 0.6 }).observe(row);
+  })();
+
+  // Magnetic buttons: the main buttons lean toward a nearby cursor, the
+  // label a little further, and spring back when it leaves.
+  if (motionOk && finePointer) {
+    const magnets = [...document.querySelectorAll(".hero .actions .btn, .price-card .btn, .watch-card .btn")].map((el) => {
+      const inner = document.createElement("span");
+      inner.className = "mag-in";
+      while (el.firstChild) inner.append(el.firstChild);
+      el.append(inner);
+      el.classList.add("mag");
+      return { el, inner, sx: spring(170, 11), sy: spring(170, 11) };
+    });
+    let raf = 0;
+    let last = 0;
+    const tick = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      let moving = false;
+      for (const m of magnets) {
+        if (m.sx.step(dt) | m.sy.step(dt)) moving = true;
+        m.el.style.transform = "translate(" + m.sx.x.toFixed(2) + "px, " + m.sy.x.toFixed(2) + "px)";
+        m.inner.style.transform = "translate(" + (m.sx.x * 0.45).toFixed(2) + "px, " + (m.sy.x * 0.45).toFixed(2) + "px)";
+      }
+      raf = moving ? requestAnimationFrame(tick) : 0;
+    };
+    const kick = () => {
+      if (raf) return;
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+    };
+    addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch") return;
+      // Only the button nearest the cursor leans, so neighbours never meet:
+      // a third of the way to the cursor, at most 10 px, within 80 px of its edge.
+      let near = null;
+      let best = Infinity;
+      for (const m of magnets) {
+        const r = m.el.getBoundingClientRect();
+        m.dx = e.clientX - (r.left + r.width / 2 - m.sx.x);
+        m.dy = e.clientY - (r.top + r.height / 2 - m.sy.x);
+        const gap = Math.max(Math.abs(m.dx) - r.width / 2, Math.abs(m.dy) - r.height / 2, 0);
+        if (gap < 80 && gap < best) {
+          best = gap;
+          near = m;
+        }
+      }
+      let changed = false;
+      for (const m of magnets) {
+        const pull = m === near ? Math.min(0.35, 10 / Math.max(1, Math.hypot(m.dx, m.dy))) : 0;
+        if (m.sx.to !== m.dx * pull || m.sy.to !== m.dy * pull) changed = true;
+        m.sx.to = m.dx * pull;
+        m.sy.to = m.dy * pull;
+      }
+      if (changed) kick();
+    }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", () => {
+      for (const m of magnets) m.sx.to = m.sy.to = 0;
+      kick();
+    });
+  }
+
+  // Inside the panel: each card turns toward the cursor, with a light on it.
+  if (motionOk && finePointer) {
+    for (const card of document.querySelectorAll(".tab-card")) {
+      const s = { rx: 0, ry: 0, mx: 50, my: 50, lit: 0 };
+      const to = { rx: 0, ry: 0, mx: 50, my: 50, lit: 0 };
+      let raf = 0;
+      const tick = () => {
+        let moving = false;
+        for (const k in s) {
+          s[k] += (to[k] - s[k]) * 0.14;
+          if (Math.abs(to[k] - s[k]) > 0.01) moving = true;
+        }
+        card.style.setProperty("--rx", s.rx.toFixed(2) + "deg");
+        card.style.setProperty("--ry", s.ry.toFixed(2) + "deg");
+        card.style.setProperty("--mx", s.mx.toFixed(1) + "%");
+        card.style.setProperty("--my", s.my.toFixed(1) + "%");
+        card.style.setProperty("--lit", s.lit.toFixed(3));
+        raf = moving ? requestAnimationFrame(tick) : 0;
+      };
+      card.addEventListener("pointermove", (e) => {
+        const r = card.getBoundingClientRect();
+        const u = (e.clientX - r.left) / r.width;
+        const v = (e.clientY - r.top) / r.height;
+        Object.assign(to, { ry: (u - 0.5) * 9, rx: (0.5 - v) * 9, mx: u * 100, my: v * 100, lit: 1 });
+        if (!raf) raf = requestAnimationFrame(tick);
+      });
+      card.addEventListener("pointerleave", () => {
+        Object.assign(to, { rx: 0, ry: 0, lit: 0 });
+        if (!raf) raf = requestAnimationFrame(tick);
+      });
+    }
+  }
+
+  // How it works: scrolling plays Sequence ▸ Centre out from start to finish.
+  // The layers are selected, the command runs and spreads them out on the
+  // timeline, then the playhead plays the comp. Dragging the timeline scrubs.
+  (() => {
+    const stage = document.getElementById("how-stage");
+    const comp = document.getElementById("how-comp");
+    const tl = document.getElementById("how-tl");
+    const head = document.getElementById("how-head");
+    const tcEl = document.getElementById("how-tc");
+    const cmd = document.getElementById("how-cmd");
+    const steps = [...document.querySelectorAll("#how-steps li")];
+    const HEIGHTS = [0.42, 0.68, 0.92, 0.56, 0.78];
+    const RANK = [2, 1, 0, 1, 2]; // centre out
+    const STEP = 0.3; // seconds between layers
+    const RISE = 0.6; // seconds each bar takes to rise
+    const END = 3; // the comp's length in seconds
+    const ruler = document.getElementById("how-ruler");
+    for (let s = 0; s <= END; s++) {
+      const shift = s === 0 ? "0" : s === END ? "-100%" : "-50%";
+      ruler.insertAdjacentHTML("beforeend", '<span style="left:' + (s / END) * 100 + "%;transform:translateX(" + shift + ')">' + s + "s</span>");
+    }
+    const layers = HEIGHTS.map((h, i) => {
+      const slot = document.createElement("div");
+      slot.className = "how-slot";
+      slot.style.left = 15 + i * 15 + "%";
+      slot.style.height = h * 76 + "%";
+      const bar = document.createElement("div");
+      bar.className = "how-bar";
+      slot.append(bar);
+      comp.append(slot);
+      const row = document.createElement("div");
+      row.className = "how-row";
+      row.innerHTML = '<b>Bar ' + (i + 1) + '</b><div class="how-lane"><div class="how-span"></div><i class="how-kf"></i><i class="how-kf"></i></div>';
+      tl.insertBefore(row, head);
+      return { slot, bar, row, span: row.querySelector(".how-span"), kf: row.querySelectorAll(".how-kf") };
+    });
+    const ease = (u) => 1 - Math.pow(1 - clamp(u, 0, 1), 3);
+    const back = (u) => {
+      const k = clamp(u, 0, 1) - 1;
+      return 1 + 2.7 * k * k * k + 1.7 * k * k;
+    };
+    function paint(p) {
+      const slide = ease((p - 0.36) / 0.12);
+      const t = clamp((p - 0.52) / 0.42, 0, 1) * END;
+      const active = p < 0.3 ? 0 : p < 0.5 ? 1 : 2;
+      steps.forEach((li, i) => {
+        li.classList.toggle("on", i === active);
+        li.classList.toggle("done", i < active);
+      });
+      cmd.classList.toggle("show", p >= 0.28);
+      cmd.classList.toggle("press", p >= 0.33 && p < 0.4);
+      const lane = layers[0].row.querySelector(".how-lane").clientWidth;
+      head.style.transform = "translateX(" + ((t / END) * lane).toFixed(1) + "px)";
+      tcEl.textContent = tc(t);
+      tl.setAttribute("aria-valuenow", String(Math.round(p * 100)));
+      layers.forEach((l, i) => {
+        const selected = p >= 0.04 + i * 0.045;
+        l.slot.classList.toggle("sel", selected && p < 0.52);
+        l.slot.classList.toggle("live", p >= 0.52);
+        l.row.classList.toggle("sel", selected);
+        const off = RANK[i] * STEP * slide;
+        l.span.style.left = (off / END) * 100 + "%";
+        l.span.style.width = ((END - off) / END) * 100 + "%";
+        l.kf[0].style.left = (off / END) * 100 + "%";
+        l.kf[1].style.left = ((off + RISE) / END) * 100 + "%";
+        l.kf[0].classList.toggle("on", p >= 0.52 && t >= off);
+        l.kf[1].classList.toggle("on", p >= 0.52 && t >= off + RISE);
+        l.bar.style.transform = "scaleY(" + (p < 0.52 ? 0 : Math.max(0, back((t - off) / RISE))).toFixed(3) + ")";
+      });
+    }
+    // From the stage's middle at 90% of the way down the window to 10%.
+    const fromScroll = () => {
+      const r = stage.getBoundingClientRect();
+      return clamp((innerHeight * 0.9 - (r.top + r.height / 2)) / (innerHeight * 0.8), 0, 1);
+    };
+    let shown = 0;
+    let scrub = null;
+    let raf = 0;
+    const tick = () => {
+      const target = scrub ?? fromScroll();
+      shown += (target - shown) * (motionOk ? 0.14 : 1);
+      if (Math.abs(target - shown) < 0.0005) shown = target;
+      paint(shown);
+      raf = shown !== target ? requestAnimationFrame(tick) : 0;
+    };
+    const wake = () => {
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    let near = false;
+    new IntersectionObserver(([e]) => {
+      near = e.isIntersecting;
+      if (near) wake();
+    }, { rootMargin: "100px 0px" }).observe(stage);
+    addEventListener("scroll", () => {
+      if (!near) return;
+      scrub = null;
+      wake();
+    }, { passive: true });
+    addEventListener("resize", wake);
+    const scrubTo = (e) => {
+      const r = layers[0].row.querySelector(".how-lane").getBoundingClientRect();
+      // The playhead covers the back part of the scroll: 0.52 to 0.94.
+      scrub = 0.52 + clamp((e.clientX - r.left) / r.width, 0, 1) * 0.42;
+      wake();
+    };
+    tl.addEventListener("pointerdown", (e) => {
+      tl.setPointerCapture(e.pointerId);
+      scrubTo(e);
+      tl.addEventListener("pointermove", scrubTo);
+    });
+    const stopScrub = () => tl.removeEventListener("pointermove", scrubTo);
+    tl.addEventListener("pointerup", stopScrub);
+    tl.addEventListener("pointercancel", stopScrub);
+    tl.addEventListener("keydown", (e) => {
+      const step = { ArrowRight: 0.02, ArrowUp: 0.02, ArrowLeft: -0.02, ArrowDown: -0.02 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      scrub = clamp((scrub ?? shown) + step, 0, 1);
+      wake();
+    });
+    paint(0);
+  })();
+
+  // Try it here: three tabs, one tool in each.
+  (() => {
+    const tabs = [...document.querySelectorAll("#try-tabs [role=tab]")];
+    const show = (tab, focus) => {
+      for (const t of tabs) {
+        const on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      }
+      if (focus) tab.focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => show(t));
+      t.addEventListener("keydown", (e) => {
+        const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        show(tabs[(i + step + tabs.length) % tabs.length], true);
+      });
+    });
+  })();
+
+  // Try: Curve Editor. Two handles shape the ease, and the layer and its
+  // frame dots follow at once.
+  (() => {
+    const svg = document.getElementById("curve-svg");
+    const k1 = document.getElementById("knob1");
+    const k2 = document.getElementById("knob2");
+    const chip = document.getElementById("layer-chip");
+    const track = document.getElementById("track");
+    const spacing = document.getElementById("spacing");
+    const css = document.getElementById("curve-css");
+    const presets = document.getElementById("curve-presets");
+    const P = (x, y) => [50 + x * 200, 300 - y * 200];
+    let c = [0.8, 0, 0.2, 1];
+    let anim = null;
+    let onScreen = false;
+    const grid = document.getElementById("curve-grid");
+    for (let i = 1; i < 4; i++) {
+      const v = 50 + i * 50;
+      grid.insertAdjacentHTML("beforeend", '<line x1="' + v + '" y1="100" x2="' + v + '" y2="300"/><line x1="50" y1="' + (350 - v) + '" x2="250" y2="' + (350 - v) + '"/>');
+    }
+    // The value at a given time on the curve: find the curve's t for that
+    // time by Newton's method, falling back to bisection.
+    function easeAt(x, [x1, y1, x2, y2]) {
+      const bx = (t) => 3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t;
+      const by = (t) => 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t;
+      const dx = (t) => 3 * (1 - t) * (1 - t) * x1 + 6 * (1 - t) * t * (x2 - x1) + 3 * t * t * (1 - x2);
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const e = bx(t) - x;
+        const d = dx(t);
+        if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break;
+        t -= e / d;
+      }
+      if (t < 0 || t > 1 || Math.abs(bx(t) - x) > 1e-4) {
+        let lo = 0;
+        let hi = 1;
+        t = x;
+        for (let i = 0; i < 40; i++) {
+          if (bx(t) < x) lo = t;
+          else hi = t;
+          t = (lo + hi) / 2;
+        }
+      }
+      return by(t);
+    }
+    const line = (el, [x1, y1], [x2, y2]) => {
+      el.setAttribute("x1", x1);
+      el.setAttribute("y1", y1);
+      el.setAttribute("x2", x2);
+      el.setAttribute("y2", y2);
+    };
+    function render() {
+      const [x1, y1, x2, y2] = c;
+      const a = P(0, 0);
+      const b = P(x1, y1);
+      const d = P(x2, y2);
+      const e = P(1, 1);
+      document.getElementById("curve-path").setAttribute("d", "M" + a + " C" + b + " " + d + " " + e);
+      line(document.getElementById("arm1"), a, b);
+      line(document.getElementById("arm2"), e, d);
+      k1.setAttribute("cx", b[0]);
+      k1.setAttribute("cy", b[1]);
+      k2.setAttribute("cx", d[0]);
+      k2.setAttribute("cy", d[1]);
+      const str = "cubic-bezier(" + c.map((v) => v.toFixed(2)).join(", ") + ")";
+      css.textContent = str;
+      const W = Math.max(0, track.clientWidth - chip.offsetWidth);
+      // 24 frames of the move, as dots along the track.
+      let dots = "";
+      for (let f = 0; f <= 24; f++) dots += '<circle cx="' + (26 + easeAt(f / 24, c) * W).toFixed(1) + '" cy="72" r="2.6"/>';
+      spacing.innerHTML = dots;
+      if (anim) anim.cancel();
+      if (!W) return;
+      anim = chip.animate(
+        [{ transform: "translateX(0)", easing: str }, { transform: "translateX(" + W + "px)", offset: 0.75 }, { transform: "translateX(" + W + "px)" }],
+        { duration: 2000, iterations: Infinity, direction: "alternate" },
+      );
+      if (!onScreen) anim.pause();
+    }
+    const unpress = () => {
+      for (const b of presets.querySelectorAll("button")) b.setAttribute("aria-pressed", "false");
+    };
+    function handle(knob, i) {
+      const move = (e) => {
+        const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+        c[i] = Number(clamp((pt.x - 50) / 200, 0, 1).toFixed(2));
+        c[i + 1] = Number(clamp((300 - pt.y) / 200, -0.5, 1.5).toFixed(2));
+        render();
+      };
+      knob.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        knob.setPointerCapture(e.pointerId);
+        knob.classList.add("on");
+        unpress();
+        knob.addEventListener("pointermove", move);
+      });
+      const up = () => {
+        knob.classList.remove("on");
+        knob.removeEventListener("pointermove", move);
+      };
+      knob.addEventListener("pointerup", up);
+      knob.addEventListener("pointercancel", up);
+      knob.addEventListener("keydown", (e) => {
+        const step = e.shiftKey ? 0.1 : 0.02;
+        const keys = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+        if (!keys[e.key]) return;
+        e.preventDefault();
+        unpress();
+        c[i] = Number(clamp(c[i] + keys[e.key][0], 0, 1).toFixed(2));
+        c[i + 1] = Number(clamp(c[i + 1] + keys[e.key][1], -0.5, 1.5).toFixed(2));
+        render();
+      });
+    }
+    handle(k1, 0);
+    handle(k2, 2);
+    pressGroup(presets, "data-curve", (v) => {
+      c = v.split(",").map(Number);
+      render();
+    });
+    document.getElementById("curve-copy").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      const say = (text, ms) => {
+        btn.textContent = text;
+        setTimeout(() => (btn.textContent = "Copy"), ms);
+      };
+      // Where the clipboard is refused, select the text for Ctrl+C instead.
+      const select = () => {
+        const range = document.createRange();
+        range.selectNodeContents(css);
+        getSelection().removeAllRanges();
+        getSelection().addRange(range);
+        say("Selected: press Ctrl+C", 2200);
+      };
+      try {
+        navigator.clipboard.writeText(css.textContent).then(() => say("Copied", 1400), select);
+      } catch {
+        select();
+      }
+    });
+    new IntersectionObserver(([e]) => {
+      onScreen = e.isIntersecting;
+      if (anim) (onScreen ? anim.play() : anim.pause());
+    }).observe(track);
+    new ResizeObserver(render).observe(track);
+  })();
+
+  // Try: Sequence. Click a square and the wave starts there, or pick one of
+  // the panel's orders.
+  (() => {
+    const box = document.getElementById("seq-cells");
+    const COLS = 15;
+    const ROWS = 8;
+    for (let i = 0; i < COLS * ROWS; i++) box.append(Object.assign(document.createElement("div"), { className: "seq-cell" }));
+    const cells = [...box.children];
+    let order = "click";
+    function play(from) {
+      const fx = from % COLS;
+      const fy = Math.floor(from / COLS);
+      const cx = (COLS - 1) / 2;
+      const cy = (ROWS - 1) / 2;
+      const rank = cells.map((_, i) => {
+        const x = i % COLS;
+        const y = Math.floor(i / COLS);
+        if (order === "first") return i;
+        if (order === "last") return cells.length - 1 - i;
+        if (order === "centre") return Math.hypot(x - cx, y - cy);
+        if (order === "edges") return Math.min(x, COLS - 1 - x, y, ROWS - 1 - y);
+        if (order === "random") return Math.random();
+        return Math.hypot(x - fx, y - fy);
+      });
+      const max = Math.max(...rank) || 1;
+      const spread = order === "first" || order === "last" ? 1400 : 850;
+      cells.forEach((cell, i) => {
+        for (const a of cell.getAnimations()) a.cancel();
+        cell.animate(
+          [
+            { transform: "scale(1) rotate(0deg)", backgroundColor: "#1c1f25", borderColor: "#323744" },
+            { transform: motionOk ? "scale(0.35) rotate(45deg)" : "scale(1)", backgroundColor: "#ff8f3f", borderColor: "#ff8f3f", offset: 0.35 },
+            { transform: "scale(1) rotate(90deg)", backgroundColor: "#1c1f25", borderColor: "#323744" },
+          ],
+          { duration: 820, delay: (rank[i] / max) * spread, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+        );
+      });
+    }
+    const middle = Math.floor(ROWS / 2) * COLS + Math.floor(COLS / 2);
+    box.addEventListener("pointerdown", (e) => {
+      const cell = e.target.closest(".seq-cell");
+      if (cell) play(cells.indexOf(cell));
+    });
+    pressGroup(document.getElementById("seq-order"), "data-order", (o) => {
+      order = o;
+      play(middle);
+    });
+    // Once, the first time the grid shows.
+    new IntersectionObserver(([e], io) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      play(middle);
+    }, { threshold: 0.5 }).observe(box);
+  })();
+
+  // Try: Snap to the comp. Drag a layer: it snaps to the comp's edges,
+  // centre and thirds with a guide. Thrown, it glides and bounces.
+  (() => {
+    const comp = document.getElementById("snap-comp");
+    const layers = [...comp.querySelectorAll(".slayer")];
+    const SNAP = 8;
+    const guides = {};
+    for (const k of ["v", "h"]) {
+      guides[k] = Object.assign(document.createElement("div"), { className: "guide " + k });
+      comp.append(guides[k]);
+    }
+    const hideGuides = () => {
+      guides.v.classList.remove("on");
+      guides.h.classList.remove("on");
+    };
+    const st = new Map();
+    const at = [[0.1, 0.2], [0.7, 0.18], [0.08, 0.72]];
+    const move = (el, s) => (el.style.transform = "translate(" + s.x.toFixed(1) + "px, " + s.y.toFixed(1) + "px)");
+    function place() {
+      const W = comp.clientWidth;
+      const H = comp.clientHeight;
+      layers.forEach((el, i) => {
+        const s = st.get(el) || { vx: 0, vy: 0, raf: 0 };
+        s.x = at[i][0] * W;
+        s.y = at[i][1] * H;
+        st.set(el, s);
+        move(el, s);
+      });
+    }
+    const info = (el, snap) => {
+      const s = st.get(el);
+      document.getElementById("si-name").textContent = el.dataset.name;
+      document.getElementById("si-x").textContent = String(Math.round(s.x + el.offsetWidth / 2));
+      document.getElementById("si-y").textContent = String(Math.round(s.y + el.offsetHeight / 2));
+      document.getElementById("si-snap").textContent = "Snap: " + (snap || "none");
+    };
+    // Where a layer of this size snaps: flush to an edge, or centred on a third or the middle.
+    const lines = (size, total) => [
+      [0, 0, "edge"], [total / 3 - size / 2, total / 3, "third"], [total / 2 - size / 2, total / 2, "centre"],
+      [(2 * total) / 3 - size / 2, (2 * total) / 3, "third"], [total - size, total, "edge"],
+    ];
+    function snap(el, s) {
+      const W = comp.clientWidth;
+      const H = comp.clientHeight;
+      const found = [];
+      hideGuides();
+      for (const [pos, line, name] of lines(el.offsetWidth, W)) {
+        if (Math.abs(s.x - pos) >= SNAP) continue;
+        s.x = pos;
+        guides.v.style.left = clamp(line, 0, W - 1) + "px";
+        guides.v.classList.add("on");
+        found.push(name + " (x)");
+        break;
+      }
+      for (const [pos, line, name] of lines(el.offsetHeight, H)) {
+        if (Math.abs(s.y - pos) >= SNAP) continue;
+        s.y = pos;
+        guides.h.style.top = clamp(line, 0, H - 1) + "px";
+        guides.h.classList.add("on");
+        found.push(name + " (y)");
+        break;
+      }
+      return found.join(", ");
+    }
+    for (const el of layers) {
+      let grab = null;
+      el.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        const s = st.get(el);
+        cancelAnimationFrame(s.raf);
+        // On top of the others first: moving it in the page after capturing would drop the capture.
+        comp.append(el);
+        el.setPointerCapture(e.pointerId);
+        el.classList.add("drag");
+        grab = { dx: e.clientX - s.x, dy: e.clientY - s.y, samples: [[e.clientX, e.clientY, performance.now()]] };
+      });
+      el.addEventListener("pointermove", (e) => {
+        if (!grab) return;
+        const s = st.get(el);
+        s.x = clamp(e.clientX - grab.dx, 0, comp.clientWidth - el.offsetWidth);
+        s.y = clamp(e.clientY - grab.dy, 0, comp.clientHeight - el.offsetHeight);
+        grab.samples.push([e.clientX, e.clientY, performance.now()]);
+        if (grab.samples.length > 5) grab.samples.shift();
+        const label = snap(el, s);
+        move(el, s);
+        info(el, label);
+      });
+      const drop = () => {
+        if (!grab) return;
+        const s = st.get(el);
+        const a = grab.samples[0];
+        const b = grab.samples[grab.samples.length - 1];
+        const dt = Math.max(16, b[2] - a[2]) / 1000;
+        s.vx = motionOk ? (b[0] - a[0]) / dt : 0;
+        s.vy = motionOk ? (b[1] - a[1]) / dt : 0;
+        grab = null;
+        el.classList.remove("drag");
+        let last = performance.now();
+        const glide = (now) => {
+          const t = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          const W = comp.clientWidth - el.offsetWidth;
+          const H = comp.clientHeight - el.offsetHeight;
+          s.x += s.vx * t;
+          s.y += s.vy * t;
+          if (s.x < 0 || s.x > W) {
+            s.x = clamp(s.x, 0, W);
+            s.vx *= -0.5;
+          }
+          if (s.y < 0 || s.y > H) {
+            s.y = clamp(s.y, 0, H);
+            s.vy *= -0.5;
+          }
+          const f = Math.exp(-t * 4.5);
+          s.vx *= f;
+          s.vy *= f;
+          const slow = Math.hypot(s.vx, s.vy) < 30;
+          const label = slow ? snap(el, s) : "";
+          if (!slow) hideGuides();
+          move(el, s);
+          info(el, label);
+          if (slow) {
+            setTimeout(hideGuides, 500);
+            return;
+          }
+          s.raf = requestAnimationFrame(glide);
+        };
+        s.raf = requestAnimationFrame(glide);
+      };
+      el.addEventListener("pointerup", drop);
+      el.addEventListener("pointercancel", drop);
+    }
+    let lastW = 0;
+    new ResizeObserver(() => {
+      if (Math.abs(comp.clientWidth - lastW) < 2) return;
+      lastW = comp.clientWidth;
+      place();
+      info(layers[0], "");
+    }).observe(comp);
+  })();
 })();
 </script>
 </body>

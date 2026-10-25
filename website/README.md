@@ -18,8 +18,8 @@ the ripple. It is drawn on two canvases, so it costs no download.
 
 ## Why it loads fast
 
-* **The first view is light.** It needs only the page (about 43 KB), the
-  fonts and a 34 KB poster image.
+* **The first view is light.** It needs only the page (about 97 KB, or 26 KB
+  compressed as hosts serve it), the fonts and a 34 KB poster image.
 * **Videos wait their turn.**
   * Every `<video>` is `preload="none"` with a WebP poster.
   * The hero clip starts loading only after the page has finished, when the
@@ -134,11 +134,27 @@ Each feature gives `<id>.webm` (AV1), `<id>.mp4` (H.264) and `<id>.webp`
 the tour at the top of the page: Text Animate, the Ease curve, the Effects
 Manager, Layouts, Comp Resizer and Follow Layer.
 
-More interactions to choose from are in `promo/web-lab/index.html` (the
-Motion Lab): a stagger grid, magnetic buttons, text presets, a live ease
-curve, tilt cards, a scroll-driven timeline, a velocity marquee, snap and
-throw, rolling numbers and a cursor follower. Each is plain JavaScript in its
-own block, ready to move into this page.
+## The interactions
+
+All of them are plain JavaScript in `index.html`, with nothing to download:
+
+| Where | What it does |
+|---|---|
+| Hero grid | Dots follow the cursor; a click ripples; a drag selects words and cards. |
+| Hero headline | Rises in letter by letter as the page opens. |
+| Hero and pricing buttons | Lean toward a nearby cursor and spring back (mouse only). |
+| Hero facts | 100+, 8 and 1 roll into place. |
+| How it works | Scrolling plays Sequence ▸ Centre out on a small comp and timeline; dragging the timeline scrubs it. |
+| Try it here | Three tabs: a live ease curve, the Sequence orders on a grid, and layers that snap to the comp. |
+| Inside the panel | The cards turn toward the cursor with a light on them (mouse only). |
+| Section headings | Rise in word by word as they scroll into view. |
+
+With *Reduce motion* turned on, the entrances, the leaning buttons and the
+tilting cards are switched off, and nothing is ever hidden waiting to
+animate. More interactions to choose from are in `promo/web-lab/index.html`
+(the Motion Lab): the velocity marquee and the cursor follower are not on the
+site yet.
+
 
 To change the order of the top ten, move the items in the `#fp-list` list in
 `index.html` (and their numbers), and set the player's default `poster`,

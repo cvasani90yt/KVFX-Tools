@@ -100,7 +100,11 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Duplicate Comp and the Effects Manager), the eight tabs, pricing and
   questions. The hero's dot grid answers the visitor's cursor: dots light up
   and lean away from it, a click sends a ripple, and a drag draws a live
-  selection box that selects the words and cards it touches. The clips are
+  selection box that selects the words and cards it touches. A "How it
+  works" section plays Sequence ▸ Centre out on a comp and timeline as the
+  page scrolls; "Try it here" has a live ease curve, the Sequence orders and
+  layers that snap to the comp; the headline, headings and facts animate in;
+  the main buttons are magnetic and the tab cards tilt. The clips are
   32–180 KB (AV1 WebM with an H.264 MP4 fallback) and load only after the
   page, one at a time as they scroll into view; `scripts/website-clips.mjs`
   makes them from the feature videos. The README covers hosting, checkout
