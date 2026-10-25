@@ -85,6 +85,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paced to its voiceover, with the cursor resting on whatever is being
   described. Every click happens once, as the voice names it; the edit no
   longer loops or freezes a recording to fill time
+- `promo/features/` makes ten short videos of the top Tools features, each
+  in 16:9 for YouTube (panel left, comp right) and 9:16 for Shorts and Reels:
+  a title card, a real panel recording that clicks each control once, an
+  animated comp that follows the shipped code, captions that work without
+  sound, and an end card naming the next video. `scripts/feature-videos.mjs`
+  renders them, with click and whoosh sounds it generates itself
+- `scripts/promo-capture.mjs` saves the cursor's path and the click times
+  next to each feature recording, so the edit can follow the cursor
+- The walkthrough's Polish recording now really switches the align bar to Grp;
+  the capture had been aiming at Distribute Vertically
 
 ### Added — Unprecompose
 - **Unprecompose** (Tools ▸ Layer, and search): the layers inside the

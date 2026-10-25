@@ -89,4 +89,18 @@ export default tseslint.config(
     },
     rules: { "no-console": "off" },
   },
+
+  // The feature-video studio runs in a browser page.
+  {
+    files: ["promo/features/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        document: "readonly",
+        fetch: "readonly",
+        Image: "readonly",
+        location: "readonly",
+        URLSearchParams: "readonly",
+      },
+    },
+  },
 );

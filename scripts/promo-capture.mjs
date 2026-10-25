@@ -1,9 +1,10 @@
-import { mkdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
 import { repoRoot } from "./paths.mjs";
+import { FEATURE_CLIPS } from "../promo/features/features.mjs";
 
 /**
  * Records the panel in use, for the promo.
@@ -27,8 +28,11 @@ import { repoRoot } from "./paths.mjs";
  * Usage: node scripts/promo-capture.mjs [--clip ease,text,palette,tools,generate] [--dry]
  * Output: promo/assets/clips/<clip>.mp4 at 760 x 1720, 30 fps. Clips whose
  * name starts with "wt-" are for the walkthrough and go to
- * promo/walkthrough/assets/clips instead. --dry walks every clip without
- * taking screenshots, to check its targets resolve.
+ * promo/walkthrough/assets/clips instead; "tf-" clips are the Tools feature
+ * videos' (promo/features/features.mjs) and go to promo/features/assets/clips,
+ * each with a .json beside it: the cursor's path and the click times, which
+ * the feature videos follow. --dry walks every clip without taking
+ * screenshots, to check its targets resolve (and still writes the .json).
  */
 
 const args = process.argv.slice(2);
@@ -43,6 +47,7 @@ const SCALE = 2;
 const workDir = join(repoRoot, "build", "preview", "work");
 const outDir = join(repoRoot, "promo", "assets", "clips");
 const walkthroughDir = join(repoRoot, "promo", "walkthrough", "assets", "clips");
+const featuresDir = join(repoRoot, "promo", "features", "assets", "clips");
 const DRY = args.includes("--dry");
 const framesRoot = join(repoRoot, "build", "promo-frames");
 
@@ -298,7 +303,7 @@ const CLIPS = {
     duration: 36,
     // The align bar's reference starts on Auto; Grp is three clicks along,
     // made before recording so the viewer never sees one spot clicked thrice.
-    setup: [["click", ".kvfx-alignbar button:last-child"], ["click", ".kvfx-alignbar button:last-child"], ["click", ".kvfx-alignbar button:last-child"]],
+    setup: [["click", ".kvfx-cycle"], ["click", ".kvfx-cycle"], ["click", ".kvfx-cycle"]],
     cursor: [
       [0, 330, 620],
       [2.6, 250, 360], [4.4, 230, 330], [5.2, 163, 432],
@@ -313,7 +318,7 @@ const CLIPS = {
       ...stay(18.4, 19.2, B("Rotation")),
       ...stay(19.6, 20.6, B("Scale")),
       ...stay(21.0, 22.6, B("Opacity")),
-      ...stay(23.6, 24.6, S(".kvfx-alignbar button:last-child")),
+      ...stay(23.6, 24.6, S(".kvfx-cycle")),
       ...stay(25.0, 26.0, B("Align vertical centre")),
       ...stay(26.6, 28.8, B("Align horizontal centre")),
       ...stay(30.6, 31.4, S('[data-section="tools.arrange"] input[aria-label="Gap"]', 30)),
@@ -410,6 +415,7 @@ const CLIPS = {
       ...typed(7.6, "dup", 8),
     ],
   },
+  ...FEATURE_CLIPS,
 };
 
 // ---------------------------------------------------------------------------
@@ -618,6 +624,9 @@ async function record(browser, port, name, clip) {
   let lastClick = -1;
   let last = null;
   let scroll = null;
+  // The cursor's path and the clicks, for clips that are edited to follow them.
+  const track = [];
+  const clicks = [];
   for (let f = 0; f < total; f++) {
     const t = f / FPS;
     if (scroll) {
@@ -634,9 +643,9 @@ async function record(browser, port, name, clip) {
       const [, kind, value, extra] = pending.shift();
       if (kind === "down") { await page.mouse.down(); down = true; }
       if (kind === "up") { await page.mouse.up(); down = false; }
-      if (kind === "click") { await page.mouse.down(); await page.mouse.up(); lastClick = t; }
+      if (kind === "click") { await page.mouse.down(); await page.mouse.up(); lastClick = t; clicks.push(t); }
       // A drawn click only: a real one would open a native dropdown, which never renders here.
-      if (kind === "tap") lastClick = t;
+      if (kind === "tap") { lastClick = t; clicks.push(t); }
       if (kind === "key") await page.keyboard.press(value);
       if (kind === "type") await page.keyboard.type(value);
       if (kind === "scroll") scroll = { ...(await scrollTarget(page, value)), t0: t, duration: extra ?? 0.8 };
@@ -646,18 +655,24 @@ async function record(browser, port, name, clip) {
     const now = (f + 1) * (1000 / FPS);
     const age = lastClick < 0 ? -1 : (t - lastClick) * 1000;
     const [x, y] = pos ?? [0, 0];
+    track.push(pos ? [Math.round(x * 10) / 10, Math.round(y * 10) / 10] : null);
     await page.evaluate(`window.__kvFrame(${String(now)}, ${String(x)}, ${String(y)}, ${String(pos !== null)}, ${String(down)}, ${String(age)})`);
     if (process.env["KVFX_CAPTURE_TRACE"] === "1") console.log(`${name} frame ${String(f)}`);
     if (!DRY) await shoot(page, join(frames, `f${String(f).padStart(4, "0")}.png`));
     else if (process.env["KVFX_CAPTURE_DEBUG"] === "1" && f % (FPS / 2) === 0) await page.screenshot({ path: join(frames, `debug-${String(f).padStart(4, "0")}.png`), scale: "css" });
   }
   await context.close();
+  if (name.startsWith("tf-")) {
+    await mkdir(featuresDir, { recursive: true });
+    const sidecar = { fps: FPS, size: [VIEWPORT.width, VIEWPORT.height], clicks, cursor: track };
+    await writeFile(join(featuresDir, `${name}.json`), JSON.stringify(sidecar) + "\n");
+  }
   if (DRY) {
     console.log(`Walked ${name} (${String(total)} frames)`);
     return;
   }
 
-  const target = join(name.startsWith("wt-") ? walkthroughDir : outDir, `${name}.mp4`);
+  const target = join(name.startsWith("wt-") ? walkthroughDir : name.startsWith("tf-") ? featuresDir : outDir, `${name}.mp4`);
   await run(process.env["KVFX_FFMPEG"] ?? "ffmpeg", [
     "-y", "-loglevel", "error", "-framerate", String(FPS), "-i", join(frames, "f%04d.png"),
     "-c:v", "libx264", "-preset", "slow", "-crf", "14", "-tune", "animation",
