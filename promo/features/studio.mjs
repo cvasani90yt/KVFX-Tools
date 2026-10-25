@@ -68,14 +68,13 @@ async function fonts() {
 }
 
 /**
- * Where the panel window looks, frame by frame: it follows the cursor with a
- * soft spring, a little ahead of it, and stays still while the cursor is
- * comfortably inside the window.
+ * Where the panel window looks, frame by frame. It follows the cursor with a
+ * soft spring, a little ahead of it, but never strays far from the control
+ * that will be clicked next (or was clicked last), so a cursor resting
+ * between clicks doesn't pull the view into another section.
  */
 function panelTops(track, clicks, visible) {
   const n = track.length;
-  // After the last click the cursor only drifts; the window stays on the feature.
-  const settle = Math.round(((clicks.length ? Math.max(...clicks) : 0) + 0.8) * FPS);
   const ys = new Array(n);
   let last = PANEL.h / 2;
   for (let i = 0; i < n; i++) {
@@ -83,20 +82,28 @@ function panelTops(track, clicks, visible) {
     if (p) last = p[1];
     ys[i] = last;
   }
+  const clickFrames = clicks.map((t) => clamp(Math.round(t * FPS), 0, n - 1)).sort((a, b) => a - b);
+  const anchorY = (i) => {
+    const next = clickFrames.find((f) => f >= i);
+    return ys[next ?? clickFrames[clickFrames.length - 1] ?? i];
+  };
+  const reach = visible * 0.32;
   const lead = Math.round(0.5 * FPS);
   const maxTop = PANEL.h - visible;
-  const want = (i) => clamp(ys[Math.min(n - 1, i + lead)] - visible * 0.42, 0, maxTop);
+  const focus = (i) => {
+    const a = anchorY(i);
+    return clamp(ys[Math.min(n - 1, i + lead)], a - reach, a + reach);
+  };
+  const want = (i) => clamp(focus(i) - visible * 0.45, 0, maxTop);
   const tops = new Float32Array(n);
-  // Start where the first rest is, so the opening frame doesn't pan.
-  let top = want(Math.min(n - 1, Math.round(2.4 * FPS)));
+  let top = want(0);
   let v = 0;
   const omega = 5.5;
   const dt = 1 / FPS;
   for (let i = 0; i < n; i++) {
-    const y = ys[Math.min(n - 1, i + lead)];
-    const inside = y > top + visible * 0.18 && y < top + visible * 0.78;
-    // Still while the cursor waits at its starting spot.
-    const target = inside || i < 1.6 * FPS || i > settle ? top : want(i);
+    const y = focus(i);
+    const inside = y > top + visible * 0.2 && y < top + visible * 0.75;
+    const target = inside ? top : want(i);
     v += (omega * omega * (target - top) - 2 * omega * v) * dt;
     top += v * dt;
     tops[i] = clamp(top, 0, maxTop);
