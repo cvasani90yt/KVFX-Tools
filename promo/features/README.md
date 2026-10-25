@@ -51,6 +51,7 @@ sound off.
 | `studio.html`, `studio.mjs` | Draws any frame of any video, in either format. |
 | `assets/clips/tf-*.mp4` | The panel recordings at 2× (760 × 1720, 30 fps). |
 | `assets/clips/tf-*.json` | Each recording's cursor path and click times. |
+| `upload-copy.md` | Titles, descriptions and captions for each upload. |
 | `../../scripts/feature-videos.mjs` | Renders the MP4s. |
 
 ## Render
