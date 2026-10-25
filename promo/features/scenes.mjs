@@ -501,14 +501,18 @@ function silenceScene(ctx, c, { times: T }) {
     ctx.fillRect(0, track.y - 10, area.w, track.h + 20);
     text(ctx, track.name, 24, track.y + 26, `600 19px ${FONT.ui}`, C.fg);
     text(ctx, "selected", 24, track.y + 52, `500 14px ${FONT.mono}`, C.amber);
-    // Kept pieces, slid left as the pauses close.
+    // One clip until the cut; then the kept pieces, slid left as the pauses close.
     const pieces = [];
-    let from = 0;
-    for (const [a, b] of PAUSES) {
-      pieces.push([from, a]);
-      from = b;
+    if (cut <= 0) {
+      pieces.push([0, VOICE]);
+    } else {
+      let from = 0;
+      for (const [a, b] of PAUSES) {
+        pieces.push([from, a]);
+        from = b;
+      }
+      pieces.push([from, VOICE]);
     }
-    pieces.push([from, VOICE]);
     pieces.forEach(([a, b], i) => {
       const xa = toX(mapT(a));
       const xb = toX(mapT(a) + (b - a));
