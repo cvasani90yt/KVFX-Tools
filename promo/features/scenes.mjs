@@ -1591,6 +1591,431 @@ function gradientScene(ctx, c, { times: T }) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Tour · Text Animate
+// ---------------------------------------------------------------------------
+
+const WORDS = ["Make", "every", "word", "land."];
+/** Ease-out with overshoot, peaking about 30 % past the target. */
+const overshoot = (p) => {
+  const k = 3.2;
+  return 1 + (k + 1) * Math.pow(p - 1, 3) + k * Math.pow(p - 1, 2);
+};
+
+function textScene(ctx, c, { times: T }) {
+  const live = c >= T.animate;
+  const lt = live ? (c - T.animate - 0.1) % 2.6 : 99;
+  const step = 6 / 30;
+  const each = 15 / 30;
+  const { area, strip } = frame(ctx, {
+    title: "Composition · MAIN_COMP",
+    tc: tcode(live ? Math.max(0, lt) : c),
+    stripH: 150,
+    stripTitle: "Animate · Headline",
+    stripRight: live ? "Still live text" : "",
+  });
+  const cv = compView(area, 1920, 1080);
+  enterComp(ctx, cv);
+  // Two lines, animated word by word in reading order.
+  const font = `700 150px ${FONT.display}`;
+  ctx.font = font;
+  const space = 46;
+  const lines = [WORDS.slice(0, 2), WORDS.slice(2)];
+  const lineY = [470, 680];
+  let index = 0;
+  let widest = 0;
+  lines.forEach((line, row) => {
+    const widths = line.map((w) => ctx.measureText(w).width);
+    const total = widths.reduce((a, b) => a + b, 0) + space * (line.length - 1);
+    widest = Math.max(widest, total);
+    let x = 960 - total / 2;
+    line.forEach((w, i) => {
+      const n = index++;
+      const p = clamp((lt - n * step) / each);
+      const scale = live ? Math.max(0, overshoot(p)) : 1;
+      const cx = x + widths[i] / 2;
+      ctx.save();
+      ctx.globalAlpha = live ? clamp(p * 2.2) : 1;
+      ctx.translate(cx, lineY[row] - 52);
+      ctx.scale(scale, scale);
+      text(ctx, w, 0, 52, font, n === WORDS.length - 1 ? C.amber : C.fg, "center");
+      ctx.restore();
+      x += widths[i] + space;
+    });
+  });
+  // The text layer's selection box: it is one layer, still editable.
+  selBox(ctx, 960 - widest / 2 - 40, lineY[0] - 150, widest + 80, lineY[1] - lineY[0] + 210, cv.k, C.fg, 0.55);
+  ctx.restore();
+
+  const preset = c >= T.pop ? "Pop" : "Rise";
+  const unit = c >= T.words ? "Words" : "Chars";
+  const stagger = c >= T.stagger + 0.4 ? "6 fr" : "2 fr";
+  const stats = [["Preset", preset], ["Mode", "In"], ["By", unit], ["Stagger", stagger]];
+  stats.forEach(([k, v], i) => {
+    const sx = strip.x + i * (strip.w / 4);
+    text(ctx, k, sx, strip.y + 18, `500 16px ${FONT.ui}`, C.fg2);
+    text(ctx, v, sx, strip.y + 58, `700 28px ${FONT.display}`, C.fg);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tour · Ease curve
+// ---------------------------------------------------------------------------
+
+/** The curve the recording drags out, as the panel shows it. */
+const CURVE = [0.804, -0.002, 0.196, 0.998];
+const bez = (p1, p2, t) => 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t;
+const bezD = (p1, p2, t) => 3 * (1 - t) * (1 - t) * p1 + 6 * (1 - t) * t * (p2 - p1) + 3 * t * t * (1 - p2);
+function curveParam(u) {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (bez(CURVE[0], CURVE[2], mid) < u) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+const eased = (u) => bez(CURVE[1], CURVE[3], curveParam(u));
+function easedSpeed(u) {
+  const t = curveParam(u);
+  return bezD(CURVE[1], CURVE[3], t) / Math.max(1e-4, bezD(CURVE[0], CURVE[2], t));
+}
+
+function easeScene(ctx, c, { times: T }) {
+  const easedOn = seg(c, T.apply + 0.1, T.apply + 0.5);
+  const X0 = 380;
+  const X1 = 1540;
+  const Y = 470;
+  const MOVE = 1.4;
+  const HOLD = 0.45;
+  const period = 2 * (MOVE + HOLD);
+  const local = ((c % period) + period) % period;
+  let u;
+  if (local < MOVE) u = local / MOVE;
+  else if (local < MOVE + HOLD) u = 1;
+  else if (local < 2 * MOVE + HOLD) u = 1 - (local - MOVE - HOLD) / MOVE;
+  else u = 0;
+  const k = lerp(u, eased(u), easedOn);
+  const { area, strip } = frame(ctx, {
+    title: "Composition · MAIN_COMP",
+    tc: tcode(local),
+    stripH: 210,
+    stripTitle: "Graph Editor · Position speed",
+    stripRight: easedOn > 0.5 ? "Custom ease 0.80, 0, 0.20, 1" : "Linear",
+  });
+  const cv = compView(area, 1920, 1080);
+  enterComp(ctx, cv);
+  // The motion path, with a dot for every frame: their spacing is the speed.
+  ctx.strokeStyle = "rgba(255,143,63,0.35)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(X0, Y);
+  ctx.lineTo(X1, Y);
+  ctx.stroke();
+  const frames = Math.round(MOVE * 30);
+  for (let f = 0; f <= frames; f++) {
+    const a = f / frames;
+    const px = lerp(X0, X1, lerp(a, eased(a), easedOn));
+    ctx.fillStyle = "rgba(255,143,63,0.85)";
+    ctx.beginPath();
+    ctx.arc(px, Y, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (const kx of [X0, X1]) {
+    ctx.fillStyle = C.fg;
+    ctx.fillRect(kx - 9, Y - 9, 18, 18);
+  }
+  const bx = lerp(X0, X1, k);
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 16;
+  rr(ctx, bx - 90, Y + 60, 180, 180, 44);
+  ctx.fillStyle = C.amber;
+  ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = "rgba(14,15,18,0.85)";
+  ctx.save();
+  ctx.translate(bx, Y + 150);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-26, -26, 52, 52);
+  ctx.restore();
+  ctx.restore();
+
+  // Speed over one move: flat when linear, a bell once eased.
+  const gx0 = strip.x + 40;
+  const gx1 = strip.x + strip.w - 20;
+  const gy1 = strip.y + strip.h - 14;
+  const gy0 = strip.y + 6;
+  const maxSpeed = 4.4;
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(gx0, gy0);
+  ctx.lineTo(gx0, gy1);
+  ctx.lineTo(gx1, gy1);
+  ctx.stroke();
+  text(ctx, "speed", gx0 - 8, gy0 + 12, `500 13px ${FONT.mono}`, C.mute, "right");
+  ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const a = i / 200;
+    const v = lerp(1, easedSpeed(Math.min(0.999, Math.max(0.001, a))), easedOn);
+    const x = lerp(gx0, gx1, a);
+    const y = gy1 - (v / maxSpeed) * (gy1 - gy0);
+    if (i) ctx.lineTo(x, y);
+    else ctx.moveTo(x, y);
+  }
+  ctx.strokeStyle = C.amber;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // The playhead on the graph, during the forward move.
+  if (local < MOVE) {
+    const x = lerp(gx0, gx1, local / MOVE);
+    ctx.fillStyle = C.fg;
+    ctx.fillRect(x - 1, gy0, 2, gy1 - gy0);
+  }
+  for (const kx of [gx0, gx1]) {
+    ctx.save();
+    ctx.translate(kx, gy1);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = C.fg;
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tour · Effects Manager
+// ---------------------------------------------------------------------------
+
+function fxScene(ctx, c, { times: T }) {
+  // Each switch blends over a quarter second.
+  const state = (changes, start) => {
+    let v = start;
+    let from = start;
+    let at = -1;
+    for (const [t, to] of changes) {
+      if (c >= t) {
+        from = v;
+        v = to;
+        at = t;
+      }
+    }
+    return at < 0 ? v : lerp(from, v, seg(c, at, at + 0.25));
+  };
+  const glow = state([[T.glowOff, 0], [T.allOff, 0], [T.allOn, 1]], 1);
+  const shadow = state([[T.shadowOn, 1], [T.allOff, 0], [T.allOn, 1]], 0);
+  const grad = state([[T.allOff, 0], [T.allOn, 1]], 1);
+  const scanned = c >= T.scan + 0.2;
+  const { area, strip } = frame(ctx, {
+    title: "Composition · MAIN_COMP",
+    tc: tcode(c),
+    stripH: 170,
+    stripTitle: "Effect Controls · Title",
+    stripRight: scanned ? "Scanned: 2 layers, 4 effects" : "",
+  });
+  const cv = compView(area, 1920, 1080);
+  enterComp(ctx, cv, "#14161b", false);
+  // Card BG: locked, with its own Gaussian Blur.
+  ctx.save();
+  ctx.filter = "blur(24px)";
+  rr(ctx, 360, 250, 1200, 580, 80);
+  const bg = ctx.createLinearGradient(360, 250, 1560, 830);
+  bg.addColorStop(0, "#2a2140");
+  bg.addColorStop(1, "#1a2a3a");
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.restore();
+  const word = "KOVO";
+  const font = `700 280px ${FONT.display}`;
+  const y = 640;
+  ctx.font = font;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  const fill = () => {
+    const g = ctx.createLinearGradient(0, y - 220, 0, y);
+    g.addColorStop(0, "#ffb15c");
+    g.addColorStop(1, "#ff4f6d");
+    return g;
+  };
+  // Drop Shadow.
+  if (shadow > 0) {
+    ctx.save();
+    ctx.globalAlpha = shadow;
+    ctx.shadowColor = "rgba(0,0,0,0.9)";
+    ctx.shadowBlur = 30 * cv.k * 2;
+    ctx.shadowOffsetX = 26 * cv.k * 2;
+    ctx.shadowOffsetY = 30 * cv.k * 2;
+    ctx.fillStyle = "#000";
+    ctx.fillText(word, 960, y);
+    ctx.restore();
+  }
+  // Glow.
+  if (glow > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.9 * glow;
+    ctx.shadowColor = "rgba(255,143,63,0.95)";
+    ctx.shadowBlur = 90 * cv.k * 2;
+    ctx.fillStyle = "rgba(255,143,63,0.55)";
+    ctx.fillText(word, 960, y);
+    ctx.restore();
+  }
+  // The text, with or without KVFX Gradient Lock.
+  ctx.save();
+  ctx.fillStyle = "#f2f2f4";
+  ctx.fillText(word, 960, y);
+  if (grad > 0) {
+    ctx.globalAlpha = grad;
+    ctx.fillStyle = fill();
+    ctx.fillText(word, 960, y);
+  }
+  ctx.restore();
+  ctx.restore();
+
+  const rows = [
+    ["Glow", glow],
+    ["Drop Shadow", shadow],
+    ["KVFX Gradient Lock", grad],
+  ];
+  rows.forEach(([name, on], i) => {
+    const ry = strip.y + 10 + i * 36;
+    const lit = on > 0.5;
+    rr(ctx, strip.x, ry - 13, 40, 26, 6);
+    ctx.fillStyle = lit ? C.amberSoft : C.ink;
+    ctx.fill();
+    ctx.strokeStyle = lit ? C.amber : C.line;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    text(ctx, "fx", strip.x + 20, ry + 1, `700 15px ${FONT.mono}`, lit ? C.amber : C.mute, "center", "middle");
+    text(ctx, name, strip.x + 58, ry + 1, `600 19px ${FONT.ui}`, lit ? C.fg : C.mute, "left", "middle");
+    if (!lit) {
+      ctx.font = `600 19px ${FONT.ui}`;
+      ctx.fillStyle = C.mute;
+      ctx.fillRect(strip.x + 58, ry, ctx.measureText(name).width, 1.5);
+    }
+    text(ctx, lit ? "on" : "off", strip.x + 420, ry + 1, `600 16px ${FONT.mono}`, lit ? C.amberHi : C.mute, "left", "middle");
+  });
+  text(ctx, "Card BG · Gaussian Blur · locked, left alone", strip.x + strip.w, strip.y + 82, `500 15px ${FONT.mono}`, C.mute, "right", "middle");
+}
+
+// ---------------------------------------------------------------------------
+// Tour · Layouts (Metric Cards)
+// ---------------------------------------------------------------------------
+
+const METRICS = [
+  { label: "Revenue", value: 48200, prefix: "$", suffix: "", decimals: 0, change: "+12%" },
+  { label: "Active users", value: 12840, prefix: "", suffix: "", decimals: 0, change: "+8%" },
+  { label: "Conversion", value: 7.4, prefix: "", suffix: "%", decimals: 1, change: "+1.2%" },
+];
+
+function formatNumber(v, decimals) {
+  const fixed = v.toFixed(decimals);
+  const [int, frac] = fixed.split(".");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return frac ? `${grouped}.${frac}` : grouped;
+}
+
+function generateScene(ctx, c, { times: T }) {
+  const built = c >= T.build;
+  const lt = c - T.build - 0.1;
+  const step = 5 / 30;
+  const each = 16 / 30;
+  const { area, strip } = frame(ctx, {
+    title: "Composition · MAIN_COMP",
+    tc: tcode(built ? Math.max(0, lt) : 0),
+    stripH: 170,
+    stripTitle: "Timeline · MAIN_COMP",
+    stripRight: built ? "13 layers on one null" : "Empty",
+  });
+  const cv = compView(area, 1920, 1080);
+  enterComp(ctx, cv);
+  if (!built) {
+    text(ctx, "Empty comp", 960, 560, `600 40px ${FONT.ui}`, "rgba(232,234,237,0.25)", "center", "middle");
+  } else {
+    const head = clamp(lt / each);
+    ctx.save();
+    ctx.globalAlpha = head;
+    text(ctx, "Kovo · this week", 150, 300 + (1 - out(head)) * 40, `700 54px ${FONT.display}`, C.fg);
+    ctx.restore();
+    METRICS.forEach((m, i) => {
+      const t0 = (i + 1) * step;
+      const p = clamp((lt - t0) / each);
+      if (p <= 0) return;
+      const x = 150 + i * 560;
+      const y = 380 + (1 - out(p)) * 60;
+      ctx.save();
+      ctx.globalAlpha = clamp(p * 1.6);
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 40;
+      ctx.shadowOffsetY = 16;
+      rr(ctx, x, y, 520, 330, 40);
+      ctx.fillStyle = "#1b1e24";
+      ctx.fill();
+      ctx.restore();
+      rr(ctx, x, y, 520, 330, 40);
+      ctx.strokeStyle = "#353a45";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      text(ctx, m.label, x + 40, y + 70, `600 30px ${FONT.ui}`, C.fg2);
+      const count = clamp((lt - t0 - 0.15) / 1.0);
+      const v = m.value * out(count);
+      text(ctx, `${m.prefix}${formatNumber(v, m.decimals)}${m.suffix}`, x + 38, y + 170, `700 76px ${FONT.display}`, C.fg);
+      const chip = back(clamp((lt - t0 - 0.6) / 0.4));
+      if (chip > 0) {
+        ctx.save();
+        ctx.translate(x + 40, y + 230);
+        ctx.scale(chip, chip);
+        rr(ctx, 0, -2, 130, 50, 25);
+        ctx.fillStyle = "rgba(63,185,80,0.16)";
+        ctx.fill();
+        text(ctx, m.change, 65, 24, `700 26px ${FONT.ui}`, C.ok, "center", "middle");
+        ctx.restore();
+      }
+      // Bars grow from their base.
+      const bars = [0.4, 0.55, 0.48, 0.7, 0.62, 0.85, 1];
+      bars.forEach((b, j) => {
+        const g = out(clamp((lt - t0 - 0.3 - j * 0.05) / 0.5));
+        const h = 110 * b * g;
+        if (h < 1) return;
+        rr(ctx, x + 250 + j * 34, y + 290 - h, 22, h, 6);
+        ctx.fillStyle = j === bars.length - 1 ? C.amber : "rgba(255,143,63,0.35)";
+        ctx.fill();
+      });
+      ctx.restore();
+    });
+  }
+  ctx.restore();
+
+  // Timeline: the null, then each card, staggered by 5 frames.
+  const rows = [["KVFX Layout", "null", 0], ["Header", "text", 0], ...METRICS.map((m, i) => [`${m.label} card`, "shape", (i + 1) * step])];
+  const nameW = 300;
+  const tx0 = strip.x + nameW;
+  const tx1 = strip.x + strip.w;
+  const span = 3;
+  const toX = (t) => tx0 + (t / span) * (tx1 - tx0);
+  rows.forEach(([name, kind, inPoint], i) => {
+    const ry = strip.y + 4 + i * 22;
+    const a = built ? seg(c, T.build, T.build + 0.2) : 0;
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+    text(ctx, name, strip.x + (i > 0 ? 22 : 0), ry + 12, `600 15px ${FONT.ui}`, i === 0 ? C.amberHi : C.fg);
+    if (i > 0) text(ctx, "↳", strip.x, ry + 12, `600 15px ${FONT.ui}`, C.mute);
+    rr(ctx, toX(inPoint), ry, tx1 - toX(inPoint), 14, 3);
+    ctx.fillStyle = kind === "null" ? "rgba(255,143,63,0.45)" : "rgba(127,168,255,0.4)";
+    ctx.fill();
+    ctx.restore();
+  });
+  if (built) {
+    ctx.fillStyle = C.fg;
+    ctx.fillRect(toX(clamp(lt, 0, span)) - 1, strip.y, 2, rows.length * 22 + 4);
+  } else {
+    text(ctx, "No layers yet.", strip.x, strip.y + 14, `500 17px ${FONT.ui}`, C.mute);
+  }
+}
+
 export const SCENES = {
   resize: resizeScene,
   silence: silenceScene,
@@ -1602,4 +2027,8 @@ export const SCENES = {
   gaps: gapsScene,
   anchor: anchorScene,
   gradient: gradientScene,
+  text: textScene,
+  ease: easeScene,
+  fx: fxScene,
+  generate: generateScene,
 };

@@ -30,6 +30,11 @@ const ALIGN = { centreY: 3.0, distribute: 7.0, grp: 11.0, groupX: 13.6, groupY: 
 const GAPS = { even: 3.2, gapField: 8.9, fixed: 11.2 };
 const ANCHOR = { topLeft: 3.0, bottomCentre: 10.2, centre: 16.4 };
 const GRADIENT = { direction: 4.8, lock: 6.4 };
+// The tour of the other tabs.
+const TEXT = { pop: 4.6, words: 5.8, stagger: 6.8, animate: 8.4 };
+const EASE = { grab1: 2.4, drop1: 3.4, grab2: 4.0, drop2: 5.0, apply: 6.6 };
+const FX = { scan: 2.6, shadowOn: 5.0, glowOff: 7.2, allOff: 9.4, allOn: 11.4 };
+const GEN = { metric: 2.6, build: 7.4 };
 
 export const FEATURE_CLIPS = {
   "tf-resize": {
@@ -205,6 +210,68 @@ export const FEATURE_CLIPS = {
       [GRADIENT.direction, "click"], [GRADIENT.lock, "click"],
     ],
   },
+
+  // The tour: one short take on each of the other tabs.
+  "tf-text": {
+    tab: "text",
+    duration: 14,
+    cursor: [
+      [0, 300, 720],
+      ...stay(2.0, 2.6, B("Rise")),
+      ...stay(2.8, 3.4, B("Blur In")),
+      ...stay(3.6, 4.2, B("Bounce Drop")),
+      ...stay(4.4, 5.0, B("Pop")),
+      ...stay(5.5, 6.1, B("Words")),
+      ...stay(6.5, 7.6, S('[data-section="text.animate"] input[aria-label="Stagger"]')),
+      ...stay(8.0, 8.9, B("Animate Text", 30)),
+      [11, 250, 600], [14, 240, 620],
+    ],
+    events: [
+      [0.6, "scroll", S('[data-section="text.animate"]'), 0.9],
+      [TEXT.pop, "click"], [TEXT.words, "click"],
+      [TEXT.stagger, "click"], [TEXT.stagger + 0.1, "key", "Control+A"], ...typed(TEXT.stagger + 0.3, "6"),
+      [TEXT.animate, "click"],
+    ],
+  },
+  "tf-ease": {
+    tab: "ease",
+    duration: 13,
+    cursor: [
+      [0, 320, 640],
+      [2.0, 163, 432], [EASE.grab1, 163, 432], [EASE.drop1, 239, 432], [3.6, 239, 432],
+      [3.9, 217, 271], [EASE.grab2, 217, 271], [EASE.drop2, 141, 271], [5.4, 141, 271],
+      ...stay(6.1, 7.1, B("Apply to Keys", 30)),
+      [9.5, 250, 660], [13, 240, 680],
+    ],
+    events: [[EASE.grab1, "down"], [EASE.drop1, "up"], [EASE.grab2, "down"], [EASE.drop2, "up"], [EASE.apply, "click"]],
+  },
+  "tf-fx": {
+    tab: "fx",
+    duration: 14,
+    cursor: [
+      [0, 300, 700],
+      ...stay(1.2, 1.7, B("Glow")),
+      ...stay(2.1, 3.0, B("Scan Selected Layers")),
+      ...stay(4.4, 5.4, S('input[aria-label="Drop Shadow on"]')),
+      ...stay(6.6, 7.6, S('input[aria-label="Glow on"]')),
+      ...stay(8.8, 9.8, B("All off")),
+      ...stay(10.8, 11.8, B("All on")),
+      [14, 250, 640],
+    ],
+    events: [[FX.scan, "click"], [FX.shadowOn, "click"], [FX.glowOff, "click"], [FX.allOff, "click"], [FX.allOn, "click"]],
+  },
+  "tf-generate": {
+    tab: "generate",
+    duration: 13,
+    cursor: [
+      [0, 300, 700],
+      ...stay(2.0, 3.0, B("Metric Cards")),
+      ...stay(3.6, 5.2, S('input[aria-label="Values"]', 60)),
+      ...stay(6.6, 7.8, B("Build Layout", 40)),
+      [10, 250, 600], [13, 240, 620],
+    ],
+    events: [[GEN.metric, "click"], [5.6, "scroll", B("Build Layout"), 0.6], [GEN.build, "click"]],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -378,6 +445,72 @@ export const FEATURES = [
       [5.8, "Gradient Lock pins the gradient's ends to the edges."],
       [9.4, "As the bar grows, the gradient grows with it."],
       [13.6, "A plain Gradient Ramp stays where it was put."],
+    ],
+  },
+];
+
+// Videos of the other tabs, for the website's tour (not part of the ten).
+export const TOUR = [
+  {
+    id: "text",
+    badge: "TEXT",
+    title: "Text Animate",
+    promise: "Animate any text by letter, word or line, from 41 presets.",
+    where: "Text ▸ Animate",
+    clip: "tf-text",
+    times: TEXT,
+    captions: [
+      [0, "Live text, standing still."],
+      [2.0, "Hover a preset and the preview plays it."],
+      [4.4, "Pop, word by word…"],
+      [6.5, "…six frames apart."],
+      [8.4, "Animate Text. It stays live text."],
+    ],
+  },
+  {
+    id: "ease",
+    badge: "EASE",
+    title: "Curve Editor",
+    promise: "Draw an ease, then apply it to your keyframes.",
+    where: "Ease ▸ Curve",
+    clip: "tf-ease",
+    times: EASE,
+    captions: [
+      [0, "Linear keys: the same speed all the way."],
+      [2.0, "Drag the handles to shape the ease."],
+      [6.1, "Apply to Keys sets the speed and influence of each key."],
+      [8.0, "Now it eases in and out."],
+    ],
+  },
+  {
+    id: "fx",
+    badge: "FX",
+    title: "Effects Manager",
+    promise: "Every effect on the selected layers, in one list.",
+    where: "FX ▸ Effects Manager",
+    clip: "tf-fx",
+    times: FX,
+    captions: [
+      [0, "A title with a glow and a gradient."],
+      [2.1, "Scan lists every effect on the selection."],
+      [4.4, "Switch the drop shadow on…"],
+      [6.6, "…and the glow off."],
+      [8.8, "Or all of them at once."],
+    ],
+  },
+  {
+    id: "generate",
+    badge: "GEN",
+    title: "Layouts",
+    promise: "Interface scenes built from your own words and numbers.",
+    where: "Generate ▸ Layouts",
+    clip: "tf-generate",
+    times: GEN,
+    captions: [
+      [0, "An empty comp."],
+      [2.0, "Pick Metric Cards and type your numbers."],
+      [6.6, "Build Layout."],
+      [7.8, "Ordinary layers on one null, and they animate in."],
     ],
   },
 ];

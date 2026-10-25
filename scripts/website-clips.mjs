@@ -11,8 +11,8 @@ import { repoRoot } from "./paths.mjs";
  * Each feature becomes a short, silent loop of the comp side, cut around the
  * moment the command runs, in two files: AV1 in WebM (smallest, for Chrome,
  * Edge and Firefox) and H.264 in MP4 (for Safari and everything else), plus a
- * WebP poster that shows while the clip loads. The hero gets a montage of
- * four features with the panel in frame.
+ * WebP poster that shows while the clip loads. The hero gets a tour across
+ * the panel's tabs (Text, Ease, FX, Generate, Tools) with the panel in frame.
  *
  * Usage: node scripts/website-clips.mjs
  * Output: website/assets/clips/
@@ -39,13 +39,15 @@ const CLIPS = [
   { id: "gradient", file: "10-gradient", from: 8.6, to: 15.6, poster: 12.0 },
 ];
 
+// The tour: one moment from each tab, then two from Tools.
 const HERO = [
-  { file: "03-follow", from: 11.0, to: 14.2 },
-  { file: "01-resize", from: 13.2, to: 16.8 },
-  { file: "06-sequence", from: 13.8, to: 17.2 },
-  { file: "04-unprecomp", from: 5.4, to: 8.6 },
-];
-const XFADE = 0.4;
+  { file: "tour-text", from: 10.7, to: 13.6 },
+  { file: "tour-ease", from: 8.8, to: 11.9 },
+  { file: "tour-fx", from: 7.2, to: 10.6 },
+  { file: "tour-generate", from: 9.6, to: 12.6 },
+  { file: "01-resize", from: 13.2, to: 16.4 },
+  { file: "03-follow", from: 11.2, to: 14.2 },
+];const XFADE = 0.4;
 
 function run(args) {
   return new Promise((resolve, reject) => {
@@ -94,5 +96,5 @@ for (let i = 1; i < HERO.length; i++) {
 const total = HERO.reduce((sum, h) => sum + h.to - h.from, 0) - XFADE * (HERO.length - 1);
 parts.push(`[x]fade=t=in:st=0:d=0.3:color=${BG},fade=t=out:st=${(total - 0.3).toFixed(2)}:d=0.3:color=${BG},format=yuv420p[v]`);
 await encode(inputs, parts.join(";"), "hero");
-await run(["-ss", "12.0", "-i", join(source, "03-follow-16x9.mp4"), "-frames:v", "1", "-vf", "crop=1904:1071:8:0,scale=1280:720:flags=lanczos", "-c:v", "libwebp", "-quality", "80", join(out, "hero.webp")]);
+await run(["-ss", "12.8", "-i", join(source, "tour-text-16x9.mp4"), "-frames:v", "1", "-vf", "crop=1904:1071:8:0,scale=1280:720:flags=lanczos", "-c:v", "libwebp", "-quality", "80", join(out, "hero.webp")]);
 console.log(`hero: webm ${String(await kb(join(out, "hero.webm")))} KB, mp4 ${String(await kb(join(out, "hero.mp4")))} KB, poster ${String(await kb(join(out, "hero.webp")))} KB`);

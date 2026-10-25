@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
 import { repoRoot } from "./paths.mjs";
-import { FEATURES } from "../promo/features/features.mjs";
+import { FEATURES, TOUR } from "../promo/features/features.mjs";
 
 /**
  * Renders the Tools feature videos (promo/features) to MP4.
@@ -152,8 +152,8 @@ const music = await musicFile();
 try {
   for (const id of only) {
     const index = FEATURES.findIndex((f) => f.id === id);
-    if (index < 0) throw new Error(`Unknown feature "${id}". Known: ${FEATURES.map((f) => f.id).join(", ")}`);
-    const feature = FEATURES[index];
+    const feature = FEATURES[index] ?? TOUR.find((f) => f.id === id);
+    if (!feature) throw new Error(`Unknown feature "${id}". Known: ${[...FEATURES, ...TOUR].map((f) => f.id).join(", ")}`);
     const hasFrames = await extractFrames(feature.clip);
     if (!hasFrames) console.warn(`${feature.clip}.mp4 not recorded yet: the panel shows a placeholder`);
     for (const layout of layouts) {
@@ -163,7 +163,7 @@ try {
       await page.waitForFunction(() => globalThis.studio !== undefined);
       const info = await page.evaluate(([f, l, base]) => globalThis.studio.load(f, l, base), [id, layout, hasFrames ? `/frames/${feature.clip}` : ""]);
       if (!info.fontsOk) console.warn("Unbounded did not load; titles use the fallback face");
-      const name = `${String(index + 1).padStart(2, "0")}-${id}-${layout}`;
+      const name = index < 0 ? `tour-${id}-${layout}` : `${String(index + 1).padStart(2, "0")}-${id}-${layout}`;
       if (stills) {
         await mkdir(join(outDir, "stills"), { recursive: true });
         for (const t of stills) {

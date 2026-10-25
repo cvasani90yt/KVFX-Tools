@@ -4,7 +4,7 @@
 // frame by frame; opening studio.html?feature=follow&layout=16x9&t=12 shows
 // one frame for a quick look.
 
-import { FEATURES } from "./features.mjs";
+import { FEATURES, TOUR } from "./features.mjs";
 import { C, FONT, SCENES, STAGE, clamp, io, out, rr, seg, text } from "./scenes.mjs";
 
 const FPS = 30;
@@ -112,9 +112,10 @@ function panelTops(track, clicks, visible) {
 }
 
 async function load(id, layoutName = "16x9", framesBase = "") {
+  // The ten keep their place in the series; tour videos carry a tab badge instead.
   state.index = FEATURES.findIndex((f) => f.id === id);
-  if (state.index < 0) throw new Error(`Unknown feature ${id}`);
-  state.feature = FEATURES[state.index];
+  state.feature = FEATURES[state.index] ?? TOUR.find((f) => f.id === id);
+  if (!state.feature) throw new Error(`Unknown feature ${id}`);
   state.layout = LAYOUTS[layoutName];
   canvas.width = state.layout.W;
   canvas.height = state.layout.H;
@@ -212,13 +213,13 @@ function titleCard(v, alpha) {
       const r = rise(v, -0.4);
       ctx.globalAlpha = alpha * r.a;
       mark(x + 14, y - 10 + r.dy, 22);
-      text(ctx, "KVFX TOOLS  ·  TOP 10 TOOLS FEATURES", x + 44, y + r.dy, `700 ${vertical ? 26 : 24}px ${FONT.mono}`, C.amber);
+      text(ctx, f.badge ? "KVFX TOOLS  ·  PANEL TOUR" : "KVFX TOOLS  ·  TOP 10 TOOLS FEATURES", x + 44, y + r.dy, `700 ${vertical ? 26 : 24}px ${FONT.mono}`, C.amber);
       y += vertical ? 250 : 230;
     },
     () => {
       const r = rise(v, -0.32);
       ctx.globalAlpha = alpha * r.a;
-      text(ctx, pad2(state.index + 1), x - 8, y + r.dy, `700 ${vertical ? 230 : 210}px ${FONT.display}`, C.amber);
+      text(ctx, f.badge ?? pad2(state.index + 1), x - 8, y + r.dy, `700 ${vertical ? 230 : 210}px ${FONT.display}`, C.amber);
       y += vertical ? 140 : 130;
     },
     () => {
@@ -244,7 +245,7 @@ function endCard(v, alpha) {
   if (alpha <= 0) return;
   const L = state.layout;
   const f = state.feature;
-  const next = FEATURES[state.index + 1];
+  const next = f.badge ? null : FEATURES[state.index + 1];
   const vertical = L.H > L.W;
   const t = v - (INTRO + state.duration);
   ctx.save();
@@ -269,7 +270,7 @@ function endCard(v, alpha) {
   y += vertical ? 120 : 100;
   r = rise(t, 0.35);
   ctx.globalAlpha = alpha * r.a;
-  const label = next ? `Next  ·  ${pad2(state.index + 2)}  ${next.title}` : "That's the top ten. 100+ commands inside.";
+  const label = next ? `Next  ·  ${pad2(state.index + 2)}  ${next.title}` : f.badge ? "100+ commands. One panel." : "That's the top ten. 100+ commands inside.";
   ctx.font = `600 ${vertical ? 34 : 32}px ${FONT.ui}`;
   const w = ctx.measureText(label).width + 64;
   rr(ctx, cx - w / 2, y - 40 + r.dy, w, 64, 32);
@@ -285,7 +286,7 @@ function header(alpha) {
   const f = state.feature;
   ctx.save();
   ctx.globalAlpha = alpha;
-  text(ctx, `${pad2(state.index + 1)} / 10   ·   ${f.where.toUpperCase()}`, L.head.x, L.head.eyebrow, `700 ${L.H > L.W ? 26 : 20}px ${FONT.mono}`, C.amber);
+  text(ctx, f.badge ? `PANEL TOUR   ·   ${f.where.toUpperCase()}` : `${pad2(state.index + 1)} / 10   ·   ${f.where.toUpperCase()}`, L.head.x, L.head.eyebrow, `700 ${L.H > L.W ? 26 : 20}px ${FONT.mono}`, C.amber);
   text(ctx, f.title, L.head.x - 2, L.head.title, `600 ${L.head.size}px ${FONT.display}`, C.fg);
   if (L.W > L.H) {
     mark(L.brand.x + 12, L.brand.y - 9, 20);
@@ -399,7 +400,7 @@ async function renderAt(v) {
   progress(v, total);
 }
 
-globalThis.studio = { load, renderAt, features: FEATURES.map((f) => f.id), INTRO, OUTRO, FPS };
+globalThis.studio = { load, renderAt, features: [...FEATURES, ...TOUR].map((f) => f.id), INTRO, OUTRO, FPS };
 
 // A single frame for a quick look: studio.html?feature=follow&layout=16x9&t=12&frames=/frames/tf-follow
 const params = new URLSearchParams(location.search);

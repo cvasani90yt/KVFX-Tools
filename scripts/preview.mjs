@@ -146,6 +146,18 @@ const STUB = `
       // Once relinked, nothing is missing any more.
       if (/"op":"kvfx\\.op\\.project\\.relink"/.test(source)) RELINKED = true;
       if (op === "kvfx.op.project.missing" && RELINKED) result = { items: [] };
+      // Effects switched on or off stay that way, so the manager's re-scan shows the change.
+      if (/"op":"kvfx\\.op\\.fx\\.setEnabled"/.test(source)) {
+        var on = /"enabled":true/.test(source);
+        var ref = /"id":(\\d+),"index":(\\d+)/g;
+        var hit;
+        while ((hit = ref.exec(source))) {
+          REPLIES["kvfx.op.fx.list"].layers.forEach(function (layer) {
+            if (layer.id !== Number(hit[1])) return;
+            layer.effects.forEach(function (effect) { if (effect.index === Number(hit[2])) effect.enabled = on; });
+          });
+        }
+      }
       if (/"op":"kvfx\\.op\\.audio\\.analyse"/.test(source)) {
         result = { stepCount: 1, steps: [{ op: "kvfx.op.audio.analyse", result: { id: 11, name: "Voiceover", start: 0, frameDuration: 0.04, samples: VOICE } }] };
       }
