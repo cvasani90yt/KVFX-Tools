@@ -185,8 +185,8 @@ Caption: Gradient Lock in KVFX Tools. #AfterEffects #MotionDesign #KVFXTools
 
 ## Bonus · Transitions
 
-File: `tour-transitions-16x9.mp4` (YouTube) and `tour-transitions-9x16.mp4`
-(Shorts, Reels, TikTok).
+Files: `Bonus-transitions-16x9.mp4` (YouTube) and `Bonus-transitions-9x16.mp4`
+(Shorts, Reels, TikTok) in the zip; `tour-transitions-*.mp4` when rendered.
 
 **YouTube:** 27 seamless transitions in one click in After Effects | KVFX Tools
 
