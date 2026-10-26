@@ -8,6 +8,9 @@
 // ranks centre-out as |i − mid|; Comp Resizer's Fit scales by the smaller
 // ratio around the pinned spot; Follow adds the leader's change since the
 // click, delayed; the anchor grid moves the anchor and compensates position.
+// The Transitions tour runs on the plugin's own transition maths.
+
+import { transitionById, transitionPose } from "../../packages/core/dist/transitions/index.js";
 
 export const C = {
   ink: "#0e0f12",
@@ -2016,6 +2019,319 @@ function generateScene(ctx, c, { times: T }) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Tour · Transitions
+// ---------------------------------------------------------------------------
+
+// Four shots of 1.8 s, three cuts. Each cut gets the preset picked in the
+// recording, posed by the plugin's own transition maths (transitionPose), so
+// the comp moves exactly as the generated layer would.
+const SHOT = 1.8;
+const EDIT_FPS = 30;
+const EDIT_END = SHOT * 4;
+const TRANS_CUTS = [
+  { at: SHOT, preset: "whipLeft", add: "add1", seed: 7 },
+  { at: SHOT * 2, preset: "glitch", add: "add2", seed: 23 },
+  { at: SHOT * 3, preset: "bars", add: "add3", seed: 5 },
+];
+const SHOT_NAMES = ["Shot A · Title", "Shot B · City", "Shot C · Hills", "Shot D · End"];
+const TRANS_W = 1280;
+const TRANS_H = 720;
+let shotCache = null;
+let transWork = null;
+
+/** The four stand-in shots, drawn once at 1280 × 720. */
+function transShots() {
+  if (shotCache) return shotCache;
+  const make = (draw) => {
+    const cv = document.createElement("canvas");
+    cv.width = TRANS_W;
+    cv.height = TRANS_H;
+    draw(cv.getContext("2d"), TRANS_W, TRANS_H);
+    return cv;
+  };
+  const floor = (g, w, h, color) => {
+    g.strokeStyle = color;
+    g.lineWidth = 2;
+    for (let i = -8; i <= 8; i++) {
+      g.beginPath();
+      g.moveTo(w / 2 + i * 40, h * 0.66);
+      g.lineTo(w / 2 + i * 260, h);
+      g.stroke();
+    }
+    for (let j = 0; j < 6; j++) {
+      const y = h * 0.66 + Math.pow(j / 6, 1.8) * h * 0.34;
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(w, y);
+      g.stroke();
+    }
+  };
+  shotCache = [
+    make((g, w, h) => {
+      const bg = g.createRadialGradient(w * 0.7, h * 0.35, 20, w * 0.6, h * 0.5, w * 0.8);
+      bg.addColorStop(0, "#6b2c10");
+      bg.addColorStop(1, "#120a08");
+      g.fillStyle = bg;
+      g.fillRect(0, 0, w, h);
+      floor(g, w, h, "rgba(255,143,63,0.22)");
+      g.fillStyle = "#ff8f3f";
+      g.beginPath();
+      g.arc(w * 0.76, h * 0.34, h * 0.15, 0, Math.PI * 2);
+      g.fill();
+      text(g, "KOVO", w * 0.08, h * 0.52, `700 ${String(Math.round(h * 0.3))}px ${FONT.display}`, "#f4efe9");
+    }),
+    make((g, w, h) => {
+      const sky = g.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, "#132650");
+      sky.addColorStop(1, "#05070f");
+      g.fillStyle = sky;
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = "#e8eef8";
+      g.beginPath();
+      g.arc(w * 0.18, h * 0.2, h * 0.07, 0, Math.PI * 2);
+      g.fill();
+      for (let i = 0; i < 14; i++) {
+        const bw = 60 + ((i * 37) % 70);
+        const bh = h * (0.28 + ((i * 53) % 40) / 100);
+        const x = i * (w / 13) - 20;
+        g.fillStyle = i % 2 ? "#0b1226" : "#101a36";
+        g.fillRect(x, h - bh, bw, bh);
+        for (let wy = h - bh + 16; wy < h - 12; wy += 22) {
+          for (let wx = x + 10; wx < x + bw - 10; wx += 18) {
+            if (Math.sin(wx * 12.9 + wy * 7.3) > 0.2) {
+              g.fillStyle = Math.sin(wx + wy) > 0.6 ? "#ffd27a" : "#ff8f3f";
+              g.fillRect(wx, wy, 7, 10);
+            }
+          }
+        }
+      }
+    }),
+    make((g, w, h) => {
+      const sky = g.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, "#8fe0cf");
+      sky.addColorStop(1, "#2f7f78");
+      g.fillStyle = sky;
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = "#fff6d8";
+      g.beginPath();
+      g.arc(w * 0.68, h * 0.3, h * 0.1, 0, Math.PI * 2);
+      g.fill();
+      const hill = (y0, amp, color, phase) => {
+        g.fillStyle = color;
+        g.beginPath();
+        g.moveTo(0, h);
+        for (let x = 0; x <= w; x += 20) g.lineTo(x, y0 + Math.sin(x / 180 + phase) * amp);
+        g.lineTo(w, h);
+        g.fill();
+      };
+      hill(h * 0.6, 40, "#3a9a7c", 0.4);
+      hill(h * 0.72, 32, "#1f6b55", 2.1);
+      hill(h * 0.84, 24, "#0f4235", 4);
+    }),
+    make((g, w, h) => {
+      g.fillStyle = "#101114";
+      g.fillRect(0, 0, w, h);
+      floor(g, w, h, "rgba(255,255,255,0.08)");
+      text(g, "NEW SEASON", w * 0.08, h * 0.44, `700 ${String(Math.round(h * 0.15))}px ${FONT.display}`, "#f4efe9");
+      g.fillStyle = "#ff8f3f";
+      g.fillRect(w * 0.08, h * 0.52, w * 0.3, h * 0.012);
+      text(g, "12.04", w * 0.08, h * 0.66, `700 ${String(Math.round(h * 0.11))}px ${FONT.display}`, "#ff8f3f");
+    }),
+  ];
+  return shotCache;
+}
+
+/** Edit time on screen at recording time c: each new cut on a loop, then the whole edit. */
+function transEditTime(c, T) {
+  if (c >= T.play) return Math.min(EDIT_END - 0.001, c - T.play);
+  let cut = TRANS_CUTS[0];
+  let since = c;
+  for (const cc of TRANS_CUTS) {
+    if (c >= T[cc.add]) {
+      cut = cc;
+      since = c - T[cc.add];
+    }
+  }
+  // 1.3 s either side of the cut, then a short hold, round and round.
+  const loop = 1.5;
+  const k = (since % loop) / 1.3;
+  return cut.at - 0.65 + Math.min(1, k) * 1.3;
+}
+
+/** A transition's span in edit time. */
+function transWindow(cc) {
+  const preset = transitionById(cc.preset);
+  const length = preset.frames / EDIT_FPS;
+  return { preset, start: cc.at - length / 2, end: cc.at + length / 2, length };
+}
+
+/** The shot through the pose: moved like the Transform effect, with Motion Tile copies and motion blur. */
+function transPlaced(g, shot, pose, k) {
+  g.save();
+  g.translate(TRANS_W / 2 + pose.x * k, TRANS_H / 2 + pose.y * k);
+  g.rotate((pose.rotation * Math.PI) / 180);
+  g.scale(pose.scaleX / 100, pose.scaleY / 100);
+  const reach = pose.tiled ? 1 : 0;
+  for (let ix = -reach; ix <= reach; ix++) for (let iy = -reach; iy <= reach; iy++) g.drawImage(shot, -TRANS_W / 2 + ix * TRANS_W, -TRANS_H / 2 + iy * TRANS_H);
+  g.restore();
+}
+
+function transCopy() {
+  const copy = document.createElement("canvas");
+  copy.width = TRANS_W;
+  copy.height = TRANS_H;
+  copy.getContext("2d").drawImage(transWork, 0, 0);
+  return copy;
+}
+
+/** The glitch's tearing, fringing and inverted frames, sketched from its effect amounts. */
+function transGlitch(g, pose, k) {
+  const a = pose.amounts;
+  const tear = a["ADBE Wave Warp-0002"] ?? 0;
+  if (tear > 0.5) {
+    const copy = transCopy();
+    const width = Math.max(4, (a["ADBE Wave Warp-0003"] ?? 120) * k);
+    const phase = ((a["ADBE Wave Warp-0007"] ?? 0) * Math.PI) / 180;
+    const slice = 12;
+    g.clearRect(0, 0, TRANS_W, TRANS_H);
+    for (let y = 0; y < TRANS_H; y += slice) {
+      const dx = Math.sign(Math.sin((y / width) * Math.PI * 2 + phase)) * tear * k * 1.4;
+      g.drawImage(copy, 0, y, TRANS_W, slice, dx, y, TRANS_W, slice);
+    }
+  }
+  const red = a["ADBE Channel Blur-0001"] ?? 0;
+  if (red > 0.5) {
+    const copy = transCopy();
+    g.save();
+    g.globalCompositeOperation = "screen";
+    g.globalAlpha = Math.min(0.65, red / 50);
+    g.filter = "sepia(1) saturate(8) hue-rotate(-40deg)";
+    g.drawImage(copy, -red * k * 0.8, 0);
+    g.filter = "sepia(1) saturate(8) hue-rotate(170deg)";
+    g.drawImage(copy, red * k * 0.55, 0);
+    g.restore();
+  }
+  const invert = a["ADBE Invert-0002"];
+  if (invert !== undefined && invert < 50) {
+    const copy = transCopy();
+    g.save();
+    g.filter = "invert(1)";
+    g.drawImage(copy, 0, 0);
+    g.restore();
+  }
+}
+
+/** One frame of the edit, at edit time e, with the transitions added so far. */
+function transFrame(e, active) {
+  const shots = transShots();
+  if (!transWork) {
+    transWork = document.createElement("canvas");
+    transWork.width = TRANS_W;
+    transWork.height = TRANS_H;
+  }
+  const g = transWork.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.filter = "none";
+  g.globalCompositeOperation = "source-over";
+  g.clearRect(0, 0, TRANS_W, TRANS_H);
+  const index = Math.min(3, Math.floor(e / SHOT));
+  const k = TRANS_W / 1920;
+  const on = active.map((cc) => ({ cc, ...transWindow(cc) })).find((w) => e >= w.start && e < w.end);
+  if (!on) {
+    g.drawImage(shots[index], 0, 0);
+    return { name: null };
+  }
+  const t = (e - on.start) / on.length;
+  const shot = shots[t < 0.5 ? TRANS_CUTS.indexOf(on.cc) : TRANS_CUTS.indexOf(on.cc) + 1];
+  const options = { seed: on.cc.seed, frames: on.preset.frames, W: 1920, H: 1080, color: [1, 0.56, 0.25] };
+  const pose = transitionPose(on.preset, t, options);
+  if (pose.kind === "adjust") {
+    // The Transform effect's motion blur: poses across its 240° shutter.
+    const span = (240 / 360) / on.preset.frames;
+    const samples = 16;
+    for (let i = 0; i < samples; i++) {
+      const p = transitionPose(on.preset, clamp(t + span * (i / (samples - 1) - 0.5)), options);
+      g.globalAlpha = 1 / (i + 1);
+      transPlaced(g, shot, p, k);
+    }
+    g.globalAlpha = 1;
+    transGlitch(g, pose, k);
+  } else {
+    g.drawImage(shot, 0, 0);
+  }
+  for (const s of [...pose.shapes].reverse()) {
+    if (s.opacity <= 0 || s.scaleX <= 0 || s.scaleY <= 0) continue;
+    g.save();
+    g.translate(TRANS_W / 2 + s.x * k, TRANS_H / 2 + s.y * k);
+    g.rotate((s.rotation * Math.PI) / 180);
+    g.scale(s.scaleX / 100, s.scaleY / 100);
+    const c = s.color;
+    g.fillStyle = `rgb(${String(Math.round(c[0] * 255))}, ${String(Math.round(c[1] * 255))}, ${String(Math.round(c[2] * 255))})`;
+    g.fillRect((-s.size[0] * k) / 2, (-s.size[1] * k) / 2, s.size[0] * k, s.size[1] * k);
+    g.restore();
+  }
+  return { name: on.preset.name };
+}
+
+function transitionsScene(ctx, c, { times: T }) {
+  const active = TRANS_CUTS.filter((cc) => c >= T[cc.add]);
+  const e = transEditTime(c, T);
+  const playing = transFrame(e, active);
+  const { area, strip } = frame(ctx, {
+    title: "Composition · KOVO_EDIT",
+    tc: tcode(e),
+    stripH: 196,
+    stripTitle: "Timeline · KOVO_EDIT",
+    stripRight: active.length === 0 ? "3 hard cuts" : `${String(active.length)} transition${active.length > 1 ? "s" : ""} · ${String(active.length)} undo step${active.length > 1 ? "s" : ""}`,
+  });
+  const cv = compView(area, 1920, 1080, 22);
+  enterComp(ctx, cv, "#000", false);
+  ctx.drawImage(transWork, 0, 0, 1920, 1080);
+  ctx.restore();
+  if (playing.name) pill(ctx, playing.name, cv.x + 18, cv.y + 26, { size: 16, fill: "rgba(14,15,18,0.82)", ink: C.amber, border: C.amber });
+
+  // Timeline: the transition layers above the four shots, playhead on the edit.
+  const nameW = 300;
+  const tx0 = strip.x + nameW;
+  const tx1 = strip.x + strip.w;
+  const toX = (t) => tx0 + (t / EDIT_END) * (tx1 - tx0);
+  const rowH = 19;
+  const rows = [
+    ...[...TRANS_CUTS].reverse().map((cc) => ({ cc, name: `KVFX Transition · ${transitionById(cc.preset).name}` })),
+    ...SHOT_NAMES.map((name, i) => ({ shot: i, name })).reverse(),
+  ];
+  let y = strip.y;
+  for (const row of rows) {
+    if (row.cc) {
+      if (c < T[row.cc.add]) continue;
+      const w = transWindow(row.cc);
+      const fresh = seg(c, T[row.cc.add], T[row.cc.add] + 0.4);
+      ctx.save();
+      ctx.globalAlpha = 0.3 + 0.7 * fresh;
+      text(ctx, row.name, strip.x, y + 13, `600 14px ${FONT.ui}`, C.amberHi);
+      rr(ctx, toX(w.start), y + 2, Math.max(6, toX(w.end) - toX(w.start)), 13, 3);
+      ctx.fillStyle = "rgba(255,143,63,0.75)";
+      ctx.fill();
+      ctx.restore();
+    } else {
+      text(ctx, row.name, strip.x, y + 13, `600 14px ${FONT.ui}`, C.fg2);
+      rr(ctx, toX(row.shot * SHOT), y + 2, toX((row.shot + 1) * SHOT) - toX(row.shot * SHOT) - 2, 13, 3);
+      ctx.fillStyle = ["rgba(255,143,63,0.35)", "rgba(127,168,255,0.4)", "rgba(94,200,176,0.4)", "rgba(232,234,237,0.25)"][row.shot];
+      ctx.fill();
+    }
+    y += rowH;
+  }
+  // The cuts, and the playhead.
+  for (const cc of TRANS_CUTS) {
+    ctx.fillStyle = "rgba(232,234,237,0.25)";
+    ctx.fillRect(toX(cc.at) - 0.5, strip.y, 1, y - strip.y);
+  }
+  ctx.fillStyle = C.fg;
+  ctx.fillRect(toX(e) - 1, strip.y - 4, 2, y - strip.y + 8);
+}
+
 export const SCENES = {
   resize: resizeScene,
   silence: silenceScene,
@@ -2031,4 +2347,5 @@ export const SCENES = {
   ease: easeScene,
   fx: fxScene,
   generate: generateScene,
+  transitions: transitionsScene,
 };

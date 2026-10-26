@@ -16,6 +16,7 @@ import { FEATURES, TOUR } from "../promo/features/features.mjs";
  * promo/features/assets/music is mixed in underneath when there is one.
  *
  * Prerequisites: the panel recordings (node scripts/promo-capture.mjs --clip tf-…),
+ * the built core package (npm run build; the Transitions scene uses its maths),
  * Playwright (KVFX_PLAYWRIGHT), Chromium (KVFX_CHROMIUM) and ffmpeg (KVFX_FFMPEG).
  *
  * Usage:
@@ -34,6 +35,7 @@ const studioDir = join(repoRoot, "promo", "features");
 const outDir = join(repoRoot, "build", "feature-videos");
 const framesDir = join(outDir, "frames");
 const sfxDir = join(outDir, "sfx");
+const coreDist = join(repoRoot, "packages", "core", "dist");
 const ffmpeg = process.env["KVFX_FFMPEG"] ?? "ffmpeg";
 const only = flag("only", FEATURES.map((f) => f.id).join(",")).split(",");
 const layouts = flag("layout", "16x9,9x16").split(",");
@@ -57,8 +59,13 @@ function serve() {
   return new Promise((resolve) => {
     const server = createServer((request, response) => {
       const path = decodeURIComponent((request.url ?? "/").split("?")[0]);
-      const file = path.startsWith("/frames/") ? join(framesDir, path.slice("/frames/".length)) : join(studioDir, path.replace(/^\/+/, ""));
-      if (!file.startsWith(studioDir) && !file.startsWith(framesDir)) {
+      // The scenes import the shipped transition maths from the built core package.
+      const file = path.startsWith("/frames/")
+        ? join(framesDir, path.slice("/frames/".length))
+        : path.startsWith("/packages/core/dist/")
+          ? join(repoRoot, path)
+          : join(studioDir, path.replace(/^\/+/, ""));
+      if (!file.startsWith(studioDir) && !file.startsWith(framesDir) && !file.startsWith(coreDist)) {
         response.writeHead(403).end();
         return;
       }

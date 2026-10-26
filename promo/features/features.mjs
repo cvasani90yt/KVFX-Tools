@@ -15,6 +15,8 @@ const stay = (t0, t1, target) => [[t0, target], [t1, target]];
 const typed = (t, text, perSecond = 9) => [...text].map((c, i) => [t + i / perSecond, "type", c]);
 
 const DIALOG_OK = S(".kvfx-dialog__actions button:last-child");
+/** A transition preset's tile in Generate ▸ Transitions. */
+const TILE = (id) => S(`.kvfx-trans-tiles [data-preset="${id}"]`);
 
 // ---------------------------------------------------------------------------
 // The panel recordings. Each starts on the Tools tab, scrolled to the top.
@@ -35,6 +37,8 @@ const TEXT = { pop: 4.6, words: 5.8, stagger: 6.8, animate: 8.4 };
 const EASE = { grab1: 2.4, drop1: 3.4, grab2: 4.0, drop2: 5.0, apply: 6.6 };
 const FX = { scan: 2.6, shadowOn: 5.0, glowOff: 7.2, allOff: 9.4, allOn: 11.4 };
 const GEN = { metric: 2.6, build: 7.4 };
+// Transitions: a preset and Add Transition on each of three cuts, then the edit plays.
+const TRANS = { whip: 3.2, add1: 4.5, glitch: 6.6, add2: 8.0, bars: 10.6, add3: 11.9, play: 13.4 };
 
 export const FEATURE_CLIPS = {
   "tf-resize": {
@@ -271,6 +275,32 @@ export const FEATURE_CLIPS = {
       [10, 250, 600], [13, 240, 620],
     ],
     events: [[GEN.metric, "click"], [5.6, "scroll", B("Build Layout"), 0.6], [GEN.build, "click"]],
+  },
+  "tf-transitions": {
+    tab: "generate",
+    duration: 22,
+    cursor: [
+      [0, 300, 720],
+      ...stay(1.5, 1.9, TILE("spin")),
+      ...stay(2.1, 2.6, TILE("zoomIn")),
+      ...stay(2.8, 3.5, TILE("whipLeft")),
+      ...stay(4.0, 4.9, B("Add Transition", 30)),
+      ...stay(5.8, 6.2, TILE("signal")),
+      ...stay(6.4, 6.9, TILE("glitch")),
+      ...stay(7.5, 8.4, B("Add Transition", 30)),
+      ...stay(9.6, 10.0, TILE("circle")),
+      ...stay(10.2, 10.9, TILE("bars")),
+      ...stay(11.4, 12.3, B("Add Transition", 30)),
+      [14, 250, 640], [22, 240, 660],
+    ],
+    events: [
+      [0.5, "scroll", S('[data-section="gen.transitions"]'), 0.8],
+      [TRANS.whip, "click"], [TRANS.add1, "click"],
+      [5.1, "scroll", TILE("glitch"), 0.7, ".kvfx-trans-tiles"],
+      [TRANS.glitch, "click"], [TRANS.add2, "click"],
+      [8.8, "scroll", TILE("bars"), 0.7, ".kvfx-trans-tiles"],
+      [TRANS.bars, "click"], [TRANS.add3, "click"],
+    ],
   },
 };
 
@@ -511,6 +541,24 @@ export const TOUR = [
       [2.0, "Pick Metric Cards and type your numbers."],
       [6.6, "Build Layout."],
       [7.8, "Ordinary layers on one null, and they animate in."],
+    ],
+  },
+  {
+    id: "transitions",
+    badge: "GEN",
+    title: "Transitions",
+    promise: "Seamless transitions across any cut, from 27 presets.",
+    where: "Generate ▸ Transitions",
+    clip: "tf-transitions",
+    times: TRANS,
+    captions: [
+      [0, "Three cuts. Every one of them hard."],
+      [1.4, "Hover a preset and the panel plays it."],
+      [2.8, "Whip Left, then Add Transition."],
+      [4.6, "It lands on the cut, as one layer you trim to retime."],
+      [5.8, "A glitch on the next cut, different every time."],
+      [9.6, "Bars on the last one, in your colour."],
+      [13.4, "Twenty-seven presets, built from After Effects' own effects."],
     ],
   },
 ];

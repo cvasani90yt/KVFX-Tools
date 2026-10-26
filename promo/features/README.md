@@ -23,6 +23,22 @@ sound off.
 | 09 | Anchor Point Grid | Top of the panel |
 | 10 | Gradient Lock | Tools ▸ Colour |
 
+### Bonus videos: the other tabs
+
+Five more, in the same style, named `tour-<id>-<16x9|9x16>.mp4`:
+
+| Video | Where it lives |
+|---|---|
+| Text Animate (`text`) | Text ▸ Animate |
+| Curve Editor (`ease`) | Ease ▸ Curve |
+| Effects Manager (`fx`) | FX ▸ Effects Manager |
+| Layouts (`generate`) | Generate ▸ Layouts |
+| Transitions (`transitions`) | Generate ▸ Transitions |
+
+The Transitions video adds Whip Left, Glitch and Bars to three cuts in a short
+edit, then plays it through. Its comp runs on the plugin's own transition maths
+(`packages/core/dist`), so `npm run build` comes first.
+
 ## What's in the frame
 
 * **The panel** is a real recording of the built panel. The cursor clicks each
@@ -61,6 +77,7 @@ npm run build && node scripts/preview.mjs --all --width 380
 node scripts/promo-capture.mjs --clip tf-resize,tf-follow     # re-record panels (--dry checks targets)
 node scripts/feature-videos.mjs                               # all ten, both formats
 node scripts/feature-videos.mjs --only follow --layout 9x16
+node scripts/feature-videos.mjs --only text,ease,fx,generate,transitions   # the bonus videos
 node scripts/feature-videos.mjs --stills 4,12 --only follow   # PNG stills for a quick look
 ```
 

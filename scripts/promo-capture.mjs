@@ -58,7 +58,8 @@ const framesRoot = join(repoRoot, "build", "promo-frames");
 //           label) or { tab } (a tab's name), optionally with dx/dy; it is found when the cursor sets
 //           off towards it, so it can follow a scroll.
 //   events: [t, kind, ...] - down, up, click, tap (the ring only), key (a key name), type (one char),
-//           scroll (target, seconds: brings it near the top of the view),
+//           scroll (target, seconds[, container]: brings it near the top of the view, or of
+//           a scrolling list inside it given as a CSS selector),
 //           select (target, value).
 //   setup:  run once before the first frame (not recorded): fill or click.
 // ---------------------------------------------------------------------------
@@ -563,19 +564,20 @@ function makeCursor(page, points) {
   };
 }
 
-async function scrollTarget(page, target) {
+async function scrollTarget(page, target, within = "main.kvfx-view") {
   const handle =
     target.sel !== undefined
       ? page.locator(target.sel).first()
       : page.getByRole("button", { name: target.button, exact: true }).first();
   const element = await handle.elementHandle({ timeout: 2000 });
   if (!element) throw new Error(`Cannot scroll to ${JSON.stringify(target)}`);
-  return element.evaluate((el) => {
-    const view = el.ownerDocument.querySelector("main.kvfx-view");
+  const span = await element.evaluate((el, selector) => {
+    const view = el.closest(selector) ?? el.ownerDocument.querySelector(selector);
     if (!view) return { from: 0, to: 0 };
     const top = el.getBoundingClientRect().top - view.getBoundingClientRect().top + view.scrollTop - 10;
     return { from: view.scrollTop, to: Math.max(0, Math.min(view.scrollHeight - view.clientHeight, top)) };
-  });
+  }, within);
+  return { ...span, within };
 }
 
 /**
@@ -631,7 +633,7 @@ async function record(browser, port, name, clip) {
     const t = f / FPS;
     if (scroll) {
       const k = Math.min(1, (t - scroll.t0) / scroll.duration);
-      await page.evaluate(`document.querySelector("main.kvfx-view").scrollTop = ${String(scroll.from + (scroll.to - scroll.from) * smooth(k))}`);
+      await page.evaluate(`document.querySelector(${JSON.stringify(scroll.within)}).scrollTop = ${String(scroll.from + (scroll.to - scroll.from) * smooth(k))}`);
       if (k >= 1) scroll = null;
     }
     const pos = await cursorAtTime(t);
@@ -640,7 +642,7 @@ async function record(browser, port, name, clip) {
       last = pos;
     }
     while (pending.length > 0 && pending[0][0] <= t + 1e-6) {
-      const [, kind, value, extra] = pending.shift();
+      const [, kind, value, extra, within] = pending.shift();
       if (kind === "down") { await page.mouse.down(); down = true; }
       if (kind === "up") { await page.mouse.up(); down = false; }
       if (kind === "click") { await page.mouse.down(); await page.mouse.up(); lastClick = t; clicks.push(t); }
@@ -648,7 +650,7 @@ async function record(browser, port, name, clip) {
       if (kind === "tap") { lastClick = t; clicks.push(t); }
       if (kind === "key") await page.keyboard.press(value);
       if (kind === "type") await page.keyboard.type(value);
-      if (kind === "scroll") scroll = { ...(await scrollTarget(page, value)), t0: t, duration: extra ?? 0.8 };
+      if (kind === "scroll") scroll = { ...(await scrollTarget(page, value, within)), t0: t, duration: extra ?? 0.8 };
       if (kind === "select") await page.locator(value.sel).first().selectOption(extra);
     }
     await page.clock.runFor(1000 / FPS);

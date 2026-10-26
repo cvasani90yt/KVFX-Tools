@@ -65,7 +65,7 @@ export function buildTransitionsSection(panel: Panel, buttons: CommandButtons, s
         type: "button",
         text: preset.name,
         title: preset.about,
-        attrs: { role: "option" },
+        attrs: { role: "option", "data-preset": preset.id },
         on: {
           click: () => {
             current = preset;

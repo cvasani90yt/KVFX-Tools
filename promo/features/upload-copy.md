@@ -1,4 +1,4 @@
-# Upload copy for the ten feature videos
+# Upload copy for the feature videos
 
 Ready to paste. Each video has a YouTube title and description for the 16:9
 file, and a title and caption for the 9:16 file on Shorts, Reels and TikTok.
@@ -180,3 +180,28 @@ Caption: The KVFX Tools anchor grid. The layer never moves. #AfterEffects #Motio
 
 **Shorts / Reels / TikTok:** Gradients that follow the layer in After Effects 🌈
 Caption: Gradient Lock in KVFX Tools. #AfterEffects #MotionDesign #KVFXTools
+
+---
+
+## Bonus · Transitions
+
+File: `tour-transitions-16x9.mp4` (YouTube) and `tour-transitions-9x16.mp4`
+(Shorts, Reels, TikTok).
+
+**YouTube:** 27 seamless transitions in one click in After Effects | KVFX Tools
+
+> Put the playhead on a cut, pick a transition and click Add Transition. KVFX
+> Tools lays it across the cut as one layer, built from After Effects' own
+> effects: no extra plugins and no stock footage. There are 27 presets: whips
+> in four directions, zooms, spins, stretches and an impact shake; blur, lens
+> warp, twist, liquid, pixelate and wave; flash, light leak and dip to black;
+> glitch and signal loss; and bars, circle, split, slash and blinds wipes in
+> your own colour. Trim the layer to retime it, and use its Strength slider
+> to dial it up or down. Glitches come out different every time.
+>
+> KVFX Tools for After Effects: <link>
+>
+> #AfterEffects #Transitions #MotionDesign #KVFXTools
+
+**Shorts / Reels / TikTok:** 27 transitions, one click, After Effects ⚡
+Caption: Whip, glitch, light leak, bars and 23 more, right on the cut. KVFX Tools. #AfterEffects #Transitions #KVFXTools
