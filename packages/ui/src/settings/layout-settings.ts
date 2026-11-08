@@ -52,6 +52,7 @@ export class LayoutSettings {
   readonly #compact: HTMLInputElement;
   readonly #tabList: HTMLElement;
   #hover: { layout: PanelLayout; name: string; about: string } | undefined;
+  #tabsKey = "";
   #current: PanelLayout | undefined;
   #currentKey = "";
 
@@ -310,6 +311,13 @@ export class LayoutSettings {
       ui.tabOrder,
     );
     const hidden = new Set(ui.hiddenTabs);
+    // Redrawn only when the tabs change, so a click is never lost to a redraw
+    // between press and release; the pressed arrow keeps the focus.
+    const key = `${ordered.join(",")}#${ui.hiddenTabs.join(",")}`;
+    if (key === this.#tabsKey) return;
+    this.#tabsKey = key;
+    const active = document.activeElement;
+    const focused = active instanceof HTMLElement && this.#tabList.contains(active) ? active.getAttribute("aria-label") : null;
     const visibleCount = ordered.filter((id) => !hidden.has(id)).length;
     clear(this.#tabList);
     ordered.forEach((id, i) => {
@@ -335,5 +343,9 @@ export class LayoutSettings {
         h("div", { class: "kvfx-sectionrow" }, h("label", { class: "kvfx-check" }, box, createIcon(view.icon, IconSize.medium), h("span", { text: view.label })), up, down),
       );
     });
+    if (focused !== null) {
+      const again = Array.from(this.#tabList.querySelectorAll<HTMLElement>("[aria-label]")).find((el) => el.getAttribute("aria-label") === focused);
+      if (again !== undefined && !(again instanceof HTMLButtonElement && again.disabled)) again.focus();
+    }
   }
 }

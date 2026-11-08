@@ -9,7 +9,12 @@ import type { JsonObject } from "../types/json.js";
  * left strictly alone (see `migrateSettings`).
  */
 
-export const CURRENT_SETTINGS_VERSION = 1;
+/**
+ * 2: Colour leads the Tools tab — a section order saved by an earlier build
+ *    has its Colour section moved to the front of the tab's sections.
+ */
+export const CURRENT_SETTINGS_VERSION = 2;
+const COLOUR_FIRST_VERSION = 2;
 
 /** How many recently-used commands to remember. */
 export const MAX_RECENTS = 20;
@@ -249,7 +254,25 @@ export function migrateSettings(raw: unknown): MigrationResult {
     warnings.push("Settings file had no schema version; treated as the oldest format.");
   }
 
-  return { settings: readFields(raw), writable: true, warnings };
+  let settings = readFields(raw);
+  if (typeof version !== "number" || version < COLOUR_FIRST_VERSION) {
+    settings = setUiSetting(settings, "sectionOrder", colourFirst(settings.ui.sectionOrder));
+  }
+  return { settings, writable: true, warnings };
+}
+
+/**
+ * Version 1 → 2: the Tools tab's Colour section moved to the top. An order the
+ * user saved before then lists it further down; it moves to just before the
+ * tab's first section, and everything else keeps its place.
+ */
+function colourFirst(order: readonly string[]): string[] {
+  const at = order.indexOf("tools.colour");
+  const first = order.findIndex((id) => id.startsWith("tools."));
+  if (at === -1 || first === at) return [...order];
+  const out = order.filter((id) => id !== "tools.colour");
+  out.splice(first, 0, "tools.colour");
+  return out;
 }
 
 function bezierOf(value: unknown): readonly [number, number, number, number] | undefined {
@@ -372,6 +395,15 @@ export function moveSection(settings: KvfxSettings, siblings: readonly string[],
   order.splice(to, 0, id);
   const rest = settings.ui.sectionOrder.filter((s) => !order.includes(s));
   return setUiSetting(settings, "sectionOrder", [...rest, ...order]);
+}
+
+/** Puts these sections back in their built-in order, by forgetting the order the user gave them. */
+export function resetSectionOrder(settings: KvfxSettings, ids: readonly string[]): KvfxSettings {
+  return setUiSetting(
+    settings,
+    "sectionOrder",
+    settings.ui.sectionOrder.filter((id) => !ids.includes(id)),
+  );
 }
 
 /** Remembers a tool's parameters, merged over what was stored before. */

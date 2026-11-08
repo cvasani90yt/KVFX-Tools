@@ -61,7 +61,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the same maths as the expression; the tests run the expression against it
 - Host: `layer.speedRamp`, with `FrameBlendingType` in the environment
 
+### Changed
+- **Colour** (Fill and Gradient Lock) is now the first section of the Tools
+  tab; a section order saved by an earlier build is updated to match
+
 ### Fixed
+- Settings ▸ Sections: the up and down arrows now move a section one place
+  per click. The list used to redraw before the panel had moved the section,
+  so it lagged a click behind and every second click did nothing. The list
+  also stays unfolded and the arrow keeps its focus, and **Default order**
+  puts a tab's sections back as they ship
 - Colour fields no longer close when you type a hex code: the system colour
   dialog (a separate window inside After Effects, which took the keystrokes)
   is replaced by a picker drawn in the panel — a saturation and brightness

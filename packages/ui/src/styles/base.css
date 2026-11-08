@@ -2224,6 +2224,15 @@ select:focus-visible,
   padding-left: 12px;
 }
 
+.kvfx-sectiongroup__reset {
+  margin: 4px 0 2px 12px;
+}
+
+.kvfx-sectiongroup__reset:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .kvfx-sectionrow .kvfx-check {
   flex: 1 1 auto;
   min-width: 0;

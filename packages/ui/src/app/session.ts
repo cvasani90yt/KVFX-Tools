@@ -30,6 +30,7 @@ import {
   moveTab,
   pruneUnknownCommands,
   recordUsage,
+  resetSectionOrder,
   saveEase,
   saveLayout,
   setToolParams,
@@ -395,6 +396,11 @@ export class Session {
   /** Moves a section up or down among its siblings. */
   moveSection(siblings: readonly string[], sectionId: string, delta: -1 | 1): void {
     this.#updateSettings(moveSection(this.#state.settings, siblings, sectionId, delta));
+  }
+
+  /** Puts a tab's sections back in their built-in order. */
+  resetSectionOrder(sectionIds: readonly string[]): void {
+    this.#updateSettings(resetSectionOrder(this.#state.settings, sectionIds));
   }
 
   async purge(target: "image" | "all"): Promise<void> {

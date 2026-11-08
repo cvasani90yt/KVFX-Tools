@@ -30,6 +30,8 @@ export class SettingsDialog {
   readonly #tooltips: HTMLInputElement;
   readonly #reminder: HTMLSelectElement;
   #sectionsKey = "";
+  /** Tabs whose section list is unfolded, kept across redraws. */
+  readonly #openGroups = new Set<string>();
 
   constructor(panel: Panel, sections: SectionsProvider = () => []) {
     this.#panel = panel;
@@ -157,24 +159,49 @@ export class SettingsDialog {
   #renderSections(state: SessionState): void {
     const ui = state.settings.ui;
     const groups = this.#sections();
-    const key = `${groups.map((g) => g.sections.map((x) => x.id).join(",")).join("|")}#${ui.hiddenSections.join(",")}`;
+    const key = `${groups.map((g) => g.sections.map((x) => x.id).join(",")).join("|")}#${ui.hiddenSections.join(",")}#${ui.sectionOrder.join(",")}`;
     if (key === this.#sectionsKey) return;
     this.#sectionsKey = key;
+    // The list is rebuilt after every move: keep unfolded tabs unfolded and the
+    // pressed arrow focused, so moving a section several places is several clicks.
+    const active = document.activeElement;
+    const focused = active instanceof HTMLElement && this.#sectionList.contains(active) ? active.getAttribute("aria-label") : null;
     clear(this.#sectionList);
     const hidden = new Set(ui.hiddenSections);
+    const placed = new Set(ui.sectionOrder);
     for (const { view, sections } of groups) {
       if (sections.length === 0) continue;
-      const ids = sections.map((x) => x.id);
+      // The order as the panel shows it at the moment of the click, never the order this list was drawn with.
+      const siblings = (): string[] => this.#sections().find((g) => g.view.id === view.id)?.sections.map((x) => x.id) ?? sections.map((x) => x.id);
       const rows = sections.map((section, i) => {
         const box = h("input", { type: "checkbox", attrs: { "aria-label": `Show ${section.title}` }, on: { change: () => this.#panel.session.toggleSection(section.id) } });
         box.checked = !hidden.has(section.id);
-        const up = h("button", { class: "kvfx-iconbtn kvfx-iconbtn--small", type: "button", title: "Move up", attrs: { "aria-label": `Move ${section.title} up` }, on: { click: () => this.#panel.session.moveSection(ids, section.id, -1) } }, createIcon("move-up", IconSize.small));
-        const down = h("button", { class: "kvfx-iconbtn kvfx-iconbtn--small", type: "button", title: "Move down", attrs: { "aria-label": `Move ${section.title} down` }, on: { click: () => this.#panel.session.moveSection(ids, section.id, 1) } }, createIcon("move-down", IconSize.small));
+        const up = h("button", { class: "kvfx-iconbtn kvfx-iconbtn--small", type: "button", title: "Move up", attrs: { "aria-label": `Move ${section.title} up` }, on: { click: () => this.#panel.session.moveSection(siblings(), section.id, -1) } }, createIcon("move-up", IconSize.small));
+        const down = h("button", { class: "kvfx-iconbtn kvfx-iconbtn--small", type: "button", title: "Move down", attrs: { "aria-label": `Move ${section.title} down` }, on: { click: () => this.#panel.session.moveSection(siblings(), section.id, 1) } }, createIcon("move-down", IconSize.small));
         up.disabled = i === 0;
         down.disabled = i === sections.length - 1;
         return h("div", { class: "kvfx-sectionrow" }, h("label", { class: "kvfx-check" }, box, h("span", { text: section.title })), up, down);
       });
-      this.#sectionList.append(h("details", { class: "kvfx-sectiongroup" }, h("summary", { text: view.label }), ...rows));
+      const reset = h("button", {
+        class: "kvfx-ghost kvfx-sectiongroup__reset",
+        type: "button",
+        text: "Default order",
+        title: `Put ${view.label}'s sections back in their original order`,
+        attrs: { "aria-label": `Default order for ${view.label}` },
+        on: { click: () => this.#panel.session.resetSectionOrder(sections.map((x) => x.id)) },
+      });
+      reset.disabled = !sections.some((x) => placed.has(x.id));
+      const group = h("details", { class: "kvfx-sectiongroup" }, h("summary", { text: view.label }), ...rows, reset);
+      group.open = this.#openGroups.has(view.id);
+      group.addEventListener("toggle", () => {
+        if (group.open) this.#openGroups.add(view.id);
+        else this.#openGroups.delete(view.id);
+      });
+      this.#sectionList.append(group);
+    }
+    if (focused !== null) {
+      const again = Array.from(this.#sectionList.querySelectorAll<HTMLButtonElement>("button[aria-label]")).find((el) => el.getAttribute("aria-label") === focused);
+      if (again !== undefined && !again.disabled) again.focus();
     }
   }
 

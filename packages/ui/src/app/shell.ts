@@ -381,8 +381,10 @@ export class Shell implements Panel {
 
     this.#activeView?.update(state, availability);
     this.#palette.refresh();
-    this.#settings.update(state);
+    // Layout first: Settings ▸ Sections lists the sections in the order the
+    // panel shows them, so the panel must have rearranged them already.
     this.#updateLayout(state);
+    this.#settings.update(state);
     this.#updateSave(state);
   }
 
@@ -399,8 +401,14 @@ export class Shell implements Panel {
       for (const view of this.#views) {
         for (const parent of sectionParents(view.root)) {
           const sections = Array.from(parent.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.dataset["section"] !== undefined);
+          // Remember where each section was built, the first time through, so
+          // sections the user hasn't placed (or has reset) go back there rather
+          // than staying wherever an earlier order left them.
+          sections.forEach((section, i) => {
+            if (section.dataset["natural"] === undefined) section.dataset["natural"] = String(i);
+          });
           const ranked = sections
-            .map((section, i) => ({ section, rank: order.get(section.dataset["section"] ?? "") ?? Number.MAX_SAFE_INTEGER, i }))
+            .map((section) => ({ section, rank: order.get(section.dataset["section"] ?? "") ?? Number.MAX_SAFE_INTEGER, i: Number(section.dataset["natural"]) }))
             .sort((a, b) => a.rank - b.rank || a.i - b.i);
           if (ranked.some((r, i) => r.section !== sections[i])) for (const r of ranked) parent.append(r.section);
           for (const section of sections) toggleClass(section, "kvfx-section--off", hidden.has(section.dataset["section"] ?? ""));

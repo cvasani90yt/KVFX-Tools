@@ -69,6 +69,42 @@ export class ToolsView implements View {
     const session = panel.session;
     const b = this.#buttons;
 
+    // --- Colour ------------------------------------------------------------
+    // First in the tab: fills and gradients are what people reach for most.
+    const gradient = session.toolParams("gradient");
+    const fillColor = colorField("Fill", session.state.settings.ui.solidColor);
+    const gradFrom = colorField("From", typeof gradient["from"] === "string" ? gradient["from"] : "#ff8f3f", (hex) =>
+      session.setToolParams("gradient", { from: hex }),
+    );
+    const gradTo = colorField("To", typeof gradient["to"] === "string" ? gradient["to"] : "#1f1a1a", (hex) =>
+      session.setToolParams("gradient", { to: hex }),
+    );
+    let direction = typeof gradient["direction"] === "string" ? gradient["direction"] : "vertical";
+    const dir = segmented(
+      [
+        { value: "vertical", label: "↓", title: "Top to bottom" },
+        { value: "horizontal", label: "→", title: "Left to right" },
+        { value: "diagonal", label: "↘", title: "Corner to corner" },
+      ],
+      direction,
+      (value) => {
+        direction = value;
+        dir.set(value);
+        session.setToolParams("gradient", { direction: value });
+      },
+    );
+    const colour = this.#section("tools.colour", "Colour");
+    colour.body.append(
+      row(fillColor.root, b.button("kvfx.fx.fill", { label: "Fill", icon: "fill", params: () => ({ color: fillColor.input.value }) })),
+      row(gradFrom.root, gradTo.root, dir.root),
+      b.button("kvfx.fx.gradientlock", {
+        label: "Gradient Lock",
+        icon: "gradient",
+        variant: "wide",
+        params: () => ({ from: gradFrom.input.value, to: gradTo.input.value, direction }),
+      }),
+    );
+
     // --- Layer -----------------------------------------------------------
     const layer = this.#section("tools.layer", "Layer");
     layer.body.append(
@@ -225,41 +261,6 @@ export class ToolsView implements View {
 
     // --- Comp Resizer and Silence Remover --------------------------------------
     this.#extras = buildResizeAndSilence(panel, b, (id, title, hintText) => this.#section(id, title, hintText));
-
-    // --- Colour ------------------------------------------------------------
-    const gradient = session.toolParams("gradient");
-    const fillColor = colorField("Fill", session.state.settings.ui.solidColor);
-    const gradFrom = colorField("From", typeof gradient["from"] === "string" ? gradient["from"] : "#ff8f3f", (hex) =>
-      session.setToolParams("gradient", { from: hex }),
-    );
-    const gradTo = colorField("To", typeof gradient["to"] === "string" ? gradient["to"] : "#1f1a1a", (hex) =>
-      session.setToolParams("gradient", { to: hex }),
-    );
-    let direction = typeof gradient["direction"] === "string" ? gradient["direction"] : "vertical";
-    const dir = segmented(
-      [
-        { value: "vertical", label: "↓", title: "Top to bottom" },
-        { value: "horizontal", label: "→", title: "Left to right" },
-        { value: "diagonal", label: "↘", title: "Corner to corner" },
-      ],
-      direction,
-      (value) => {
-        direction = value;
-        dir.set(value);
-        session.setToolParams("gradient", { direction: value });
-      },
-    );
-    const colour = this.#section("tools.colour", "Colour");
-    colour.body.append(
-      row(fillColor.root, b.button("kvfx.fx.fill", { label: "Fill", icon: "fill", params: () => ({ color: fillColor.input.value }) })),
-      row(gradFrom.root, gradTo.root, dir.root),
-      b.button("kvfx.fx.gradientlock", {
-        label: "Gradient Lock",
-        icon: "gradient",
-        variant: "wide",
-        params: () => ({ from: gradFrom.input.value, to: gradTo.input.value, direction }),
-      }),
-    );
 
     // --- Switches and order -------------------------------------------------
     const switches = this.#section("tools.switches", "Switches & Order");
