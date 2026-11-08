@@ -61,6 +61,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the same maths as the expression; the tests run the expression against it
 - Host: `layer.speedRamp`, with `FrameBlendingType` in the environment
 
+### Added — the Quick tab
+- A new first tab, which the panel opens on: the everyday tools from every tab
+  as one minimal grid of tiles, each run with its last-used settings — colour
+  picker and eyedroppers, Duplicate Comp, Precomp, Null Parent, Split,
+  Sequence, Trim to Work Area, Same Label, Unlock All, Apply Ease, Wiggle,
+  Shadow, Glow, Transition, Speed Ramp, Animate Text and Null
+- **Customize**: drag tiles to reorder (with edge scrolling) or use the arrow
+  keys, remove with × or Delete, add from a catalog of 69 tools in nine
+  groups, labels on or off, and Reset (it asks)
+- Settings ▸ Layout: **Opens on** Quick or the last tab, and a **Quick** preset
+  that is the Quick tab alone; every preset now leads with Quick
+- Settings schema 3: a tab order saved by an earlier build, and those in saved
+  layouts, get the Quick tab at the front
+- Tabs now share the tab bar by label width, so nine fit without colliding
+
 ### Added — eyedroppers (Tools ▸ Colour)
 - **From comp**: the open comp's frame at the playhead, in the panel, with a
   magnifier and a live hex readout; click (or arrow keys and Enter) takes the

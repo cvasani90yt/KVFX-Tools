@@ -23,8 +23,8 @@ export interface ButtonOptions {
   /** Visible text. Pills show it; icon tools use it as the tooltip. */
   readonly label: string;
   readonly icon?: string;
-  /** "pill" — uppercase text button; "tool" — square icon button. */
-  readonly variant?: "pill" | "tool" | "wide";
+  /** "pill" — uppercase text button; "tool" — square icon button; "qtile" — the Quick tab's icon-over-label tile. */
+  readonly variant?: "pill" | "tool" | "wide" | "qtile";
   readonly params?: () => JsonObject | undefined;
   /** Extra class names. */
   readonly className?: string;
@@ -74,7 +74,7 @@ export class CommandButtons {
     for (const bound of this.#buttons) {
       const id = bound.commandId();
       const description = this.#panel.session.command(id)?.description ?? bound.label;
-      const title = bound.variant === "tool" ? `${bound.label} — ${description}` : description;
+      const title = bound.variant === "tool" || bound.variant === "qtile" ? `${bound.label} — ${description}` : description;
       const available = availability.ids.has(id) && !state.busy;
       setEnabled(bound.node, available, availability.reasons.get(id), title);
     }

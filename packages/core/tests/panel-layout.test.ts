@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CURRENT_SETTINGS_VERSION,
   DEFAULT_TAB_ORDER,
   MAX_CUSTOM_LAYOUTS,
   PANEL_LAYOUTS,
@@ -19,8 +20,8 @@ import {
 const TABS = DEFAULT_TAB_ORDER;
 
 describe("panel layout presets", () => {
-  it("has six, with unique ids, and Full is the panel as it ships", () => {
-    expect(PANEL_LAYOUTS.length).toBe(6);
+  it("has seven, with unique ids, and Full is the panel as it ships", () => {
+    expect(PANEL_LAYOUTS.length).toBe(7);
     expect(new Set(PANEL_LAYOUTS.map((p) => p.id)).size).toBe(PANEL_LAYOUTS.length);
     expect(sameLayout(panelLayoutById("full")!.layout, currentLayout(defaultSettings().ui), TABS)).toBe(true);
   });
@@ -33,11 +34,18 @@ describe("panel layout presets", () => {
     }
   });
 
-  it("only name tabs the panel has, and always leave some showing", () => {
+  it("only name tabs the panel has, and always lead with the Quick tab", () => {
     for (const preset of PANEL_LAYOUTS) {
       for (const id of [...preset.layout.tabOrder, ...preset.layout.hiddenTabs]) expect(TABS, preset.id).toContain(id);
-      expect(visibleTabs(preset.layout, TABS).length, preset.id).toBeGreaterThanOrEqual(5);
+      expect(visibleTabs(preset.layout, TABS)[0], preset.id).toBe("quick");
+      if (preset.id !== "quick") expect(visibleTabs(preset.layout, TABS).length, preset.id).toBeGreaterThanOrEqual(6);
     }
+  });
+
+  it("has a Quick preset that is the Quick tab alone, compact, with no bars", () => {
+    const quick = panelLayoutById("quick")!.layout;
+    expect(visibleTabs(quick, TABS)).toEqual(["quick"]);
+    expect([quick.quickBar, quick.alignBar, quick.compact]).toEqual([false, false, true]);
   });
 });
 
@@ -49,9 +57,9 @@ describe("tab order", () => {
 
   it("moves a tab one place and keeps the whole order", () => {
     let settings = moveTab(defaultSettings(), TABS, "generate", -1);
-    expect(settings.ui.tabOrder).toEqual(["tools", "ease", "text", "generate", "fx", "labels", "library", "media"]);
-    settings = moveTab(settings, TABS, "tools", -1);
-    expect(settings.ui.tabOrder[0]).toBe("tools");
+    expect(settings.ui.tabOrder).toEqual(["quick", "tools", "ease", "text", "generate", "fx", "labels", "library", "media"]);
+    settings = moveTab(settings, TABS, "quick", -1);
+    expect(settings.ui.tabOrder[0]).toBe("quick");
     settings = moveTab(settings, TABS, "media", 1);
     expect(settings.ui.tabOrder[settings.ui.tabOrder.length - 1]).toBe("media");
   });
@@ -66,7 +74,7 @@ describe("applying, saving and deleting layouts", () => {
   it("applies every part of a preset", () => {
     const editor = panelLayoutById("editor")!.layout;
     const ui = applyLayout(defaultSettings(), editor, TABS).ui;
-    expect(ui.tabOrder.slice(0, 2)).toEqual(["generate", "media"]);
+    expect(ui.tabOrder.slice(0, 3)).toEqual(["quick", "generate", "media"]);
     expect(ui.hiddenTabs).toEqual(["ease"]);
     expect([ui.tabPosition, ui.quickBar, ui.alignBar, ui.tabStyle, ui.compact]).toEqual(["bottom", false, false, "both", false]);
     expect(sameLayout(currentLayout(ui), editor, TABS)).toBe(true);
@@ -75,8 +83,8 @@ describe("applying, saving and deleting layouts", () => {
   it("never hides every tab", () => {
     const layout = { ...currentLayout(defaultSettings().ui), hiddenTabs: [...TABS] };
     const ui = applyLayout(defaultSettings(), layout, TABS).ui;
-    expect(visibleTabs(currentLayout(ui), TABS)).toEqual(["tools"]);
-    expect(ui.hiddenTabs).not.toContain("tools");
+    expect(visibleTabs(currentLayout(ui), TABS)).toEqual(["quick"]);
+    expect(ui.hiddenTabs).not.toContain("quick");
   });
 
   it("leaves everything else alone — sections, tooltips, favourites", () => {
@@ -116,7 +124,7 @@ describe("layout settings on disk", () => {
 
   it("read what they understand and repair the rest", () => {
     const ui = migrateSettings({
-      schemaVersion: 1,
+      schemaVersion: CURRENT_SETTINGS_VERSION,
       ui: {
         tabOrder: ["media", 3, "tools", "media"],
         tabStyle: "sideways",

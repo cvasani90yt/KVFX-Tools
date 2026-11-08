@@ -26,8 +26,8 @@ export interface PanelLayoutPreset {
   readonly layout: PanelLayout;
 }
 
-/** The panel's tabs in their built-in order. */
-export const DEFAULT_TAB_ORDER: readonly string[] = ["tools", "ease", "text", "fx", "generate", "labels", "library", "media"];
+/** The panel's tabs in their built-in order, Quick first. */
+export const DEFAULT_TAB_ORDER: readonly string[] = ["quick", "tools", "ease", "text", "fx", "generate", "labels", "library", "media"];
 
 const base: PanelLayout = {
   tabOrder: DEFAULT_TAB_ORDER,
@@ -40,6 +40,19 @@ const base: PanelLayout = {
 };
 
 export const PANEL_LAYOUTS: readonly PanelLayoutPreset[] = [
+  {
+    id: "quick",
+    name: "Quick",
+    about: "A quick-tool panel: just the Quick tab and your essentials, nothing around them.",
+    layout: {
+      ...base,
+      hiddenTabs: DEFAULT_TAB_ORDER.filter((id) => id !== "quick"),
+      tabStyle: "icons",
+      quickBar: false,
+      alignBar: false,
+      compact: true,
+    },
+  },
   {
     id: "full",
     name: "Full",
@@ -61,16 +74,16 @@ export const PANEL_LAYOUTS: readonly PanelLayoutPreset[] = [
   {
     id: "motion",
     name: "Motion",
-    about: "For animators: Ease, Text and Generate first, with the align bar under them.",
-    layout: { ...base, tabOrder: ["ease", "text", "generate", "tools", "fx", "library", "labels", "media"], hiddenTabs: ["labels", "media"], quickBar: false },
+    about: "For animators: Quick, then Ease, Text and Generate, with the align bar under them.",
+    layout: { ...base, tabOrder: ["quick", "ease", "text", "generate", "tools", "fx", "library", "labels", "media"], hiddenTabs: ["labels", "media"], quickBar: false },
   },
   {
     id: "editor",
     name: "Editor",
-    about: "For video edits: Generate (transitions, speed ramps) and Media first, tabs along the bottom.",
+    about: "For video edits: Quick, then Generate (transitions, speed ramps) and Media, tabs along the bottom.",
     layout: {
       ...base,
-      tabOrder: ["generate", "media", "tools", "fx", "labels", "library", "text", "ease"],
+      tabOrder: ["quick", "generate", "media", "tools", "fx", "labels", "library", "text", "ease"],
       hiddenTabs: ["ease"],
       tabPosition: "bottom",
       quickBar: false,
@@ -80,8 +93,8 @@ export const PANEL_LAYOUTS: readonly PanelLayoutPreset[] = [
   {
     id: "designer",
     name: "Designer",
-    about: "For layouts and type: Tools, Text and Generate first, with text-only tabs.",
-    layout: { ...base, tabOrder: ["tools", "text", "generate", "labels", "library", "ease", "fx", "media"], hiddenTabs: ["media"], tabStyle: "labels" },
+    about: "For layouts and type: Quick, then Tools, Text and Generate, with text-only tabs.",
+    layout: { ...base, tabOrder: ["quick", "tools", "text", "generate", "labels", "library", "ease", "fx", "media"], hiddenTabs: ["media"], tabStyle: "labels" },
   },
 ];
 

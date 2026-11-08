@@ -12,9 +12,41 @@ import type { JsonObject } from "../types/json.js";
 /**
  * 2: Colour leads the Tools tab — a section order saved by an earlier build
  *    has its Colour section moved to the front of the tab's sections.
+ * 3: The Quick tab leads the tab bar — a tab order saved by an earlier build,
+ *    and the tab order in each saved layout, gets it at the front.
  */
-export const CURRENT_SETTINGS_VERSION = 2;
+export const CURRENT_SETTINGS_VERSION = 3;
 const COLOUR_FIRST_VERSION = 2;
+const QUICK_FIRST_VERSION = 3;
+
+/**
+ * The Quick tab's tools as it ships: the colour picker and its eyedroppers,
+ * then the everyday comp, layer, keyframe, effect and generator tools.
+ * Plain ids, kept here rather than imported, so storage stays free of
+ * feature imports; the Quick catalog checks every one exists.
+ */
+export const DEFAULT_QUICK_TOOLS: readonly string[] = [
+  "colour",
+  "pickComp",
+  "pickScreen",
+  "kvfx.fx.fill",
+  "kvfx.comp.deepduplicatecomp",
+  "kvfx.layer.precomposeeach",
+  "kvfx.layer.nullparent",
+  "kvfx.layer.split",
+  "kvfx.layer.sequence",
+  "kvfx.layer.trimworkarea",
+  "kvfx.label.selectsame",
+  "kvfx.layer.unlockall",
+  "kvfx.keys.ease",
+  "kvfx.keys.wiggle",
+  "kvfx.fx.add.shadow",
+  "kvfx.fx.add.glow",
+  "kvfx.rig.transition",
+  "kvfx.rig.speedRamp",
+  "kvfx.text.animate",
+  "kvfx.layer.createnull",
+];
 
 /** How many recently-used commands to remember. */
 export const MAX_RECENTS = 20;
@@ -78,7 +110,15 @@ export interface UiSettings {
   readonly alignBar: boolean;
   /** Panel layouts the user saved, oldest first. */
   readonly customLayouts: readonly SavedLayout[];
+  /** The Quick tab's tools, in order. Empty when the user removed them all. */
+  readonly quickTools: readonly string[];
+  /** Labels under the Quick tab's icons. */
+  readonly quickLabels: boolean;
+  /** Which tab the panel opens on: always Quick, or wherever it was left. */
+  readonly startTab: StartTab;
 }
+
+export type StartTab = "quick" | "last";
 
 export type TabStyle = "both" | "icons" | "labels";
 export type TabPosition = "top" | "bottom";
@@ -135,6 +175,9 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   quickBar: true,
   alignBar: true,
   customLayouts: [],
+  quickTools: DEFAULT_QUICK_TOOLS,
+  quickLabels: true,
+  startTab: "quick",
 };
 
 /** Choices offered for the save reminder, in minutes. */
@@ -258,7 +301,20 @@ export function migrateSettings(raw: unknown): MigrationResult {
   if (typeof version !== "number" || version < COLOUR_FIRST_VERSION) {
     settings = setUiSetting(settings, "sectionOrder", colourFirst(settings.ui.sectionOrder));
   }
+  if (typeof version !== "number" || version < QUICK_FIRST_VERSION) {
+    settings = setUiSetting(settings, "tabOrder", quickFirst(settings.ui.tabOrder));
+    settings = setUiSetting(
+      settings,
+      "customLayouts",
+      settings.ui.customLayouts.map((saved) => ({ ...saved, layout: { ...saved.layout, tabOrder: quickFirst(saved.layout.tabOrder) } })),
+    );
+  }
   return { settings, writable: true, warnings };
+}
+
+/** Version 2 → 3: a saved tab order gets the new Quick tab at its front. An empty order already follows the built-in one. */
+function quickFirst(order: readonly string[]): string[] {
+  return order.length === 0 || order.includes("quick") ? [...order] : ["quick", ...order];
 }
 
 /**
@@ -379,6 +435,10 @@ function uiSettings(value: unknown): UiSettings {
     quickBar: value["quickBar"] !== false,
     alignBar: value["alignBar"] !== false,
     customLayouts: savedLayouts(value["customLayouts"]),
+    // A file from before the Quick tab has no list: it gets the shipped one.
+    quickTools: Array.isArray(value["quickTools"]) ? stringList(value["quickTools"]) : DEFAULT_QUICK_TOOLS,
+    quickLabels: value["quickLabels"] !== false,
+    startTab: value["startTab"] === "last" ? "last" : "quick",
   };
 }
 

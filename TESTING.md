@@ -129,6 +129,11 @@ layer. Every item below should be **one** step in Edit ▸ Undo, named
 `KVFX Tools — …`. That is the single most important thing to verify: press
 `Ctrl/⌘+Z` once after each and everything that command did should revert.
 
+**0. Quick.** The panel opens on the **Quick** tab. Select a layer and click a
+few tiles (Precomp, Shadow, Null). Click **Customize**, drag a tile somewhere
+else, remove one, add one from the list, then **Done**. Close and reopen the
+panel: it opens on Quick again, with your arrangement.
+
 **1. Basics.** Select two layers, click the panel: the header shows
 `<comp> · 2 layers`. Click **Null**, pick a colour in the swatch and click
 **Solid**. Select a layer and click the bottom-right arrow of the grid: its

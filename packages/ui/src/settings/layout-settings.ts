@@ -2,6 +2,7 @@ import {
   PANEL_LAYOUTS,
   type PanelLayout,
   type SavedLayout,
+  type StartTab,
   type TabPosition,
   type TabStyle,
   MAX_LAYOUT_NAME,
@@ -47,6 +48,7 @@ export class LayoutSettings {
   readonly #name: HTMLInputElement;
   readonly #tabStyle: { root: HTMLElement; set: (value: TabStyle) => void };
   readonly #tabPosition: { root: HTMLElement; set: (value: TabPosition) => void };
+  readonly #startTab: { root: HTMLElement; set: (value: StartTab) => void };
   readonly #quick: HTMLInputElement;
   readonly #align: HTMLInputElement;
   readonly #compact: HTMLInputElement;
@@ -106,6 +108,14 @@ export class LayoutSettings {
       "top",
       (value) => session.setUi("tabPosition", value),
     );
+    this.#startTab = segmented<StartTab>(
+      [
+        { value: "quick", label: "Quick", title: "Open on the Quick tab every time" },
+        { value: "last", label: "Last tab", title: "Open on whichever tab was showing last time" },
+      ],
+      "quick",
+      (value) => session.setUi("startTab", value),
+    );
     this.#quick = h("input", { type: "checkbox", on: { change: () => session.setUi("quickBar", this.#quick.checked) } });
     this.#align = h("input", { type: "checkbox", on: { change: () => session.setUi("alignBar", this.#align.checked) } });
     this.#compact = h("input", { type: "checkbox", on: { change: () => session.setUi("compact", this.#compact.checked) } });
@@ -127,6 +137,7 @@ export class LayoutSettings {
       h("h4", { class: "kvfx-layoutlabel", text: "Arrange" }),
       line("Tabs show", this.#tabStyle.root),
       line("Tab bar", this.#tabPosition.root),
+      line("Opens on", this.#startTab.root),
       h(
         "div",
         { class: "kvfx-checklist" },
@@ -167,6 +178,7 @@ export class LayoutSettings {
 
     this.#tabStyle.set(ui.tabStyle);
     this.#tabPosition.set(ui.tabPosition);
+    this.#startTab.set(ui.startTab);
     this.#quick.checked = ui.quickBar;
     this.#align.checked = ui.alignBar;
     this.#compact.checked = ui.compact;

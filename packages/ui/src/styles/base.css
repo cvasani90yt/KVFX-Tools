@@ -695,8 +695,9 @@ select:focus-visible,
   scrollbar-width: none;
 }
 
+/* Tabs share the bar by their labels' widths, so nine fit without colliding. */
 .kvfx-tabbtn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 30px;
   display: flex;
   flex-direction: column;
@@ -2565,4 +2566,247 @@ select:focus-visible,
 
 .kvfx-tablist .kvfx-sectionrow {
   padding-left: 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* The Quick tab: one grid of tiles, nothing in the way                       */
+/* ------------------------------------------------------------------------ */
+
+.kvfx-quicktab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px var(--kvfx-space-3) var(--kvfx-space-4);
+}
+
+.kvfx-qgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 6px;
+}
+
+.kvfx-quicktab--nolabels .kvfx-qgrid {
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+}
+
+.kvfx-qtile {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 4px 6px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-md);
+  background: var(--kvfx-surface-raised);
+  color: var(--kvfx-text-secondary);
+  font: inherit;
+  font-size: var(--kvfx-text-xs);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kvfx-qtile .kvfx-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--kvfx-accent);
+}
+
+.kvfx-qtile > span:not(.kvfx-swatch__chip) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kvfx-qtile:hover:not(:disabled) {
+  border-color: var(--kvfx-accent-edge);
+  background: var(--kvfx-surface-hover);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qtile:active:not(:disabled):not(.kvfx-qtile--edit) {
+  transform: scale(0.96);
+}
+
+.kvfx-qtile:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--kvfx-accent);
+}
+
+.kvfx-qtile:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.kvfx-qtile[hidden] {
+  display: none;
+}
+
+.kvfx-qtile--colour .kvfx-swatch__chip {
+  display: block;
+  width: 28px;
+  height: 18px;
+  border-radius: var(--kvfx-radius-pill);
+}
+
+.kvfx-qtile--colour .kvfx-swatch__hex {
+  font-family: var(--kvfx-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--kvfx-text-primary);
+}
+
+/* Icons only: small square tiles, the name in the tooltip. */
+.kvfx-quicktab--nolabels .kvfx-qtile {
+  min-height: 40px;
+  padding: 6px 4px;
+}
+
+.kvfx-quicktab--nolabels .kvfx-qtile > span:not(.kvfx-swatch__chip) {
+  display: none;
+}
+
+.kvfx-qfoot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.kvfx-qcustomize {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kvfx-qcustomize[hidden],
+.kvfx-qhint[hidden],
+.kvfx-qeditor[hidden] {
+  display: none;
+}
+
+.kvfx-qempty {
+  grid-column: 1 / -1;
+}
+
+/* Customize: dashed tiles you drag, with a remove badge. */
+.kvfx-qtile--edit {
+  border-style: dashed;
+  cursor: grab;
+  touch-action: none;
+}
+
+.kvfx-qtile--dragging {
+  z-index: 5;
+  cursor: grabbing;
+  opacity: 0.9;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.kvfx-qtile--target {
+  border-style: solid;
+  border-color: var(--kvfx-accent);
+  background: var(--kvfx-accent-soft);
+}
+
+.kvfx-qtile__remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--kvfx-border);
+  border-radius: 50%;
+  background: var(--kvfx-surface-overlay);
+  color: var(--kvfx-text-secondary);
+  cursor: pointer;
+}
+
+.kvfx-qtile__remove:hover {
+  border-color: var(--kvfx-error);
+  color: var(--kvfx-error);
+}
+
+.kvfx-qtile .kvfx-qtile__remove .kvfx-icon {
+  width: 9px;
+  height: 9px;
+  color: currentColor;
+}
+
+.kvfx-qeditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--kvfx-border);
+}
+
+.kvfx-qcatalog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kvfx-qgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kvfx-qchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.kvfx-qchip {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-pill);
+  background: var(--kvfx-surface-base);
+  color: var(--kvfx-text-secondary);
+  font: inherit;
+  font-size: var(--kvfx-text-xs);
+  cursor: pointer;
+}
+
+.kvfx-qchip:hover {
+  border-color: var(--kvfx-accent-edge);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qchip--on {
+  border-color: var(--kvfx-accent-edge);
+  background: var(--kvfx-accent-soft);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qchip--on > .kvfx-icon:first-child {
+  color: var(--kvfx-accent);
+}
+
+.kvfx-qoptions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kvfx-qoptions .kvfx-check {
+  margin-right: auto;
 }

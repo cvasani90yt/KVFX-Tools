@@ -128,11 +128,13 @@ export class Session {
 
     const knownIds = new Set(registry.all().map((command) => command.id));
     const pruned = pruneUnknownCommands(loaded.settings, knownIds);
+    // The panel opens on the Quick tab, unless the user chose to come back to the last one.
+    const opening = pruned.ui.startTab === "quick" ? setUiSetting(pruned, "activeTab", "quick") : pruned;
 
     this.#state = {
       connection: { status: "checking" },
       snapshot: EMPTY_SNAPSHOT,
-      settings: pruned,
+      settings: opening,
       busy: false,
       lastOutcome: undefined,
       memoryBytes: undefined,

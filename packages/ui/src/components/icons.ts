@@ -145,6 +145,10 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   trim: [bar(2.5, 2.5, 1.75, 11), bar(11.75, 2.5, 1.75, 11), bar(5.5, 7, 5, 2)],
   sequence: [bar(1.5, 2.5, 6, 2.5), bar(5, 6.75, 6, 2.5), bar(8.5, 11, 6, 2.5)],
   fill: [solid("M3 7 L8 2 L13 7 L8 12 Z"), dot(13.5, 11.5, 1.6)],
+  // The Quick tab: a lightning bolt.
+  "tab-quick": [solid("M9.6 1 L3 9.2 H7.4 L6.4 15 L13 6.8 H8.6 Z")],
+  // Customize: a pencil.
+  edit: [solid("M10.8 1.8 L13.4 4.4 L5.4 12.4 L2.2 13 L2.8 9.8 Z"), rule(7.5, 14.8, 14.5, 14.8)],
   // Pick from comp: a frame with a target in it.
   "pick-comp": [box(1, 2.5, 14, 11), ring(8, 8, 2.6), rule(8, 3.8, 8, 5), rule(8, 11, 8, 12.2), rule(3.8, 8, 5, 8), rule(11, 8, 12.2, 8)],
   // Pick from screen: a monitor on its stand, with a target on it.

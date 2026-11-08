@@ -26,3 +26,4 @@ export * from "./audio/silence.js";
 export * from "./layouts/index.js";
 export * from "./transitions/index.js";
 export * from "./speed/index.js";
+export * from "./quick/index.js";

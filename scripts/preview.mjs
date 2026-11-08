@@ -258,7 +258,7 @@ await rm(outDir, { recursive: true, force: true });
 await mkdir(workDir, { recursive: true });
 await cp(stagedExtensionDir, workDir, { recursive: true });
 
-const ALL_TABS = ["tools", "ease", "text", "fx", "generate", "labels", "library", "media"];
+const ALL_TABS = ["quick", "tools", "ease", "text", "fx", "generate", "labels", "library", "media"];
 const tabs = args.includes("--all") ? ALL_TABS : [flag("tab", "tools")];
 const open = flag("open", "");
 
@@ -271,6 +271,8 @@ function seedFor(tab) {
     shortcuts: {},
     ui: {
       activeTab: tab,
+      // Each preview page shows its own tab, not the Quick tab the panel opens on.
+      startTab: "last",
       alignReference: "auto",
       collapsedGroups: [],
       solidColor: "#ff8f3f",

@@ -49,6 +49,34 @@ whose parent is also selected travels with the parent rather than twice.
 
 ---
 
+## Quick
+
+The first tab, and the one the panel opens on: the everyday tools from every
+other tab as one grid of tiles, one click each. A tile runs its tool with the
+settings you last used in that tool's own tab — the transition you last picked,
+the Ease tab's curve, the Sequence step — and greys out, with the reason in its
+tooltip, when the selection doesn't suit it.
+
+It ships with: **Colour** (the panel's colour — click for the picker),
+**From Comp** and **From Screen** (the eyedroppers), **Fill**, **Dup Comp**
+(Duplicate Comp + Nested Comps), **Precomp**, **Null Parent**, **Split**,
+**Sequence**, **Trim to WA**, **Same Label**, **Unlock All**, **Apply Ease**,
+**Wiggle**, **Shadow**, **Glow**, **Transition**, **Speed Ramp**, **Animate**
+(text) and **Null**.
+
+**Customize** arranges it: drag a tile onto another to put it there (the view
+scrolls when you drag near its edge), or focus a tile and use the arrow keys —
+up and down move a whole row; **×** or Delete removes a tile; the catalog below
+the grid adds any of 69 tools, grouped Colour, Comp & layers, Organize,
+Switches, Keyframes, Text, Effects, Generate and Create. **Labels under icons**
+off gives small icon-only tiles. **Reset** puts back the shipped tools, after
+asking. Resize Comps is left out on purpose: it needs its own screen to set the
+sizes safely.
+
+Settings ▸ Layout ▸ **Opens on** chooses Quick (the default) or the last tab
+you used, and the **Quick** layout preset turns the panel into just this tab —
+compact, no anchor grid, creators or align bar — for a pure quick-tool panel.
+
 ## Tools
 
 | Control | What it does | Limits |
@@ -320,11 +348,13 @@ with a pointer to File ▸ Import, because they would be held in memory.
 
 ## Settings
 
-* **Layout** — how the panel is arranged, with six presets drawn as pictures of
-  the panel: **Full** (as it ships), **Compact** (tight spacing, icon-only
-  tabs), **Minimal** (no anchor grid, creators or align bar), **Motion** (Ease,
-  Text and Generate first), **Editor** (Generate and Media first, tabs along the
-  bottom) and **Designer** (Tools, Text and Generate first, text-only tabs).
+* **Layout** — how the panel is arranged, with seven presets drawn as pictures
+  of the panel: **Quick** (the Quick tab alone), **Full** (as it ships),
+  **Compact** (tight spacing, icon-only tabs), **Minimal** (no anchor grid,
+  creators or align bar), **Motion** (Ease, Text and Generate next to Quick),
+  **Editor** (Generate and Media next to Quick, tabs along the bottom) and
+  **Designer** (Tools, Text and Generate next to Quick, text-only tabs).
+  **Opens on** chooses whether the panel opens on Quick or the last tab used.
   Hover one and the large picture glides from your current layout to it while
   the active tab steps along the bar; click to use it. Or arrange it yourself:
   tabs show icons and labels, icons or labels; the tab bar sits at the top or

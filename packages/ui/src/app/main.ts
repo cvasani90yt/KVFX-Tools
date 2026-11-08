@@ -5,6 +5,7 @@ import { GenerateView } from "../views/generate-view.js";
 import { LabelsView } from "../views/labels-view.js";
 import { LibraryView } from "../views/library-view.js";
 import { MediaView } from "../views/media-view.js";
+import { QuickView } from "../views/quick-view.js";
 import { TextView } from "../views/text-view.js";
 import { ToolsView } from "../views/tools-view.js";
 import { Session } from "./session.js";
@@ -39,6 +40,7 @@ const PROJECT_REFRESH_MS = 30_000;
 const holder: { shell?: Shell } = {};
 const session = new Session((state) => holder.shell?.update(state));
 const shell = new Shell(session, platform, (panel) => [
+  new QuickView(panel),
   new ToolsView(panel),
   new EaseView(panel),
   new TextView(panel),
