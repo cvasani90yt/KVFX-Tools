@@ -61,7 +61,41 @@ export interface UiSettings {
   readonly sectionOrder: readonly string[];
   /** Minutes since the last save before the header suggests saving; 0 is off. */
   readonly saveReminder: number;
+  /** Tab ids in the user's preferred order; tabs not listed keep theirs, after these. */
+  readonly tabOrder: readonly string[];
+  /** What the tab buttons show. */
+  readonly tabStyle: TabStyle;
+  /** Whether the tab bar sits under the header or above the align bar. */
+  readonly tabPosition: TabPosition;
+  /** The anchor grid and the create buttons under the header. */
+  readonly quickBar: boolean;
+  /** The align and distribute bar along the bottom. */
+  readonly alignBar: boolean;
+  /** Panel layouts the user saved, oldest first. */
+  readonly customLayouts: readonly SavedLayout[];
 }
+
+export type TabStyle = "both" | "icons" | "labels";
+export type TabPosition = "top" | "bottom";
+
+/** How the panel is arranged: the parts Settings ▸ Layout changes, and what a layout preset holds. */
+export interface PanelLayout {
+  readonly tabOrder: readonly string[];
+  readonly hiddenTabs: readonly string[];
+  readonly tabStyle: TabStyle;
+  readonly tabPosition: TabPosition;
+  readonly quickBar: boolean;
+  readonly alignBar: boolean;
+  readonly compact: boolean;
+}
+
+export interface SavedLayout {
+  readonly name: string;
+  readonly layout: PanelLayout;
+}
+
+export const MAX_CUSTOM_LAYOUTS = 12;
+export const MAX_LAYOUT_NAME = 40;
 
 export interface SavedEase {
   readonly name: string;
@@ -90,6 +124,12 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   hiddenSections: [],
   sectionOrder: [],
   saveReminder: 20,
+  tabOrder: [],
+  tabStyle: "both",
+  tabPosition: "top",
+  quickBar: true,
+  alignBar: true,
+  customLayouts: [],
 };
 
 /** Choices offered for the save reminder, in minutes. */
@@ -244,6 +284,40 @@ function toolParams(value: unknown): Record<string, JsonObject> {
   return out;
 }
 
+function tabStyleOf(value: unknown): TabStyle {
+  return value === "icons" || value === "labels" ? value : "both";
+}
+
+/** A layout as stored — in a saved preset — with every field checked. */
+export function panelLayoutOf(value: unknown): PanelLayout | undefined {
+  if (!isRecord(value)) return undefined;
+  return {
+    tabOrder: stringList(value["tabOrder"]),
+    hiddenTabs: stringList(value["hiddenTabs"]),
+    tabStyle: tabStyleOf(value["tabStyle"]),
+    tabPosition: value["tabPosition"] === "bottom" ? "bottom" : "top",
+    quickBar: value["quickBar"] !== false,
+    alignBar: value["alignBar"] !== false,
+    compact: value["compact"] === true,
+  };
+}
+
+function savedLayouts(value: unknown): SavedLayout[] {
+  if (!Array.isArray(value)) return [];
+  const out: SavedLayout[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const name = entry["name"];
+    const layout = panelLayoutOf(entry["layout"]);
+    if (typeof name !== "string" || layout === undefined) continue;
+    const trimmed = name.trim().slice(0, MAX_LAYOUT_NAME);
+    if (trimmed.length === 0 || out.some((l) => l.name === trimmed)) continue;
+    out.push({ name: trimmed, layout });
+    if (out.length >= MAX_CUSTOM_LAYOUTS) break;
+  }
+  return out;
+}
+
 function uiSettings(value: unknown): UiSettings {
   if (!isRecord(value)) return DEFAULT_UI_SETTINGS;
   const activeTab = value["activeTab"];
@@ -276,6 +350,12 @@ function uiSettings(value: unknown): UiSettings {
     saveReminder: SAVE_REMINDER_MINUTES.includes(value["saveReminder"] as number)
       ? (value["saveReminder"] as number)
       : DEFAULT_UI_SETTINGS.saveReminder,
+    tabOrder: stringList(value["tabOrder"]),
+    tabStyle: tabStyleOf(value["tabStyle"]),
+    tabPosition: value["tabPosition"] === "bottom" ? "bottom" : "top",
+    quickBar: value["quickBar"] !== false,
+    alignBar: value["alignBar"] !== false,
+    customLayouts: savedLayouts(value["customLayouts"]),
   };
 }
 

@@ -602,6 +602,54 @@ select:focus-visible,
   }
 }
 
+/* Settings ▸ Layout: what the tab buttons show, and the tab bar along the bottom. */
+.kvfx-tabbar--icons .kvfx-tabbtn__label {
+  display: none;
+}
+
+.kvfx-tabbar--icons .kvfx-tabbtn {
+  padding: 6px 2px;
+}
+
+.kvfx-tabbar--labels .kvfx-tabbtn .kvfx-icon {
+  display: none;
+}
+
+/* Labels-only tabs keep their words at any width, rather than leave the tab blank. */
+.kvfx-tabbar--labels .kvfx-tabbtn__label {
+  display: block;
+}
+
+.kvfx-tabbar--labels .kvfx-tabbtn {
+  padding: 8px 2px 6px;
+}
+
+@media (max-width: 330px) {
+  .kvfx-tabbar--labels .kvfx-tabbtn__label {
+    font-size: 7.5px;
+    letter-spacing: 0.02em;
+  }
+}
+
+.kvfx-tabbar--bottom {
+  border-bottom: 0;
+  border-top: 1px solid var(--kvfx-border);
+}
+
+.kvfx-tabbar--bottom .kvfx-tabbtn {
+  border-bottom: 0;
+  border-top: 2px solid transparent;
+}
+
+.kvfx-tabbar--bottom .kvfx-tabbtn--on {
+  border-top-color: var(--kvfx-accent);
+}
+
+.kvfx-quick[hidden],
+.kvfx-alignbar[hidden] {
+  display: none;
+}
+
 .kvfx-banner {
   padding: 6px var(--kvfx-space-3);
   font-size: var(--kvfx-text-xs);
@@ -2233,4 +2281,146 @@ select:focus-visible,
 .kvfx-app--compact .kvfx-quick {
   padding-top: 4px;
   padding-bottom: 4px;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Settings ▸ Layout                                                          */
+/* ------------------------------------------------------------------------ */
+
+.kvfx-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kvfx-layoutstage {
+  display: grid;
+  grid-template-columns: 46% 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-md);
+  background: var(--kvfx-surface-base);
+}
+
+.kvfx-layoutstage__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+}
+
+.kvfx-layoutstage__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kvfx-layoutstage__name {
+  font-size: var(--kvfx-text-lg);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-layoutstage__about {
+  margin: 0;
+  min-height: 4.2em;
+}
+
+.kvfx-layoutlabel {
+  margin: 6px 0 0;
+  font-size: var(--kvfx-text-xxs);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-layoutlabel[hidden],
+.kvfx-layoutgrid[hidden] {
+  display: none;
+}
+
+.kvfx-layoutgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.kvfx-layoutcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-md);
+  background: var(--kvfx-surface-raised);
+  color: var(--kvfx-text-secondary);
+}
+
+.kvfx-layoutcard:hover,
+.kvfx-layoutcard:focus-visible {
+  border-color: var(--kvfx-accent-edge);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-layoutcard--on {
+  border-color: var(--kvfx-accent);
+  background: var(--kvfx-accent-soft);
+  color: var(--kvfx-accent);
+}
+
+.kvfx-layoutcard__thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+}
+
+.kvfx-layoutcard__name {
+  font-size: var(--kvfx-text-xs);
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kvfx-layoutcard__delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--kvfx-surface-overlay);
+  border: 1px solid var(--kvfx-border);
+  color: var(--kvfx-text-secondary);
+  cursor: pointer;
+}
+
+.kvfx-layoutcard__delete:hover,
+.kvfx-layoutcard__delete:focus-visible {
+  color: var(--kvfx-error);
+  border-color: var(--kvfx-error);
+}
+
+.kvfx-layoutsave .kvfx-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kvfx-layoutline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kvfx-tablist .kvfx-sectionrow {
+  padding-left: 0;
 }

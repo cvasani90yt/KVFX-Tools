@@ -3,12 +3,14 @@ import type { Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
 import { clear, h, setText } from "../ui/dom.js";
+import { LayoutSettings } from "./layout-settings.js";
 
 type SectionsProvider = () => { view: View; sections: { id: string; title: string }[] }[];
 
 /**
- * Settings: which tabs and sections show and in what order, display options,
- * the save reminder, where pasted media goes, diagnostics, reset.
+ * Settings: the panel's layout (presets, tab order and visibility, the bars),
+ * which sections show and in what order, display options, the save reminder,
+ * where pasted media goes, diagnostics, reset.
  *
  * Everything here is a preference the user can change back; the one
  * irreversible action, resetting, asks first.
@@ -17,7 +19,7 @@ type SectionsProvider = () => { view: View; sections: { id: string; title: strin
 export class SettingsDialog {
   readonly root: HTMLElement;
   readonly #panel: Panel;
-  readonly #tabList: HTMLElement;
+  readonly #layout: LayoutSettings;
   readonly #mediaProject: HTMLInputElement;
   readonly #mediaAppData: HTMLInputElement;
   readonly #diagnostics: HTMLElement;
@@ -26,7 +28,6 @@ export class SettingsDialog {
   readonly #sections: SectionsProvider;
   readonly #sectionList: HTMLElement;
   readonly #tooltips: HTMLInputElement;
-  readonly #compact: HTMLInputElement;
   readonly #reminder: HTMLSelectElement;
   #sectionsKey = "";
 
@@ -34,10 +35,9 @@ export class SettingsDialog {
     this.#panel = panel;
     this.#sections = sections;
     const session = panel.session;
-    this.#tabList = h("div", { class: "kvfx-checklist" });
+    this.#layout = new LayoutSettings(panel, () => this.#tabs);
     this.#sectionList = h("div", { class: "kvfx-sectionlist" });
     this.#tooltips = h("input", { type: "checkbox", on: { change: () => session.setUi("tooltips", this.#tooltips.checked) } });
-    this.#compact = h("input", { type: "checkbox", on: { change: () => session.setUi("compact", this.#compact.checked) } });
     this.#reminder = h("select", {
       class: "kvfx-input kvfx-select",
       attrs: { "aria-label": "Save reminder" },
@@ -72,9 +72,8 @@ export class SettingsDialog {
         h("h2", { class: "kvfx-dialog__title", text: "Settings" }),
         h("button", { class: "kvfx-iconbtn", type: "button", title: "Close", attrs: { "aria-label": "Close" }, on: { click: () => this.close() } }, createIcon("close")),
       ),
-      h("h3", { class: "kvfx-dialog__sub", text: "Tabs" }),
-      h("p", { class: "kvfx-hint", text: "Hide the tabs you don't use. Their commands stay in search." }),
-      this.#tabList,
+      h("h3", { class: "kvfx-dialog__sub", text: "Layout" }),
+      this.#layout.root,
       h("h3", { class: "kvfx-dialog__sub", text: "Sections" }),
       h("p", { class: "kvfx-hint", text: "Show, hide and reorder the sections inside each tab." }),
       this.#sectionList,
@@ -83,7 +82,6 @@ export class SettingsDialog {
         "div",
         { class: "kvfx-checklist" },
         h("label", { class: "kvfx-check" }, this.#tooltips, h("span", { text: "Tooltips on hover" })),
-        h("label", { class: "kvfx-check" }, this.#compact, h("span", { text: "Compact spacing" })),
       ),
       h("h3", { class: "kvfx-dialog__sub", text: "Save reminder" }),
       h("p", { class: "kvfx-hint", text: "A Save button appears in the header when the project hasn't been saved for a while." }),
@@ -125,6 +123,7 @@ export class SettingsDialog {
     this.#open = true;
     this.root.hidden = false;
     this.update(this.#panel.session.state);
+    this.#layout.opened();
   }
 
   close(): void {
@@ -134,21 +133,8 @@ export class SettingsDialog {
 
   update(state: SessionState): void {
     if (!this.#open) return;
-    const hidden = new Set(state.settings.ui.hiddenTabs);
-    clear(this.#tabList);
-    for (const tab of this.#tabs) {
-      const box = h("input", {
-        type: "checkbox",
-        on: { change: () => this.#panel.session.toggleHiddenTab(tab.id) },
-      });
-      box.checked = !hidden.has(tab.id);
-      // Never let the last visible tab be switched off: the panel would be empty.
-      box.disabled = box.checked && this.#tabs.filter((t) => !hidden.has(t.id)).length === 1;
-      this.#tabList.append(h("label", { class: "kvfx-check" }, box, createIcon(tab.icon, IconSize.medium), h("span", { text: tab.label })));
-    }
-
+    this.#layout.update(state);
     this.#tooltips.checked = state.settings.ui.tooltips;
-    this.#compact.checked = state.settings.ui.compact;
     this.#reminder.value = String(state.settings.ui.saveReminder);
     this.#renderSections(state);
 

@@ -1,4 +1,4 @@
-import { AlignEdge, type AlignReference, type Platform, alignCommandIdFor } from "@kvfx/core";
+import { AlignEdge, type AlignReference, type Platform, alignCommandIdFor, orderTabs } from "@kvfx/core";
 import { IconSize, createIcon } from "../components/icons.js";
 import { PaletteOverlay } from "../palette/palette-view.js";
 import { SettingsDialog } from "../settings/settings-dialog.js";
@@ -87,6 +87,9 @@ export class Shell implements Panel {
   readonly #solidSwatch: ColorInput;
   readonly #reference: HTMLButtonElement;
   readonly #save: HTMLButtonElement;
+  readonly #quick: HTMLElement;
+  readonly #alignBar: HTMLElement;
+  #arrangeKey = "";
   #activeView: View | undefined;
   #layoutKey = "";
   #tooltipKey = "";
@@ -183,7 +186,7 @@ export class Shell implements Panel {
       this.#buttons.button("kvfx.layer.createshape", { label: "Shape", icon: "shape" }),
       this.#buttons.button("kvfx.layer.createcamera", { label: "Camera", icon: "camera" }),
     );
-    const quick = h("section", { class: "kvfx-quick" }, anchorGrid, creators);
+    this.#quick = h("section", { class: "kvfx-quick" }, anchorGrid, creators);
 
     // --- tabs and views --------------------------------------------------
     this.#views = makeViews(this);
@@ -232,7 +235,7 @@ export class Shell implements Panel {
         },
       },
     });
-    const alignBar = h("footer", { class: "kvfx-alignbar" }, alignTools, this.#reference);
+    this.#alignBar = h("footer", { class: "kvfx-alignbar" }, alignTools, this.#reference);
 
     this.#toast = h("div", { class: "kvfx-toast", attrs: { role: "status", "aria-live": "polite" } });
     this.#toast.hidden = true;
@@ -244,11 +247,11 @@ export class Shell implements Panel {
       "div",
       { class: "kvfx-app" },
       header,
-      quick,
+      this.#quick,
       this.#tabBar,
       this.#banner,
       this.#viewHost,
-      alignBar,
+      this.#alignBar,
       this.#toast,
       this.#modal,
       this.#palette.root,
@@ -387,6 +390,7 @@ export class Shell implements Panel {
   #updateLayout(state: SessionState): void {
     const ui = state.settings.ui;
     toggleClass(this.root, "kvfx-app--compact", ui.compact);
+    this.#arrange(ui);
     const key = `${ui.sectionOrder.join(",")}|${ui.hiddenSections.join(",")}`;
     if (key !== this.#layoutKey) {
       this.#layoutKey = key;
@@ -408,6 +412,30 @@ export class Shell implements Panel {
       this.#tooltipKey = tooltipKey;
       applyTooltips(this.root, ui.tooltips);
     }
+  }
+
+  /** Settings ▸ Layout: tab order, what the tabs show, where the tab bar sits, and the two bars. */
+  #arrange(ui: SessionState["settings"]["ui"]): void {
+    const key = `${ui.tabOrder.join(",")}|${ui.tabStyle}|${ui.tabPosition}|${String(ui.quickBar)}|${String(ui.alignBar)}`;
+    if (key === this.#arrangeKey) return;
+    this.#arrangeKey = key;
+    const ids = orderTabs(
+      this.#views.map((v) => v.id),
+      ui.tabOrder,
+    );
+    for (const id of ids) {
+      const button = this.#tabButtons.get(id);
+      if (button !== undefined) this.#tabBar.append(button);
+    }
+    toggleClass(this.#tabBar, "kvfx-tabbar--icons", ui.tabStyle === "icons");
+    toggleClass(this.#tabBar, "kvfx-tabbar--labels", ui.tabStyle === "labels");
+    // At the bottom the tab bar sits just above the align bar, under the view.
+    const bottom = ui.tabPosition === "bottom";
+    toggleClass(this.#tabBar, "kvfx-tabbar--bottom", bottom);
+    if (bottom && this.#tabBar.nextElementSibling !== this.#alignBar) this.root.insertBefore(this.#tabBar, this.#alignBar);
+    if (!bottom && this.#tabBar.previousElementSibling !== this.#quick) this.#quick.after(this.#tabBar);
+    this.#quick.hidden = !ui.quickBar;
+    this.#alignBar.hidden = !ui.alignBar;
   }
 
   #updateSave(state: SessionState): void {

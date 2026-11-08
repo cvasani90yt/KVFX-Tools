@@ -317,11 +317,21 @@ with a pointer to File ▸ Import, because they would be held in memory.
 
 ## Settings
 
-* **Tabs** — hide the ones you don't use (their commands stay in search). The last
-  visible tab cannot be hidden.
+* **Layout** — how the panel is arranged, with six presets drawn as pictures of
+  the panel: **Full** (as it ships), **Compact** (tight spacing, icon-only
+  tabs), **Minimal** (no anchor grid, creators or align bar), **Motion** (Ease,
+  Text and Generate first), **Editor** (Generate and Media first, tabs along the
+  bottom) and **Designer** (Tools, Text and Generate first, text-only tabs).
+  Hover one and the large picture glides from your current layout to it while
+  the active tab steps along the bar; click to use it. Or arrange it yourself:
+  tabs show icons and labels, icons or labels; the tab bar sits at the top or
+  the bottom; the anchor grid and creators, the align bar and compact spacing
+  each switch on or off; and the tabs can be hidden and reordered. **Save
+  current** keeps the arrangement as a preset of your own (up to twelve);
+  deleting one asks first. A layout never hides tools inside a tab, and the
+  last visible tab cannot be hidden.
 * **Sections** — show, hide and reorder the sections inside each tab.
-* **Display** — tooltips on or off (why a control is disabled always shows), and
-  compact spacing for small docked panels.
+* **Display** — tooltips on or off (why a control is disabled always shows).
 * **Save reminder** — off, or after 10, 20, 30 or 60 minutes without saving.
 * **Pasted and dropped media** — where Media saves files.
 * **Diagnostics** — versions, round-trip time and the settings file location, to

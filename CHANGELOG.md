@@ -35,6 +35,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The preview draws Radial Blur, CC Kaleida, a radial Gradient Ramp and Trim
   Paths, so every new preset plays in the panel before it is added
 
+### Added — panel layouts (Settings)
+- **Layout** presets, each drawn as a picture of the panel: Full, Compact,
+  Minimal, Motion, Editor and Designer. Hovering one plays it on a large
+  picture — the panel's parts glide from the current layout to the preset's
+  and the active tab steps along the bar — and clicking applies it
+- Arrange by hand: tab order, icons and labels / icons / labels on the tabs,
+  the tab bar at the top or bottom, and the anchor-and-creators bar, align bar
+  and compact spacing on or off
+- Save the arrangement as your own layout (up to twelve), replace one by name
+  (it asks), delete one (it asks)
+
 ### Added — Speed Ramp (Generate)
 - **Add Speed Ramp**: twelve speed curves on the selected video or precomp
   clips — Velocity, Flash Hit, Beat Hits and Boomerang; Slow-Mo, Bullet Time,

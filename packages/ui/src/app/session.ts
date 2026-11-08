@@ -14,19 +14,24 @@ import {
   type KvfxError,
   type KvfxSettings,
   type PaletteEntry,
+  type PanelLayout,
   type PlanStep,
   type SelectionSnapshot,
   type UiSettings,
   buildPalette,
   createProductionCommandRegistry,
   decodeSnapshot,
+  applyLayout,
   defaultSettings,
   deleteEase,
+  deleteLayout,
   migrateSettings,
   moveSection,
+  moveTab,
   pruneUnknownCommands,
   recordUsage,
   saveEase,
+  saveLayout,
   setToolParams,
   setUiSetting,
   summarizeResult,
@@ -260,6 +265,25 @@ export class Session {
 
   deleteEase(name: string): void {
     this.#updateSettings(deleteEase(this.#state.settings, name));
+  }
+
+  /** Rearranges the panel: tab order and visibility, tab bar, the two bars and spacing. */
+  applyPanelLayout(layout: PanelLayout, tabIds: readonly string[]): void {
+    this.#updateSettings(applyLayout(this.#state.settings, layout, tabIds));
+  }
+
+  /** Saves the panel's current layout as a named preset. */
+  savePanelLayout(name: string, tabIds: readonly string[]): void {
+    this.#updateSettings(saveLayout(this.#state.settings, name, tabIds));
+  }
+
+  deletePanelLayout(name: string): void {
+    this.#updateSettings(deleteLayout(this.#state.settings, name));
+  }
+
+  /** Moves a tab one place left or right. */
+  moveTab(tabIds: readonly string[], tabId: string, delta: -1 | 1): void {
+    this.#updateSettings(moveTab(this.#state.settings, tabIds, tabId, delta));
   }
 
   /** Restores every preference to its default. Usage history goes too. */

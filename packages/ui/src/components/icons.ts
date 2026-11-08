@@ -315,3 +315,58 @@ export function createIcon(name: string, size: number = IconSize.regular): SVGSV
 export function hasIcon(name: string): boolean {
   return ICONS[name] !== undefined;
 }
+
+/**
+ * Draws an icon onto a canvas at (x, y), `size` pixels square, in `color` —
+ * for previews that sketch the panel, so their tabs carry the real icons.
+ */
+export function drawIcon(g: CanvasRenderingContext2D, name: string, x: number, y: number, size: number, color: string): void {
+  const shapes = ICONS[name];
+  if (shapes === undefined) return;
+  g.save();
+  g.translate(x, y);
+  g.scale(size / 16, size / 16);
+  g.fillStyle = color;
+  g.strokeStyle = color;
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  for (const shape of shapes) {
+    g.beginPath();
+    if (shape.kind === "bar") {
+      g.fillRect(shape.x, shape.y, shape.w, shape.h);
+    } else if (shape.kind === "box") {
+      g.globalAlpha *= 0.55;
+      g.lineWidth = 1;
+      g.strokeRect(shape.x + 0.5, shape.y + 0.5, Math.max(0, shape.w - 1), Math.max(0, shape.h - 1));
+      g.globalAlpha /= 0.55;
+    } else if (shape.kind === "rule") {
+      g.lineWidth = 1.5;
+      g.moveTo(shape.x1, shape.y1);
+      g.lineTo(shape.x2, shape.y2);
+      g.stroke();
+    } else if (shape.kind === "ring") {
+      g.lineWidth = 1.5;
+      g.arc(shape.cx, shape.cy, shape.r, 0, Math.PI * 2);
+      g.stroke();
+    } else if (shape.kind === "path") {
+      const path = new Path2D(shape.d);
+      if (shape.fill) g.fill(path, "evenodd");
+      else {
+        g.lineWidth = 1.6;
+        g.stroke(path);
+      }
+    } else if (shape.kind === "tri") {
+      shape.points.split(" ").forEach((pair, i) => {
+        const [px, py] = pair.split(",").map(Number);
+        if (i === 0) g.moveTo(px ?? 0, py ?? 0);
+        else g.lineTo(px ?? 0, py ?? 0);
+      });
+      g.closePath();
+      g.fill();
+    } else {
+      g.arc(shape.cx, shape.cy, shape.r, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.restore();
+}

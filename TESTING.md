@@ -185,7 +185,12 @@ shortcut first. Use the search button in the header instead. The shortcut only
 works while the panel has keyboard focus — After Effects allows no global
 shortcuts from a panel.
 
-**10. Nothing selected.** Deselect everything. Layer commands grey out and their
+**10. Layout.** Open Settings (the gear). Hover the **Editor** preset: the
+picture moves the tab bar to the bottom and folds away the two bars. Click it:
+the panel does the same. Save it under a name, pick **Full** again, then delete
+the saved layout — it asks first.
+
+**11. Nothing selected.** Deselect everything. Layer commands grey out and their
 tooltip says why ("Select a layer first."); the create buttons stay available.
 
 ### Behaviour that needs a real After Effects
