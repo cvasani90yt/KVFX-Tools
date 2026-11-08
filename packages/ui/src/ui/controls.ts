@@ -2,6 +2,7 @@ import type { JsonObject } from "@kvfx/core";
 import type { Availability, Panel } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
+import { colorInput } from "./color-picker.js";
 import { h, setEnabled, toggleClass } from "./dom.js";
 
 /**
@@ -186,16 +187,18 @@ export function selectField(
   return { root, select };
 }
 
-/** A colour swatch backed by the platform colour picker. */
+/**
+ * A labelled colour swatch. It opens the panel's own picker, where a hex code
+ * can be typed — After Effects' native colour dialog closes on typing.
+ */
 export function colorField(
   label: string,
   value: string,
   onChange?: (hex: string) => void,
 ): { root: HTMLElement; input: HTMLInputElement } {
-  const input = h("input", { class: "kvfx-swatch", type: "color", attrs: { value, "aria-label": label, title: label } });
-  if (onChange !== undefined) input.addEventListener("input", () => onChange(input.value));
-  const root = h("label", { class: "kvfx-field kvfx-field--color" }, h("span", { class: "kvfx-field__label", text: label }), input);
-  return { root, input };
+  const color = colorInput(label, value, onChange);
+  const root = h("div", { class: "kvfx-field kvfx-field--color" }, h("span", { class: "kvfx-field__label", text: label }), color.swatch, color.input);
+  return { root, input: color.input };
 }
 
 /** A segmented choice — a handful of mutually exclusive options. */

@@ -2,6 +2,7 @@ import { AlignEdge, type AlignReference, type Platform, alignCommandIdFor } from
 import { IconSize, createIcon } from "../components/icons.js";
 import { PaletteOverlay } from "../palette/palette-view.js";
 import { SettingsDialog } from "../settings/settings-dialog.js";
+import { type ColorInput, colorInput } from "../ui/color-picker.js";
 import { CommandButtons } from "../ui/controls.js";
 import { applyTooltips, clear, h, setText, toggleClass } from "../ui/dom.js";
 import type { Availability, ConfirmOptions, Panel, View } from "./panel.js";
@@ -83,7 +84,7 @@ export class Shell implements Panel {
   readonly #banner: HTMLElement;
   readonly #toast: HTMLElement;
   readonly #modal: HTMLElement;
-  readonly #solidSwatch: HTMLInputElement;
+  readonly #solidSwatch: ColorInput;
   readonly #reference: HTMLButtonElement;
   readonly #save: HTMLButtonElement;
   #activeView: View | undefined;
@@ -166,24 +167,18 @@ export class Shell implements Panel {
       { class: "kvfx-anchors", attrs: { "aria-label": "Move anchor point" } },
       ...ANCHORS.map((a) => this.#buttons.button(a.id, { label: a.label, icon: a.icon, variant: "tool", className: "kvfx-anchor" })),
     );
-    this.#solidSwatch = h("input", {
-      class: "kvfx-swatch kvfx-swatch--inline",
-      type: "color",
-      title: "Solid colour",
-      attrs: { value: session.state.settings.ui.solidColor, "aria-label": "Solid colour" },
-      on: { input: () => session.setUi("solidColor", this.#solidSwatch.value.toLowerCase()) },
-    });
+    this.#solidSwatch = colorInput("Solid colour", session.state.settings.ui.solidColor, (hex) => session.setUi("solidColor", hex), "kvfx-swatch kvfx-swatch--inline");
     // No icon: the swatch beside it already says "solid, this colour".
     const solid = this.#buttons.button("kvfx.layer.createsolid", {
       label: "Solid",
-      params: () => ({ color: this.#solidSwatch.value }),
+      params: () => ({ color: this.#solidSwatch.input.value }),
     });
     const creators = h(
       "div",
       { class: "kvfx-creators" },
       this.#buttons.button("kvfx.layer.createnull", { label: "Null", icon: "null" }),
       this.#buttons.button("kvfx.layer.createadjustment", { label: "Adjust", icon: "adjustment" }),
-      h("div", { class: "kvfx-solid" }, solid, this.#solidSwatch),
+      h("div", { class: "kvfx-solid" }, solid, this.#solidSwatch.swatch, this.#solidSwatch.input),
       this.#buttons.button("kvfx.layer.createtext", { label: "Text", icon: "text" }),
       this.#buttons.button("kvfx.layer.createshape", { label: "Shape", icon: "shape" }),
       this.#buttons.button("kvfx.layer.createcamera", { label: "Camera", icon: "camera" }),
@@ -379,9 +374,7 @@ export class Shell implements Panel {
     this.#updateToast(state);
 
     const solidHex = state.settings.ui.solidColor;
-    if (this.#solidSwatch.value.toLowerCase() !== solidHex && document.activeElement !== this.#solidSwatch) {
-      this.#solidSwatch.value = solidHex;
-    }
+    if (this.#solidSwatch.input.value !== solidHex && !this.#solidSwatch.isOpen()) this.#solidSwatch.set(solidHex);
 
     this.#activeView?.update(state, availability);
     this.#palette.refresh();
