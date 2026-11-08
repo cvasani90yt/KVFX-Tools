@@ -16,8 +16,13 @@ import { requireComp } from "./raw.js";
  * reads it. The project doesn't change, so this is a query, not an undo step.
  */
 
-/** Only ever a PNG directly inside a "KVFXTools/cache" folder. */
-const CACHE_FILE = /[\\/]KVFXTools[\\/]cache[\\/][^\\/]+\.png$/i;
+/**
+ * Only ever a PNG directly inside a "KVFXTools/cache" folder. The slashes in
+ * the character classes are escaped: ExtendScript reads regex literals by
+ * ECMAScript 3's grammar, where an unescaped "/" ends the literal even inside
+ * [...], and the whole host script then fails to load.
+ */
+const CACHE_FILE = /[\\\/]KVFXTools[\\\/]cache[\\\/][^\\\/]+\.png$/i;
 const DEFAULT_DEPTH = 8;
 
 export const compFrameOperation: Operation = {

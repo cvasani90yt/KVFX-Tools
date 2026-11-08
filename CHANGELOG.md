@@ -99,6 +99,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tab; a section order saved by an earlier build is updated to match
 
 ### Fixed
+- After Effects refused to load the host script ("Unable to execute script at
+  line 3201. Expected: ;"), so the panel couldn't reach it: the Pick from comp
+  path check used a regex with an unescaped "/" inside [...], which
+  ExtendScript's ECMAScript 3 grammar reads as the end of the regex. The
+  slashes are escaped, and the ES3 guard now reads every regex in the host
+  bundle with a real tokenizer and fails the build on that, on flags other
+  than g, i and m, and on lookbehind and named groups
 - Settings ▸ Sections: the up and down arrows now move a section one place
   per click. The list used to redraw before the panel had moved the section,
   so it lagged a click behind and every second click did nothing. The list

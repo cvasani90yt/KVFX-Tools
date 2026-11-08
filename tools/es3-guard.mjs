@@ -1,5 +1,6 @@
 import { readFile, access } from "node:fs/promises";
 import { join } from "node:path";
+import { tokenizer } from "acorn";
 import { repoRoot } from "../scripts/paths.mjs";
 import { findLines, stripLiterals } from "./strip-source.mjs";
 
@@ -72,6 +73,42 @@ const raw = await readFile(bundlePath, "utf8");
 const source = stripLiterals(raw);
 
 const failures = [];
+
+/**
+ * Regex literals, read by a real tokenizer. Stripping literals (above) hides
+ * them from the syntax scan, but ExtendScript reads them by ECMAScript 3's
+ * grammar, which differs from today's in ways that break the whole bundle:
+ * an unescaped "/" inside a character class ends the literal there (ES5 made
+ * [...] contain it), and the engine knows only the g, i and m flags, with no
+ * lookbehind or named groups.
+ */
+function slashInClass(pattern) {
+  let inClass = false;
+  for (let i = 0; i < pattern.length; i += 1) {
+    const ch = pattern[i];
+    if (ch === "\\") {
+      i += 1;
+    } else if (inClass) {
+      if (ch === "]") inClass = false;
+      else if (ch === "/") return true;
+    } else if (ch === "[") {
+      inClass = true;
+    }
+  }
+  return false;
+}
+
+const regexProblems = [];
+for (const token of tokenizer(raw, { ecmaVersion: 5, locations: true })) {
+  if (token.type.label !== "regexp") continue;
+  const { pattern, flags } = token.value;
+  const where = `line ${String(token.loc.start.line)}: /${pattern}/${flags}`;
+  if (slashInClass(pattern)) regexProblems.push(`  unescaped "/" inside a regex character class (write \\/) at ${where}`);
+  if (/[^gim]/.test(flags)) regexProblems.push(`  regex flag ExtendScript lacks at ${where}`);
+  if (/\(\?<[=!]/.test(pattern)) regexProblems.push(`  regex lookbehind at ${where}`);
+  if (/\(\?<[A-Za-z]/.test(pattern)) regexProblems.push(`  named regex group at ${where}`);
+}
+failures.push(...regexProblems);
 for (const [pattern, label] of [...BANNED_SYNTAX, ...BANNED_LIBRARY]) {
   const lines = findLines(source, pattern);
   if (lines.length > 0) {
