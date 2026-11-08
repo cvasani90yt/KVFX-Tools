@@ -87,18 +87,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **From comp**: the open comp's frame at the playhead, in the panel, with a
   magnifier and a live hex readout; click (or arrow keys and Enter) takes the
   colour. The frame goes through KVFX's cache folder and is deleted once read
-- **From screen**: any pixel on screen, other apps included. It uses the
-  browser engine's eyedropper where After Effects allows it, and otherwise the
-  operating system's own picker, starting on the panel's colour — the macOS
-  colour panel, or on Windows a still copy of the screens to click (Esc
-  cancels) — so inside After Effects it is always there. A second click stops
-  the panel waiting
+- **From screen**: any pixel on screen, other apps included, through the
+  operating system's own picker — on Windows a still copy of the screens to
+  click (Esc cancels), on macOS the colour panel, starting on the panel's
+  colour — which the panel starts itself, so After Effects never waits on it.
+  A second click cancels and closes the picker. In a plain browser (the
+  preview) the browser's eyedropper does it
 - Host: `comp.frame` saves the frame (only into KVFX's cache folder), run as a
   plan so a heavy frame gets the longer time limit
-- Host: `color.screenPick` starts the system picker detached, so After Effects
-  isn't held while you pick. It writes only to a text file in KVFX's cache
-  folder, and the Windows script goes in encoded, so no script policy blocks it.
-  `callSystem` joins the environment
+- Host: `color.screenPick`, the fallback for when the panel can't start
+  programs. On Windows it opens a launcher file the panel wrote in KVFX's cache
+  folder (`File.execute`, which returns at once) and never runs a command; on
+  macOS it runs osascript in the background. `callSystem` and `executeFile`
+  join the environment
 
 ### Added — Colour picker (Tools)
 - A **Colour picker** at the top of Tools ▸ Colour: an eyedropper icon, the
@@ -113,6 +114,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tab; a section order saved by an earlier build is updated to match
 
 ### Fixed
+- **From Screen** froze After Effects on Windows, with no picker on screen.
+  After Effects started the picker as a system command, and it waits for a
+  command — on Windows for everything the command starts, too — so it hung
+  until the picker closed, while the picker's window could start out hidden.
+  The panel now starts the picker itself through CEP, so After Effects isn't
+  involved and stays responsive. A second click cancels and closes the picker,
+  which also closes itself after three minutes. Its window always shows, it
+  keeps working without DPI awareness, and the panel says so when it ends
+  without a colour (when security software blocks PowerShell, say). Inside
+  After Effects the browser eyedropper, which After Effects doesn't have, is no
+  longer tried first, so the picker opens straight away
 - **Dup Comp** (Quick) and **Duplicate Comp + Nested Comps** (Tools) only
   ever added the copy to the Project panel, even with a precomp layer selected
   in the timeline. Now each selected precomp layer gets a copy directly above

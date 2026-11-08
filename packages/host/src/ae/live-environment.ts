@@ -248,6 +248,7 @@ export interface HostGlobals {
   readonly os: string;
   readonly engineVersion: string;
   readonly callSystem: (command: string) => string;
+  readonly executeFile: (path: string) => boolean;
   readonly isComp: (item: unknown) => boolean;
   readonly newKeyframeEase: (speed: number, influence: number) => AeKeyframeEase;
   readonly newFile: (path: string) => AeFile;
@@ -293,6 +294,9 @@ export function createEnvironment(g: HostGlobals): AeEnvironment {
     },
     callSystem: function (command: string): string {
       return g.callSystem(command);
+    },
+    executeFile: function (path: string): boolean {
+      return g.executeFile(path);
     },
     engineVersion: function (): string {
       return g.engineVersion;
@@ -387,6 +391,10 @@ export function createLiveEnvironment(): AeEnvironment {
     engineVersion: $.version,
     callSystem: function (command: string): string {
       return system.callSystem(command);
+    },
+    executeFile: function (path: string): boolean {
+      const file = new File(path);
+      return typeof file.execute === "function" ? file.execute() === true : false;
     },
     isComp: function (item: unknown): boolean {
       return item instanceof CompItem;

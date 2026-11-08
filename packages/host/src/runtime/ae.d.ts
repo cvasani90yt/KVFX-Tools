@@ -274,6 +274,8 @@ interface AeFile {
   readonly name: string;
   /** When the file was last written. */
   readonly modified?: Date;
+  /** Opens the file with its application, as a double-click would; returns at once. */
+  execute?(): boolean;
 }
 
 interface AeImportOptions {

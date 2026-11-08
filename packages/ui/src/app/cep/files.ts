@@ -147,6 +147,19 @@ export function removeCacheFile(path: string): boolean {
   return api.deleteFile(path).err === CEP_FS_NO_ERROR;
 }
 
+/**
+ * Writes UTF-8 text to a new file directly inside KVFX's cache folder. Any
+ * other path, or a file that already exists, is refused: nothing is replaced.
+ * The bytes go through Base64, so no byte-order mark is added — cmd.exe would
+ * read one as part of a launcher's first command.
+ */
+export function writeCacheText(path: string, text: string): boolean {
+  if (!CACHE_FILE.test(path) || exists(path)) return false;
+  let binary = "";
+  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
+  return writeBase64(path, btoa(binary));
+}
+
 /** KVFX's folder in the platform application-data root. */
 export function appDataFolder(...sub: readonly string[]): string | undefined {
   const host = window.__adobe_cep__;

@@ -92,6 +92,8 @@ export interface MockAe extends AeEnvironment {
   readonly undoEvents: string[];
   /** Command lines run with `system.callSystem`, oldest first. */
   readonly systemCalls: string[];
+  /** Files opened with `File.execute`, oldest first. */
+  readonly executedFiles: string[];
   openGroups(): number;
   setVersion(version: string): void;
   advance(ms: number): void;
@@ -131,6 +133,7 @@ function vec2(value: unknown): Vec2Value | undefined {
 
 export function createMockAe(options: MockAeOptions = {}): MockAe {
   const systemCalls: string[] = [];
+  const executedFiles: string[] = [];
   const app = createMockApp({
     ...(options.version === undefined ? {} : { version: options.version }),
     ...(options.hasProject === undefined ? {} : { hasProject: options.hasProject }),
@@ -191,6 +194,10 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
       systemCalls.push(command);
       return "";
     },
+    executeFile: (path) => {
+      executedFiles.push(path);
+      return true;
+    },
     isComp: (item) => item instanceof MockComp,
     newKeyframeEase: (speed, influence) => ({ speed, influence }),
     newFile: (path) => ({ exists: app.existingFiles.has(path), fsName: path, name: path.split(/[\\/]/).pop() ?? path }),
@@ -232,6 +239,7 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
       return app.undoEvents;
     },
     systemCalls,
+    executedFiles,
     openGroups: () =>
       app.undoEvents.reduce((depth, event) => depth + (event === "end" ? -1 : 1), 0),
     setVersion: (next) => {

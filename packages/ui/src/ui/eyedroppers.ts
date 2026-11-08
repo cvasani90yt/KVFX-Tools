@@ -1,7 +1,16 @@
 import type { Panel } from "../app/panel.js";
-import type { SessionState } from "../app/session.js";
-import { hexToRgb } from "@kvfx/core";
-import { appDataFolder, exists, filesAvailable, join, makeDirs, readBase64, readText, removeCacheFile } from "../app/cep/files.js";
+import type { Session, SessionState } from "../app/session.js";
+import {
+  type JsonObject,
+  SYSTEM_PICKER_TIMEOUT_MS,
+  hexToRgb,
+  macPickerScript,
+  powershellCandidates,
+  windowsPickerArgs,
+  windowsPickerLauncher,
+} from "@kvfx/core";
+import { appDataFolder, exists, filesAvailable, join, makeDirs, readBase64, readText, removeCacheFile, writeCacheText } from "../app/cep/files.js";
+import { processRunning, startProcess, stopProcess } from "../app/cep/process.js";
 import { IconSize, createIcon } from "../components/icons.js";
 import { normalizeHex } from "./color-picker.js";
 import { h, setEnabled, setText } from "./dom.js";
@@ -15,10 +24,10 @@ import { fitWithin, hexAt, parsePicked, pngComplete, refusedByHost } from "./eye
  * hex readout, and a click takes that pixel's colour. It works everywhere,
  * because nothing outside the panel has to be read.
  *
- * Pick from screen: Chromium's own eyedropper, which can pick from anywhere
- * on screen — but only where the app hosting the panel has built it. When
- * After Effects hasn't, the browser refuses at once; the button then hides
- * itself for that version of After Effects.
+ * Pick from screen: anywhere on screen, other apps included. Inside After
+ * Effects, whose panels have no eyedropper, through the operating system's
+ * own picker, which the panel starts itself so After Effects never waits on
+ * it; in a plain browser (the preview), through Chromium's eyedropper.
  */
 
 /* eslint-disable no-magic-numbers -- timings, the magnifier's size and its zoom are the content */
@@ -422,24 +431,47 @@ export async function pickFromScreen(): Promise<ScreenPick> {
 // The buttons, shared by Tools ▸ Colour and the Quick tab
 // ---------------------------------------------------------------------------
 
-/** How long Pick from screen waits on the browser eyedropper before it falls back to the system picker. */
-const SCREEN_PICK_TIMEOUT_MS = 30_000;
-/** How long the system colour picker may stay open before the panel stops waiting for it. */
-const NATIVE_WAIT_MS = 180_000;
+/** How long the panel waits for the system picker: the picker's own time limit, and time to start. */
+const NATIVE_WAIT_MS = SYSTEM_PICKER_TIMEOUT_MS + 20_000;
 const NATIVE_POLL_MS = 250;
 const SCREEN_FILE = "screen-pick.txt";
+const LAUNCHER_FILE = "screen-pick.cmd";
 
-/** Waits for the system picker's answer: it writes a whole file in one move, so any file is the answer. */
-async function waitForText(path: string, ms: number, cancelled: () => boolean): Promise<string | undefined> {
-  const deadline = performance.now() + ms;
-  while (performance.now() < deadline && !cancelled()) {
-    if (exists(path)) {
-      const text = readText(path);
-      if (text !== undefined) return text;
+const onWindows = (): boolean => /^win/i.test(navigator.platform) || /Windows/i.test(navigator.userAgent);
+
+/** The system picker the panel started, so a second click or the time limit can close it. */
+let pickerPid: number | undefined;
+
+function stopPicker(): void {
+  if (pickerPid !== undefined) stopProcess(pickerPid);
+  pickerPid = undefined;
+}
+
+/** What waiting on the system picker came to. */
+type Answer = { readonly text: string } | "ended" | "cancelled" | "timeout";
+
+/**
+ * Waits for the system picker's answer. It writes a whole file in one move, so
+ * any file is the answer — and a picker that has ended without one won't.
+ */
+async function waitForAnswer(path: string, cancelled: () => boolean, pid: number | undefined): Promise<Answer> {
+  const deadline = performance.now() + NATIVE_WAIT_MS;
+  const read = (): Answer | undefined => {
+    const text = exists(path) ? readText(path) : undefined;
+    return text === undefined ? undefined : { text };
+  };
+  for (;;) {
+    const answer = read();
+    if (answer !== undefined) return answer;
+    if (cancelled()) return "cancelled";
+    if (performance.now() > deadline) return "timeout";
+    if (pid !== undefined && processRunning(pid) === false) {
+      // The answer and the exit can cross: one last look.
+      await delay(NATIVE_POLL_MS);
+      return read() ?? "ended";
     }
     await delay(NATIVE_POLL_MS);
   }
-  return undefined;
 }
 
 let sharedComp: CompEyedropper | undefined;
@@ -448,11 +480,11 @@ let sharedComp: CompEyedropper | undefined;
  * "From comp" and "From screen" buttons wherever they appear: a picked colour
  * becomes the panel's colour, and From comp is off without a comp.
  *
- * From screen uses the browser engine's eyedropper where After Effects allows
- * it, and the operating system's own picker otherwise — the macOS colour panel,
- * or a click-to-pick copy of the screens on Windows — so inside After Effects
- * it is always there. Outside After Effects (the preview) only the browser's
- * can work, and the button shows only if it exists.
+ * Inside After Effects, whose panels have no eyedropper, From screen opens the
+ * operating system's own picker — a click-to-pick copy of the screens on
+ * Windows, the colour panel on macOS — started so that After Effects never
+ * waits on it. Outside After Effects (the preview) the browser's eyedropper
+ * does it, and the button shows only if it exists.
  */
 export class Eyedroppers {
   readonly #panel: Panel;
@@ -489,7 +521,7 @@ export class Eyedroppers {
     const insideAe = filesAvailable();
     for (const button of this.#screen) {
       button.hidden = !insideAe && !screenPickerExists();
-      setEnabled(button, !insideAe || connected, "Not connected to After Effects.", "Pick a colour from anywhere on your screen");
+      setEnabled(button, !insideAe || connected, "Not connected to After Effects.", "Pick a colour from anywhere on your screen. Click again to cancel.");
     }
   }
 
@@ -505,7 +537,9 @@ let screenPick: { token: number; busy: boolean } = { token: 0, busy: false };
 
 async function pickScreen(panel: Panel, button: HTMLButtonElement, idle: string, take: (hex: string) => void): Promise<void> {
   if (screenPick.busy) {
+    // A second click cancels, and closes the picker too when the panel started it.
     cancelScreenPick();
+    stopPicker();
     screenPick = { token: screenPick.token + 1, busy: false };
     return;
   }
@@ -519,77 +553,99 @@ async function pickScreen(panel: Panel, button: HTMLButtonElement, idle: string,
   screenPick = { token, busy: true };
   const current = (): boolean => screenPick.token === token;
   try {
-    const refused = session.state.settings.ui.toolParams["colourPicker"]?.["screenUnsupported"] === aeVersion(session.state);
-    if (screenPickerExists() && !refused) {
-      // Opened before anything else happens: the eyedropper needs the click it came from.
+    if (!filesAvailable()) {
+      // Outside After Effects only the browser's eyedropper can work. It is
+      // opened before anything else happens: it needs the click it came from.
       const picking = pickFromScreen();
       busy(true);
-      // An eyedropper that neither opens nor refuses would leave the click doing
-      // nothing; after a while, stop waiting and use the system picker.
-      let timedOut = false;
-      const timer = setTimeout(() => {
-        timedOut = true;
-        cancelScreenPick();
-      }, SCREEN_PICK_TIMEOUT_MS);
       const result = await picking;
-      clearTimeout(timer);
       if (!current()) return;
-      if (typeof result === "object") {
-        take(result.hex);
-        return;
-      }
-      if (result === "cancelled" && !timedOut) return;
-      // Refused at once, or never answered: this After Effects doesn't support it.
-      session.setToolParams("colourPicker", { screenUnsupported: aeVersion(session.state) });
-    }
-    if (!filesAvailable()) {
-      session.report("Pick from screen", false, "Picking from the screen works inside After Effects.");
+      if (typeof result === "object") take(result.hex);
+      else if (result === "unsupported") session.report("Pick from screen", false, "Picking from the screen works inside After Effects.");
       return;
     }
     busy(true);
     const hex = await pickWithSystem(panel, current);
     if (hex !== undefined && current()) take(hex);
   } finally {
-    if (current()) screenPick = { token, busy: false };
-    busy(false);
+    if (current()) {
+      screenPick = { token, busy: false };
+      busy(false);
+    } else if (!screenPick.busy) {
+      busy(false);
+    }
   }
 }
 
-/** The operating system's own colour picker, opened by After Effects; the answer comes back as a file. */
+/**
+ * The operating system's own colour picker; the answer comes back as a file
+ * in KVFX's cache folder. The panel starts it as its own process, so After
+ * Effects isn't involved and can't be held up, and a second click or the time
+ * limit can close it.
+ */
 async function pickWithSystem(panel: Panel, current: () => boolean): Promise<string | undefined> {
   const session = panel.session;
-  const folder = appDataFolder("cache");
-  if (folder === undefined || !makeDirs(folder)) {
-    session.report("Pick from screen", false, "KVFX couldn't create its cache folder, so the system colour picker can't answer.");
+  const fail = (message: string): undefined => {
+    session.report("Pick from screen", false, message);
     return undefined;
-  }
+  };
+  const folder = appDataFolder("cache");
+  if (folder === undefined || !makeDirs(folder)) return fail("KVFX couldn't create its cache folder, so the screen picker can't answer.");
   const out = join(folder, SCREEN_FILE);
   removeCacheFile(out);
   removeCacheFile(`${out}.part`);
   const rgb = hexToRgb(session.state.settings.ui.solidColor) ?? [1, 1, 1];
-  const reply = await session.query("kvfx.op.color.screenPick", { out, rgb: [rgb[0], rgb[1], rgb[2]] });
-  // A refusal is final. A late reply may only mean After Effects waited for the
-  // picker to close, so then the file still decides.
-  if (!reply.ok && !/budget|took/i.test(reply.message)) {
-    session.report("Pick from screen", false, reply.message);
-    return undefined;
+
+  if (!(await startPicker(session, folder, out, rgb))) return undefined;
+  const pid = pickerPid;
+  const answer = await waitForAnswer(out, () => !current(), pid);
+  // A picker that answered has ended by itself; one still open after a cancel
+  // or the time limit is closed here.
+  if (pickerPid === pid) {
+    if (typeof answer !== "object") stopPicker();
+    pickerPid = undefined;
   }
-  const text = await waitForText(out, NATIVE_WAIT_MS, () => !current());
   removeCacheFile(out);
-  if (!current()) return undefined;
-  if (text === undefined) {
-    session.report("Pick from screen", false, "The system colour picker didn't answer. Try again — and if nothing appears, use From comp.");
-    return undefined;
-  }
-  const picked = parsePicked(text);
+  if (answer === "cancelled" || !current()) return undefined;
+  if (answer === "timeout") return fail("The screen picker didn't answer in time, so it was closed. Try again, or use From comp.");
+  if (answer === "ended") return fail("The screen picker closed without a colour. If it never appeared, security software may have stopped it — use From comp instead.");
+  const picked = parsePicked(answer.text);
   if (picked === "cancelled") return undefined;
-  if (picked === undefined) {
-    session.report("Pick from screen", false, "The system colour picker couldn't open on this computer. Use From comp instead.");
-    return undefined;
-  }
+  if (picked === undefined) return fail("The screen picker couldn't open on this computer. Use From comp instead.");
   return picked.hex;
 }
 
-function aeVersion(state: SessionState): string {
-  return state.connection.status === "connected" ? state.connection.facts.aeVersion : "unknown";
+/**
+ * Starts the picker from the panel when CEP allows it. Otherwise After
+ * Effects starts it in a way that returns at once: on Windows by opening a
+ * launcher file as a double-click would, never by running a command — After
+ * Effects waits on a command, and on everything it starts.
+ */
+async function startPicker(session: Session, folder: string, out: string, rgb: readonly number[]): Promise<boolean> {
+  if (!onWindows()) {
+    pickerPid = startProcess("/bin/sh", ["-c", macPickerScript(out, rgb)]);
+    return pickerPid !== undefined || launchThroughHost(session, { out, rgb: [rgb[0] ?? 1, rgb[1] ?? 1, rgb[2] ?? 1] });
+  }
+  const powershell = powershellCandidates(appDataFolder() ?? "").find((path) => exists(path));
+  if (powershell === undefined) {
+    session.report("Pick from screen", false, "Windows PowerShell, which shows the screen picker, wasn't found. Use From comp instead.");
+    return false;
+  }
+  pickerPid = startProcess(powershell, windowsPickerArgs(out));
+  if (pickerPid !== undefined) return true;
+  const launcher = join(folder, LAUNCHER_FILE);
+  removeCacheFile(launcher);
+  if (!writeCacheText(launcher, windowsPickerLauncher(powershell, out))) {
+    session.report("Pick from screen", false, "KVFX couldn't prepare the screen picker in its cache folder.");
+    return false;
+  }
+  return launchThroughHost(session, { launcher });
+}
+
+async function launchThroughHost(session: Session, args: JsonObject): Promise<boolean> {
+  const reply = await session.query("kvfx.op.color.screenPick", args);
+  // A late reply isn't a refusal: the answer file still decides.
+  if (reply.ok || /budget|took/i.test(reply.message)) return true;
+  session.report("Pick from screen", false, reply.message);
+  return false;
 }

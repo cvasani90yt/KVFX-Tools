@@ -136,7 +136,9 @@ preview in view and highlighted. Back on Quick, put the playhead on a cut and
 **Alt-click** **Transition**: it adds your last transition without leaving
 Quick. Click **From Screen** and pick a colour outside After Effects (macOS:
 the colour panel's magnifier, then OK; Windows: click a pixel on the frozen
-screen): the **Colour** tile turns that colour. Click **Customize**, drag a
+screen, which can take a second or two to appear): the **Colour** tile turns
+that colour. After Effects should stay responsive the whole time. Click **From
+Screen** again while it says **Picking…**: the picker closes. Click **Customize**, drag a
 tile somewhere else, remove one, add one from the list, then **Done**. Close
 and reopen the panel: it opens on Quick again, with your arrangement.
 
@@ -226,12 +228,12 @@ real thing. Please look closely at these, which the model cannot settle
 * **Clock** transition: does the sweep start at twelve o'clock?
 * **From comp**: does the frame match the viewer, including in a 32-bit
   project?
-* **From screen**: does a picker open (the browser eyedropper, the macOS
-  colour panel, or the frozen screen on Windows), does the picked colour reach
-  the panel, and does After Effects stay responsive while the picker is open?
-  On Windows, does the frozen screen line up with your displays, at every
-  display scale? If the panel asks you to allow scripts to write files, does
-  turning that preference on fix it?
+* **From screen**: does the picker appear within a couple of seconds (the
+  frozen screen on Windows, the colour panel on macOS), and does the picked
+  colour reach the panel? Does After Effects stay responsive while it is open,
+  and does a second click on From Screen close it? On Windows, does the frozen
+  screen line up with your displays, at every display scale? If the panel asks
+  you to allow scripts to write files, does turning that preference on fix it?
 
 ## If something does not work
 

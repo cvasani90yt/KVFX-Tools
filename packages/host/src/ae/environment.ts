@@ -110,8 +110,14 @@ export interface AeEnvironment {
   language(): string;
   /** `$.os`. */
   os(): string;
-  /** Runs a command line (`system.callSystem`) and returns what it printed. */
+  /**
+   * Runs a command line (`system.callSystem`) and returns what it printed.
+   * After Effects waits for the command — on Windows also for anything it
+   * starts — so never use it for something that stays open.
+   */
   callSystem(command: string): string;
+  /** Opens a file as a double-click would (`File.execute`); returns at once. */
+  executeFile(path: string): boolean;
   /** `$.version` — the ExtendScript engine version. */
   engineVersion(): string;
   hasProject(): boolean;

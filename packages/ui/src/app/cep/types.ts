@@ -57,6 +57,24 @@ export interface AdobeCepUtil {
   registerExtensionUnloadCallback(callback: () => void): { err: number };
 }
 
+/** A `cep.process` result: `err` 0 for success, `data` the answer. */
+export interface AdobeCepProcessResult<T> {
+  readonly err: number;
+  readonly data?: T;
+}
+
+/**
+ * CEP's built-in process bridge, also available without Node. A process it
+ * starts belongs to the panel's own process, not to After Effects, so After
+ * Effects never waits on it.
+ */
+export interface AdobeCepProcess {
+  /** The executable's full path, then its arguments; `data` is the pid. */
+  createProcess(...args: string[]): AdobeCepProcessResult<number>;
+  isRunning?(pid: number): AdobeCepProcessResult<boolean>;
+  terminate?(pid: number): AdobeCepProcessResult<unknown>;
+}
+
 /** `cep.fs` returns 0 for success. We deliberately depend on nothing else. */
 export const CEP_FS_NO_ERROR = 0;
 
@@ -66,7 +84,7 @@ export const SYSTEM_PATH_USER_DATA = "userData";
 declare global {
   interface Window {
     __adobe_cep__?: AdobeCepHost;
-    cep?: { fs?: AdobeCepFs; util?: AdobeCepUtil; encoding?: AdobeCepEncoding };
+    cep?: { fs?: AdobeCepFs; util?: AdobeCepUtil; encoding?: AdobeCepEncoding; process?: AdobeCepProcess };
   }
 }
 
