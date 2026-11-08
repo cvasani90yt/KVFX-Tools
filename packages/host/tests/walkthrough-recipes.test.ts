@@ -682,6 +682,8 @@ describe("walkthrough recipes", () => {
     const text = render(recipes, resize);
     if (WRITE) writeFileSync(OUT, text);
     expect(existsSync(OUT), "run with KVFX_WRITE_RECIPES=1 to create the recipes file").toBe(true);
-    expect(readFileSync(OUT, "utf8"), "recipes are stale: regenerate with KVFX_WRITE_RECIPES=1").toBe(text);
+    // Git on Windows checks text files out with CRLF line endings; that isn't a stale file.
+    const committed = readFileSync(OUT, "utf8").replace(/\r\n/g, "\n");
+    expect(committed, "recipes are stale: regenerate with KVFX_WRITE_RECIPES=1").toBe(text);
   });
 });
