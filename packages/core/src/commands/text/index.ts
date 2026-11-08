@@ -191,4 +191,18 @@ export const styleText = simpleCommand({
   },
 });
 
-export const textCommands: readonly Command[] = [animateText, explodeText, styleText];
+/** The Colour picker's Text button: only the fill colour changes — font, size and tracking stay. */
+export const colourText = simpleCommand({
+  id: "kvfx.text.color",
+  name: "Colour Text",
+  description: "Recolour the selected text layers in the picked colour",
+  category: CommandCategory.Text,
+  keywords: ["text colour", "text color", "font colour", "font color", "recolour", "recolor", "fill"],
+  icon: "text",
+  metadata: NEEDS_LAYER,
+  check: hasText,
+  defaultParams: (ui) => ({ color: ui.solidColor }),
+  steps: (ctx) => [{ op: "kvfx.op.text.setStyle", args: { target: "selection", fillColor: [...colorParam(ctx, "color", [1, 1, 1])] } }],
+});
+
+export const textCommands: readonly Command[] = [animateText, explodeText, styleText, colourText];

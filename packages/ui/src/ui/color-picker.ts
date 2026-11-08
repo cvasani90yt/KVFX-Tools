@@ -1,5 +1,6 @@
 import { hexToRgb, rgbToHex } from "@kvfx/core";
-import { h, toggleClass } from "./dom.js";
+import { IconSize, createIcon } from "../components/icons.js";
+import { h, setText, toggleClass } from "./dom.js";
 
 /**
  * Colour fields with a picker drawn inside the panel.
@@ -265,20 +266,41 @@ export interface ColorInput {
   readonly isOpen: () => boolean;
 }
 
+export interface ColorInputOptions {
+  /** An icon before the colour, so the control reads as a picker. */
+  readonly icon?: string;
+  /** Shows the hex code beside the colour. */
+  readonly showHex?: boolean;
+}
+
 /** A swatch that opens the in-panel picker. `onChange` fires as the colour changes. */
-export function colorInput(label: string, value: string, onChange?: (hex: string) => void, className = "kvfx-swatch"): ColorInput {
+export function colorInput(
+  label: string,
+  value: string,
+  onChange?: (hex: string) => void,
+  className = "kvfx-swatch",
+  options: ColorInputOptions = {},
+): ColorInput {
   const input = h("input", { type: "hidden", attrs: { value: normalizeHex(value) ?? "#ffffff" } });
   const chip = h("span", { class: "kvfx-swatch__chip" });
-  const swatch = h("button", {
-    class: className,
-    type: "button",
-    title: label,
-    attrs: { "aria-label": label, "aria-haspopup": "dialog", "aria-expanded": "false" },
-  }, chip);
+  const hexText = options.showHex === true ? h("span", { class: "kvfx-swatch__hex" }) : null;
+  const swatch = h(
+    "button",
+    {
+      class: className,
+      type: "button",
+      title: label,
+      attrs: { "aria-label": label, "aria-haspopup": "dialog", "aria-expanded": "false" },
+    },
+    options.icon === undefined ? null : createIcon(options.icon, IconSize.medium),
+    chip,
+    hexText,
+  );
   const paint = (hex: string): void => {
     input.value = hex;
     chip.style.backgroundColor = hex;
     swatch.title = `${label}: ${hex}`;
+    if (hexText !== null) setText(hexText, hex.toUpperCase());
   };
   paint(input.value);
   swatch.addEventListener("click", () => {

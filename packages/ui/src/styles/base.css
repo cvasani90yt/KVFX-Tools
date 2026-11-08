@@ -457,6 +457,45 @@ select:focus-visible,
   border-color: var(--kvfx-accent-edge);
 }
 
+/* Tools ▸ Colour: the panel's colour, as a full-width picker button. */
+.kvfx-colorpick {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: var(--kvfx-wide-h);
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-pill);
+  background: var(--kvfx-surface-base);
+  color: var(--kvfx-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kvfx-colorpick .kvfx-swatch__chip {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 16px;
+  border-radius: var(--kvfx-radius-pill);
+}
+
+.kvfx-swatch__hex {
+  flex: 1 1 auto;
+  font-family: var(--kvfx-font-mono);
+  font-size: var(--kvfx-text-sm);
+  letter-spacing: 0.04em;
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-colorpick:hover,
+.kvfx-colorpick[aria-expanded="true"] {
+  border-color: var(--kvfx-accent-edge);
+  color: var(--kvfx-accent);
+}
+
 /* The colour picker: drawn in the panel, so a hex code can be typed. */
 .kvfx-cpick {
   position: fixed;

@@ -5,6 +5,7 @@ import { createProductionRegistry } from "../src/ops/index.js";
 import type { HostJson } from "../src/runtime/serialize.js";
 import { createMockAe, type MockLayerSpec } from "./mock-ae.js";
 import { INTERP, type MockProp } from "./mock-dom.js";
+import { planFor, runCommand } from "./run-command.js";
 
 interface Reply {
   ok: boolean;
@@ -332,5 +333,31 @@ describe("text.setStyle and text.read", () => {
   it("reads the selected text layer's string", () => {
     const h = harness([{ name: "T", kind: "text", text: "Hello", selected: true }]);
     expect(ok(h.query("kvfx.op.text.read"))["text"]).toBe("Hello");
+  });
+});
+
+describe("Colour Text (the Colour picker's Text button)", () => {
+  it("recolours the selected text layers and leaves their font, size and other layers alone", () => {
+    const ae = createMockAe({
+      comp: {
+        width: 1920,
+        height: 1080,
+        frameRate: 25,
+        layers: [
+          { name: "Title", kind: "text", text: "Hello", selected: true },
+          { name: "Plate", selected: true },
+        ],
+      },
+    });
+    const doc = (): Record<string, unknown> => ae.raw("Title").property("ADBE Text Properties")!.property("ADBE Text Document")!.value as Record<string, unknown>;
+    const before = { font: doc()["font"], fontSize: doc()["fontSize"] };
+    const reply = runCommand(ae, "kvfx.text.color", { color: "#3366ff" });
+    expect(doc()).toMatchObject({ ...before, fillColor: [0.2, 0.4, 1] });
+    expect(JSON.stringify(reply.result)).toContain("Not a text layer");
+  });
+
+  it("is unavailable without a text layer selected", () => {
+    const ae = createMockAe({ comp: { width: 1920, height: 1080, frameRate: 25, layers: [{ name: "Plate", selected: true }] } });
+    expect(() => planFor(ae, "kvfx.text.color", { color: "#ffffff" })).toThrow("Select a text layer.");
   });
 });

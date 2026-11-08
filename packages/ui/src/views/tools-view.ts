@@ -15,6 +15,7 @@ import {
   selectField,
   toggles,
 } from "../ui/controls.js";
+import { type ColorInput, colorInput } from "../ui/color-picker.js";
 import { h, setEnabled, setText, toggleClass } from "../ui/dom.js";
 import { type ToolsExtras, buildResizeAndSilence } from "./resize-silence-sections.js";
 
@@ -62,6 +63,7 @@ export class ToolsView implements View {
   #primary: PrimaryTransform | undefined;
   readonly #duplicateTarget: HTMLElement;
   readonly #extras: ToolsExtras;
+  readonly #picker: ColorInput;
 
   constructor(panel: Panel) {
     this.#panel = panel;
@@ -71,8 +73,14 @@ export class ToolsView implements View {
 
     // --- Colour ------------------------------------------------------------
     // First in the tab: fills and gradients are what people reach for most.
+    // The picker sets the panel's colour — the header's Solid swatch is the
+    // same one — and the buttons under it apply that colour.
+    this.#picker = colorInput("Colour picker", session.state.settings.ui.solidColor, (hex) => session.setUi("solidColor", hex), "kvfx-colorpick", {
+      icon: "eyedropper",
+      showHex: true,
+    });
+    const picked = (): JsonObject => ({ color: this.#picker.input.value });
     const gradient = session.toolParams("gradient");
-    const fillColor = colorField("Fill", session.state.settings.ui.solidColor);
     const gradFrom = colorField("From", typeof gradient["from"] === "string" ? gradient["from"] : "#ff8f3f", (hex) =>
       session.setToolParams("gradient", { from: hex }),
     );
@@ -93,9 +101,14 @@ export class ToolsView implements View {
         session.setToolParams("gradient", { direction: value });
       },
     );
-    const colour = this.#section("tools.colour", "Colour");
+    const colour = this.#section("tools.colour", "Colour", "fill · text · gradient");
     colour.body.append(
-      row(fillColor.root, b.button("kvfx.fx.fill", { label: "Fill", icon: "fill", params: () => ({ color: fillColor.input.value }) })),
+      h("div", { class: "kvfx-field kvfx-field--picker" }, h("span", { class: "kvfx-field__label", text: "Colour picker" }), this.#picker.swatch, this.#picker.input),
+      pillGrid(
+        b.button("kvfx.fx.fill", { label: "Fill", icon: "fill", params: picked }),
+        b.button("kvfx.text.color", { label: "Text", icon: "text", params: picked }),
+        b.button("kvfx.layer.createsolid", { label: "Solid", icon: "solid", params: picked }),
+      ),
       row(gradFrom.root, gradTo.root, dir.root),
       b.button("kvfx.fx.gradientlock", {
         label: "Gradient Lock",
@@ -361,6 +374,9 @@ export class ToolsView implements View {
   }
 
   update(state: SessionState, availability: Availability): void {
+    // The header's Solid swatch may have changed the panel's colour.
+    const colour = state.settings.ui.solidColor;
+    if (this.#picker.input.value !== colour && !this.#picker.isOpen()) this.#picker.set(colour);
     for (const section of this.#sections) section.update(state);
     this.#buttons.update(state, availability);
     this.#updateInspector(state);

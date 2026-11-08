@@ -145,6 +145,11 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   trim: [bar(2.5, 2.5, 1.75, 11), bar(11.75, 2.5, 1.75, 11), bar(5.5, 7, 5, 2)],
   sequence: [bar(1.5, 2.5, 6, 2.5), bar(5, 6.75, 6, 2.5), bar(8.5, 11, 6, 2.5)],
   fill: [solid("M3 7 L8 2 L13 7 L8 12 Z"), dot(13.5, 11.5, 1.6)],
+  // Eyedropper: the bulb and collar filled, the glass tube drawn, tipped down-left.
+  eyedropper: [
+    solid("M10.6 2.1 A2.3 2.3 0 0 1 13.9 5.4 L12.3 7 L13 7.7 L11.8 8.9 L7.1 4.2 L8.3 3 L9 3.7 Z"),
+    line("M8.4 5.6 L3.4 10.6 L2.5 13.5 L5.4 12.6 L10.4 7.6"),
+  ],
   gradient: [box(2, 2, 12, 12), bar(2, 2, 4, 12), bar(6, 2, 2.5, 12)],
   select: [box(1.5, 1.5, 9, 9), tri("8,8 14.5,11 11.5,11.8 10.6,14.6")],
   label: [solid("M1.5 3 H9 L14.5 8 L9 13 H1.5 Z"), dot(5, 8, 1.2)],

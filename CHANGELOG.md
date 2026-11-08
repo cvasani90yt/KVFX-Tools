@@ -61,6 +61,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the same maths as the expression; the tests run the expression against it
 - Host: `layer.speedRamp`, with `FrameBlendingType` in the environment
 
+### Added — Colour picker (Tools)
+- A **Colour picker** at the top of Tools ▸ Colour: an eyedropper icon, the
+  colour and its hex code, opening the in-panel picker. It is the panel's one
+  colour, shared with the header's Solid swatch
+- **Fill**, **Text** and **Solid** under it apply the picked colour; **Colour
+  Text** (also in search) recolours text layers without touching their font,
+  size or tracking
+
 ### Changed
 - **Colour** (Fill and Gradient Lock) is now the first section of the Tools
   tab; a section order saved by an earlier build is updated to match
