@@ -130,9 +130,15 @@ layer. Every item below should be **one** step in Edit ▸ Undo, named
 `Ctrl/⌘+Z` once after each and everything that command did should revert.
 
 **0. Quick.** The panel opens on the **Quick** tab. Select a layer and click a
-few tiles (Precomp, Shadow, Null). Click **Customize**, drag a tile somewhere
-else, remove one, add one from the list, then **Done**. Close and reopen the
-panel: it opens on Quick again, with your arrangement.
+few tiles (Precomp, Shadow, Null). Click **Speed Ramp** (it has a small arrow
+in its corner): the panel switches to Generate with Speed Ramp's presets and
+preview in view and highlighted. Back on Quick, put the playhead on a cut and
+**Alt-click** **Transition**: it adds your last transition without leaving
+Quick. Click **From Screen** and pick a colour outside After Effects (macOS:
+the colour panel's magnifier, then OK; Windows: click a pixel on the frozen
+screen): the **Colour** tile turns that colour. Click **Customize**, drag a
+tile somewhere else, remove one, add one from the list, then **Done**. Close
+and reopen the panel: it opens on Quick again, with your arrangement.
 
 **1. Basics.** Select two layers, click the panel: the header shows
 `<comp> · 2 layers`. Click **Null**, pick a colour in the swatch and click
@@ -216,8 +222,13 @@ real thing. Please look closely at these, which the model cannot settle
   still end on its last frame with **Keep the ending** on?
 * **Clock** transition: does the sweep start at twelve o'clock?
 * **From comp**: does the frame match the viewer, including in a 32-bit
-  project? **From screen**: does an eyedropper appear, or does the button
-  hide itself with a message?
+  project?
+* **From screen**: does a picker open (the browser eyedropper, the macOS
+  colour panel, or the frozen screen on Windows), does the picked colour reach
+  the panel, and does After Effects stay responsive while the picker is open?
+  On Windows, does the frozen screen line up with your displays, at every
+  display scale? If the panel asks you to allow scripts to write files, does
+  turning that preference on fix it?
 
 ## If something does not work
 

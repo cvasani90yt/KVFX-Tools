@@ -186,6 +186,13 @@ const STUB = `
           });
         }
       }
+      if (op === "kvfx.op.color.screenPick") {
+        var answer = /"out":"([^"]+)"/.exec(source);
+        var outPath = answer ? answer[1] : "";
+        // The system picker answers when the user has picked; a test can choose the answer.
+        setTimeout(function () { FILES[outPath] = window.__KVFX_SCREEN_PICK__ || "#3366cc"; }, 600);
+        result = { platform: "windows" };
+      }
       if (source.indexOf("kvfx.op.comp.frame") !== -1) {
         var target = /"path":"([^"]+)"/.exec(source);
         var path = target ? target[1] : "";

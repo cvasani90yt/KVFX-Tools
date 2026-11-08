@@ -23,6 +23,13 @@ export const QUICK_GROUPS: readonly { readonly id: QuickGroup; readonly label: s
 
 export type QuickWidget = "colour" | "pickComp" | "pickScreen";
 
+/** Where a feature's own screen is: its tab, its section, and the tab's filter chip when it has them. */
+export interface QuickScreen {
+  readonly tab: string;
+  readonly section: string;
+  readonly filter?: string;
+}
+
 export interface QuickTool {
   /** Stable id stored in settings: the command id, or the widget's name. */
   readonly id: string;
@@ -33,9 +40,22 @@ export interface QuickTool {
   /** The command a tile runs; absent for the widgets. */
   readonly command?: string;
   readonly widget?: QuickWidget;
+  /**
+   * For a feature with choices of its own — presets, a preview, a length —
+   * the tile is a shortcut to that screen instead of running blind.
+   * Alt-click still runs it with its last settings.
+   */
+  readonly screen?: QuickScreen;
 }
 
-const cmd = (command: string, label: string, icon: string, group: QuickGroup): QuickTool => ({ id: command, label, icon, group, command });
+const cmd = (command: string, label: string, icon: string, group: QuickGroup, screen?: QuickScreen): QuickTool => ({
+  id: command,
+  label,
+  icon,
+  group,
+  command,
+  ...(screen === undefined ? {} : { screen }),
+});
 const widget = (id: QuickWidget, label: string, icon: string): QuickTool => ({ id, label, icon, group: "colour", widget: id });
 
 export const QUICK_TOOLS: readonly QuickTool[] = [
@@ -45,7 +65,7 @@ export const QUICK_TOOLS: readonly QuickTool[] = [
   widget("pickScreen", "From Screen", "pick-screen"),
   cmd("kvfx.fx.fill", "Fill", "fill", "colour"),
   cmd("kvfx.text.color", "Text Colour", "text", "colour"),
-  cmd("kvfx.fx.gradientlock", "Grad Lock", "gradient", "colour"),
+  cmd("kvfx.fx.gradientlock", "Grad Lock", "gradient", "colour", { tab: "tools", section: "tools.colour" }),
 
   // Comp & layers
   cmd("kvfx.comp.deepduplicatecomp", "Dup Comp", "duplicate", "comp"),
@@ -57,7 +77,7 @@ export const QUICK_TOOLS: readonly QuickTool[] = [
   cmd("kvfx.layer.trimworkarea", "Trim to WA", "trim", "comp"),
 
   // Organize
-  cmd("kvfx.layer.sequence", "Sequence", "sequence", "organize"),
+  cmd("kvfx.layer.sequence", "Sequence", "sequence", "organize", { tab: "tools", section: "tools.sequence" }),
   cmd("kvfx.label.selectsame", "Same Label", "select", "organize"),
   cmd("kvfx.align.gaps.horizontal", "Gaps ↔", "gaps-h", "organize"),
   cmd("kvfx.align.gaps.vertical", "Gaps ↕", "gaps-v", "organize"),
@@ -67,7 +87,7 @@ export const QUICK_TOOLS: readonly QuickTool[] = [
   cmd("kvfx.layer.moveup", "Up", "move-up", "organize"),
   cmd("kvfx.layer.movedown", "Down", "move-down", "organize"),
   cmd("kvfx.layer.movebottom", "To Bottom", "move-bottom", "organize"),
-  cmd("kvfx.layer.follow", "Follow", "follow", "organize"),
+  cmd("kvfx.layer.follow", "Follow", "follow", "organize", { tab: "tools", section: "tools.follow" }),
 
   // Switches
   cmd("kvfx.layer.solo", "Solo", "solo", "switches"),
@@ -89,14 +109,14 @@ export const QUICK_TOOLS: readonly QuickTool[] = [
   cmd("kvfx.keys.bounce", "Bounce", "bounce", "keys"),
   cmd("kvfx.keys.loopcycle", "Loop", "loop", "keys"),
   cmd("kvfx.keys.looppingpong", "Ping-Pong", "loop", "keys"),
-  cmd("kvfx.keys.wiggle", "Wiggle", "wiggle", "keys"),
+  cmd("kvfx.keys.wiggle", "Wiggle", "wiggle", "keys", { tab: "ease", section: "ease.motion" }),
   cmd("kvfx.keys.clearexpressions", "Clear Expr", "clear", "keys"),
 
   // Text
-  cmd("kvfx.text.animate", "Animate", "text-animate", "text"),
-  cmd("kvfx.text.explode", "Explode", "explode", "text"),
-  cmd("kvfx.text.style", "Style Text", "text-style", "text"),
-  cmd("kvfx.rig.kinetic", "Kinetic", "kinetic", "text"),
+  cmd("kvfx.text.animate", "Animate", "text-animate", "text", { tab: "text", section: "text.animate" }),
+  cmd("kvfx.text.explode", "Explode", "explode", "text", { tab: "text", section: "text.explode" }),
+  cmd("kvfx.text.style", "Style Text", "text-style", "text", { tab: "text", section: "text.style" }),
+  cmd("kvfx.rig.kinetic", "Kinetic", "kinetic", "text", { tab: "text", section: "text.kinetic" }),
 
   // Effects
   cmd("kvfx.fx.add.blur", "Blur", "fx-blur", "fx"),
@@ -112,11 +132,11 @@ export const QUICK_TOOLS: readonly QuickTool[] = [
   cmd("kvfx.fx.add.angle", "Angle Ctrl", "fx-angle", "fx"),
 
   // Generate
-  cmd("kvfx.rig.transition", "Transition", "transition", "generate"),
-  cmd("kvfx.rig.speedRamp", "Speed Ramp", "speed", "generate"),
-  cmd("kvfx.rig.counter", "Counter", "counter", "generate"),
-  cmd("kvfx.rig.carousel", "Carousel", "carousel", "generate"),
-  cmd("kvfx.rig.extrude", "Extrude", "extrude", "generate"),
+  cmd("kvfx.rig.transition", "Transition", "transition", "generate", { tab: "generate", section: "gen.transitions", filter: "trans" }),
+  cmd("kvfx.rig.speedRamp", "Speed Ramp", "speed", "generate", { tab: "generate", section: "gen.speedramp", filter: "speed" }),
+  cmd("kvfx.rig.counter", "Counter", "counter", "generate", { tab: "generate", section: "gen.counter", filter: "build" }),
+  cmd("kvfx.rig.carousel", "Carousel", "carousel", "generate", { tab: "generate", section: "gen.carousel", filter: "build" }),
+  cmd("kvfx.rig.extrude", "Extrude", "extrude", "generate", { tab: "generate", section: "gen.extrude", filter: "build" }),
 
   // Create
   cmd("kvfx.layer.createnull", "Null", "null", "create"),

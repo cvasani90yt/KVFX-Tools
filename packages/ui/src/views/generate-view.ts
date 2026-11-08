@@ -264,5 +264,7 @@ export class GenerateView implements View {
   update(state: SessionState, availability: Availability): void {
     for (const section of this.#sections) section.update(state);
     this.#buttons.update(state, availability);
+    // The filter can be set from outside too: the Quick tab opens a feature on its chip.
+    this.#applyFilter();
   }
 }

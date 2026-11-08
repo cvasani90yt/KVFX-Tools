@@ -283,6 +283,8 @@ interface AeImportOptions {
 
 declare const app: AeApplication;
 declare const $: AeDollar;
+/** ExtendScript's `system`: runs a command line and returns what it printed. */
+declare const system: { callSystem(command: string): string };
 
 /** Used only for the `instanceof` narrowing of `activeItem`. */
 declare const CompItem: { new (): AeRawComp };

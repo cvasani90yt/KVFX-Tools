@@ -72,6 +72,8 @@ export interface MockAeOptions {
   readonly hasProject?: boolean;
   /** Omit for "no composition open". */
   readonly comp?: MockCompSpec;
+  /** `$.os`, e.g. "Windows/10" or "Macintosh OS 14.5". */
+  readonly os?: string;
 }
 
 /** A read-only view of a layer's switches, in the names the tests use. */
@@ -88,6 +90,8 @@ export interface MockAe extends AeEnvironment {
   /** The active comp, when one was specified. */
   readonly comp: MockComp | undefined;
   readonly undoEvents: string[];
+  /** Command lines run with `system.callSystem`, oldest first. */
+  readonly systemCalls: string[];
   openGroups(): number;
   setVersion(version: string): void;
   advance(ms: number): void;
@@ -126,6 +130,7 @@ function vec2(value: unknown): Vec2Value | undefined {
 }
 
 export function createMockAe(options: MockAeOptions = {}): MockAe {
+  const systemCalls: string[] = [];
   const app = createMockApp({
     ...(options.version === undefined ? {} : { version: options.version }),
     ...(options.hasProject === undefined ? {} : { hasProject: options.hasProject }),
@@ -180,8 +185,12 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
 
   const environment = createEnvironment({
     app: app,
-    os: "Mock OS 1.0",
+    os: options.os ?? "Mock OS 1.0",
     engineVersion: "4.2.0",
+    callSystem: (command) => {
+      systemCalls.push(command);
+      return "";
+    },
     isComp: (item) => item instanceof MockComp,
     newKeyframeEase: (speed, influence) => ({ speed, influence }),
     newFile: (path) => ({ exists: app.existingFiles.has(path), fsName: path, name: path.split(/[\\/]/).pop() ?? path }),
@@ -222,6 +231,7 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
     get undoEvents(): string[] {
       return app.undoEvents;
     },
+    systemCalls,
     openGroups: () =>
       app.undoEvents.reduce((depth, event) => depth + (event === "end" ? -1 : 1), 0),
     setVersion: (next) => {

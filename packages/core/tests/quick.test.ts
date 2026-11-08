@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_QUICK_TOOLS,
+  DEFAULT_TAB_ORDER,
   QUICK_GROUPS,
   QUICK_TOOLS,
   addQuickTool,
@@ -29,6 +30,19 @@ describe("Quick tab catalog", () => {
 
   it("keeps labels short enough for a small tile", () => {
     for (const tool of QUICK_TOOLS) expect(tool.label.length, tool.id).toBeLessThanOrEqual(12);
+  });
+
+  it("opens a feature's own screen for the tools with choices, like Speed Ramp and Transition", () => {
+    const prefix: Record<string, string> = { generate: "gen.", text: "text.", tools: "tools.", ease: "ease." };
+    for (const tool of QUICK_TOOLS.filter((t) => t.screen !== undefined)) {
+      const screen = tool.screen!;
+      expect(DEFAULT_TAB_ORDER, tool.id).toContain(screen.tab);
+      expect(screen.section.startsWith(prefix[screen.tab] ?? "?"), tool.id).toBe(true);
+    }
+    expect(quickToolById("kvfx.rig.speedRamp")?.screen).toEqual({ tab: "generate", section: "gen.speedramp", filter: "speed" });
+    expect(quickToolById("kvfx.rig.transition")?.screen?.section).toBe("gen.transitions");
+    // One-click actions stay one click.
+    expect(quickToolById("kvfx.layer.precomposeeach")?.screen).toBeUndefined();
   });
 
   it("leaves out tools that need their own screen to be safe, like Resize Comps", () => {

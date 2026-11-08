@@ -1,10 +1,11 @@
 import type { Panel } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
-import { appDataFolder, exists, filesAvailable, join, makeDirs, readBase64, removeCacheFile } from "../app/cep/files.js";
+import { hexToRgb } from "@kvfx/core";
+import { appDataFolder, exists, filesAvailable, join, makeDirs, readBase64, readText, removeCacheFile } from "../app/cep/files.js";
 import { IconSize, createIcon } from "../components/icons.js";
 import { normalizeHex } from "./color-picker.js";
 import { h, setEnabled, setText } from "./dom.js";
-import { fitWithin, hexAt, pngComplete, refusedByHost } from "./eyedropper-core.js";
+import { fitWithin, hexAt, parsePicked, pngComplete, refusedByHost } from "./eyedropper-core.js";
 
 /**
  * The two eyedroppers behind Tools ▸ Colour's picker.
@@ -215,7 +216,10 @@ export class CompEyedropper {
     removeCacheFile(path);
     if (token !== this.#token) return;
     if (data === undefined || info === undefined) {
-      this.#say("After Effects didn't finish saving the frame. Try again — if it comes back black, click in the comp viewer first.", true);
+      this.#say(
+        "After Effects didn't finish saving the frame. Try again — if it comes back black, click in the comp viewer first. If it keeps failing, turn on Preferences ▸ Scripting & Expressions ▸ Allow Scripts to Write Files and Access Network.",
+        true,
+      );
       return;
     }
     let image: HTMLImageElement;
@@ -418,20 +422,42 @@ export async function pickFromScreen(): Promise<ScreenPick> {
 // The buttons, shared by Tools ▸ Colour and the Quick tab
 // ---------------------------------------------------------------------------
 
-/** How long Pick from screen waits for a colour before it gives up and explains. */
+/** How long Pick from screen waits on the browser eyedropper before it falls back to the system picker. */
 const SCREEN_PICK_TIMEOUT_MS = 30_000;
+/** How long the system colour picker may stay open before the panel stops waiting for it. */
+const NATIVE_WAIT_MS = 180_000;
+const NATIVE_POLL_MS = 250;
+const SCREEN_FILE = "screen-pick.txt";
+
+/** Waits for the system picker's answer: it writes a whole file in one move, so any file is the answer. */
+async function waitForText(path: string, ms: number, cancelled: () => boolean): Promise<string | undefined> {
+  const deadline = performance.now() + ms;
+  while (performance.now() < deadline && !cancelled()) {
+    if (exists(path)) {
+      const text = readText(path);
+      if (text !== undefined) return text;
+    }
+    await delay(NATIVE_POLL_MS);
+  }
+  return undefined;
+}
 
 let sharedComp: CompEyedropper | undefined;
 
 /**
  * "From comp" and "From screen" buttons wherever they appear: a picked colour
- * becomes the panel's colour, From comp is off without a comp, and From
- * screen hides on a version of After Effects that refused it.
+ * becomes the panel's colour, and From comp is off without a comp.
+ *
+ * From screen uses the browser engine's eyedropper where After Effects allows
+ * it, and the operating system's own picker otherwise — the macOS colour panel,
+ * or a click-to-pick copy of the screens on Windows — so inside After Effects
+ * it is always there. Outside After Effects (the preview) only the browser's
+ * can work, and the button shows only if it exists.
  */
 export class Eyedroppers {
   readonly #panel: Panel;
   readonly #comp: HTMLButtonElement[] = [];
-  readonly #screen: { button: HTMLButtonElement; idle: string }[] = [];
+  readonly #screen: HTMLButtonElement[] = [];
 
   constructor(panel: Panel) {
     this.#panel = panel;
@@ -449,9 +475,9 @@ export class Eyedroppers {
 
   /** Wires a button to Pick from screen; `idle` is its label when not picking. */
   screen(button: HTMLButtonElement, idle: string): HTMLButtonElement {
-    // No await before pickFromScreen: the eyedropper only opens straight from a click.
-    button.addEventListener("click", () => void this.#pickScreen(button, idle));
-    this.#screen.push({ button, idle });
+    // No await before pickFromScreen: the browser's eyedropper only opens straight from a click.
+    button.addEventListener("click", () => void pickScreen(this.#panel, button, idle, (hex) => this.#take(hex, "screen")));
+    this.#screen.push(button);
     return button;
   }
 
@@ -460,9 +486,11 @@ export class Eyedroppers {
     for (const button of this.#comp) {
       setEnabled(button, connected && state.snapshot.comp !== undefined, connected ? "Open a composition first." : "Not connected to After Effects.", "Pick a colour from the comp's frame at the playhead");
     }
-    const refused = state.settings.ui.toolParams["colourPicker"]?.["screenUnsupported"];
-    const hidden = !screenPickerExists() || refused === aeVersion(state);
-    for (const { button } of this.#screen) button.hidden = hidden;
+    const insideAe = filesAvailable();
+    for (const button of this.#screen) {
+      button.hidden = !insideAe && !screenPickerExists();
+      setEnabled(button, !insideAe || connected, "Not connected to After Effects.", "Pick a colour from anywhere on your screen");
+    }
   }
 
   #take(hex: string, from: string): void {
@@ -470,46 +498,96 @@ export class Eyedroppers {
     session.setUi("solidColor", hex);
     session.report("Colour", true, `Picked ${hex.toUpperCase()} from the ${from}`);
   }
+}
 
-  /**
-   * When After Effects refuses the eyedropper outright, the buttons go away
-   * for this version of After Effects — a later one may allow it. While it is
-   * open the button says so, and a second click cancels.
-   */
-  async #pickScreen(button: HTMLButtonElement, idle: string): Promise<void> {
-    if (screenPickOpen()) {
-      cancelScreenPick();
-      return;
-    }
-    const session = this.#panel.session;
-    const label = button.querySelector("span");
-    // Opened before anything else happens: the eyedropper needs the click it came from.
-    const picking = pickFromScreen();
-    button.classList.add("kvfx-pill--busy");
-    if (label !== null) setText(label, "Picking…");
-    // A host that neither opens the eyedropper nor refuses it would leave a click
-    // doing nothing; after a while, say what may be going on.
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      cancelScreenPick();
-    }, SCREEN_PICK_TIMEOUT_MS);
-    const result = await picking;
-    clearTimeout(timer);
-    button.classList.remove("kvfx-pill--busy");
-    if (label !== null) setText(label, idle);
-    if (timedOut) {
-      session.report("Pick from screen", false, "Nothing was picked. If no eyedropper appeared, this version of After Effects doesn't support it — use From comp instead.");
-      return;
-    }
-    if (result === "cancelled") return;
-    if (result === "unsupported") {
-      session.setToolParams("colourPicker", { screenUnsupported: aeVersion(session.state) });
-      session.report("Pick from screen", false, "This version of After Effects doesn't let panels pick from the screen. Use From comp instead.");
-      return;
-    }
-    this.#take(result.hex, "screen");
+/** One pick at a time across every From screen button; a second click on any of them cancels it. */
+let screenPick: { token: number; busy: boolean } = { token: 0, busy: false };
+
+async function pickScreen(panel: Panel, button: HTMLButtonElement, idle: string, take: (hex: string) => void): Promise<void> {
+  if (screenPick.busy) {
+    cancelScreenPick();
+    screenPick = { token: screenPick.token + 1, busy: false };
+    return;
   }
+  const session = panel.session;
+  const label = button.querySelector("span");
+  const busy = (on: boolean): void => {
+    button.classList.toggle("kvfx-pill--busy", on);
+    if (label !== null) setText(label, on ? "Picking…" : idle);
+  };
+  const token = screenPick.token + 1;
+  screenPick = { token, busy: true };
+  const current = (): boolean => screenPick.token === token;
+  try {
+    const refused = session.state.settings.ui.toolParams["colourPicker"]?.["screenUnsupported"] === aeVersion(session.state);
+    if (screenPickerExists() && !refused) {
+      // Opened before anything else happens: the eyedropper needs the click it came from.
+      const picking = pickFromScreen();
+      busy(true);
+      // An eyedropper that neither opens nor refuses would leave the click doing
+      // nothing; after a while, stop waiting and use the system picker.
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        cancelScreenPick();
+      }, SCREEN_PICK_TIMEOUT_MS);
+      const result = await picking;
+      clearTimeout(timer);
+      if (!current()) return;
+      if (typeof result === "object") {
+        take(result.hex);
+        return;
+      }
+      if (result === "cancelled" && !timedOut) return;
+      // Refused at once, or never answered: this After Effects doesn't support it.
+      session.setToolParams("colourPicker", { screenUnsupported: aeVersion(session.state) });
+    }
+    if (!filesAvailable()) {
+      session.report("Pick from screen", false, "Picking from the screen works inside After Effects.");
+      return;
+    }
+    busy(true);
+    const hex = await pickWithSystem(panel, current);
+    if (hex !== undefined && current()) take(hex);
+  } finally {
+    if (current()) screenPick = { token, busy: false };
+    busy(false);
+  }
+}
+
+/** The operating system's own colour picker, opened by After Effects; the answer comes back as a file. */
+async function pickWithSystem(panel: Panel, current: () => boolean): Promise<string | undefined> {
+  const session = panel.session;
+  const folder = appDataFolder("cache");
+  if (folder === undefined || !makeDirs(folder)) {
+    session.report("Pick from screen", false, "KVFX couldn't create its cache folder, so the system colour picker can't answer.");
+    return undefined;
+  }
+  const out = join(folder, SCREEN_FILE);
+  removeCacheFile(out);
+  removeCacheFile(`${out}.part`);
+  const rgb = hexToRgb(session.state.settings.ui.solidColor) ?? [1, 1, 1];
+  const reply = await session.query("kvfx.op.color.screenPick", { out, rgb: [rgb[0], rgb[1], rgb[2]] });
+  // A refusal is final. A late reply may only mean After Effects waited for the
+  // picker to close, so then the file still decides.
+  if (!reply.ok && !/budget|took/i.test(reply.message)) {
+    session.report("Pick from screen", false, reply.message);
+    return undefined;
+  }
+  const text = await waitForText(out, NATIVE_WAIT_MS, () => !current());
+  removeCacheFile(out);
+  if (!current()) return undefined;
+  if (text === undefined) {
+    session.report("Pick from screen", false, "The system colour picker didn't answer. Try again — and if nothing appears, use From comp.");
+    return undefined;
+  }
+  const picked = parsePicked(text);
+  if (picked === "cancelled") return undefined;
+  if (picked === undefined) {
+    session.report("Pick from screen", false, "The system colour picker couldn't open on this computer. Use From comp instead.");
+    return undefined;
+  }
+  return picked.hex;
 }
 
 function aeVersion(state: SessionState): string {

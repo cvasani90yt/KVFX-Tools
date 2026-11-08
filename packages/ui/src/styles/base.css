@@ -2651,6 +2651,28 @@ select:focus-visible,
   display: none;
 }
 
+/* The colour tile's eyedropper badge, and the corner arrow on tiles that open a feature's screen. */
+.kvfx-qtile--colour > .kvfx-icon,
+.kvfx-qtile .kvfx-icon.kvfx-qtile__opens {
+  position: absolute;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-qtile--colour > .kvfx-icon {
+  left: 5px;
+}
+
+.kvfx-qtile .kvfx-icon.kvfx-qtile__opens {
+  right: 4px;
+}
+
+.kvfx-qtile--opens:hover .kvfx-icon.kvfx-qtile__opens {
+  color: var(--kvfx-accent);
+}
+
 .kvfx-qtile--colour .kvfx-swatch__chip {
   display: block;
   width: 28px;
@@ -2809,4 +2831,20 @@ select:focus-visible,
 
 .kvfx-qoptions .kvfx-check {
   margin-right: auto;
+}
+
+/* A section opened from the Quick tab: a brief highlight, so the eye lands on it. */
+@keyframes kvfx-flash {
+  0% {
+    box-shadow: inset 0 0 0 2px var(--kvfx-accent);
+    background: var(--kvfx-accent-soft);
+  }
+  100% {
+    box-shadow: inset 0 0 0 2px transparent;
+    background: transparent;
+  }
+}
+
+.kvfx-section--flash {
+  animation: kvfx-flash 1.4s ease-out;
 }

@@ -1,4 +1,14 @@
-import { DEFAULT_QUICK_TOOLS, QUICK_GROUPS, QUICK_TOOLS, type QuickTool, addQuickTool, moveQuickTool, quickToolsOf, removeQuickTool } from "@kvfx/core";
+import {
+  DEFAULT_QUICK_TOOLS,
+  QUICK_GROUPS,
+  QUICK_TOOLS,
+  type QuickScreen,
+  type QuickTool,
+  addQuickTool,
+  moveQuickTool,
+  quickToolsOf,
+  removeQuickTool,
+} from "@kvfx/core";
 import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
@@ -10,8 +20,10 @@ import { Eyedroppers } from "../ui/eyedroppers.js";
 /**
  * QUICK: the everyday tools from every tab, as one grid of tiles.
  *
- * Minimal on purpose — no sections, no settings in the way: a tile is one
- * click, run with the tool's last-used settings from its own tab. Customize
+ * Minimal on purpose — no sections, no settings in the way. An action tile is
+ * one click, run with the tool's last-used settings from its own tab; a tile
+ * for a feature with choices of its own (Speed Ramp, Transition, Animate…) is
+ * a shortcut that opens that feature's screen, and Alt-click runs it. Customize
  * arranges the grid: drag a tile onto another to move it there (or focus it
  * and use the arrow keys), × or Delete removes it, and the catalog under the
  * grid adds any of the others. The panel opens on this tab unless Settings ▸
@@ -139,14 +151,41 @@ export class QuickView implements View {
   #tile(tool: QuickTool): HTMLElement {
     if (tool.widget === "colour") {
       const session = this.#panel.session;
-      this.#colour = colorInput("Colour", session.state.settings.ui.solidColor, (hex) => session.setUi("solidColor", hex), "kvfx-qtile kvfx-qtile--colour", { showHex: true });
+      this.#colour = colorInput("Colour picker", session.state.settings.ui.solidColor, (hex) => session.setUi("solidColor", hex), "kvfx-qtile kvfx-qtile--colour", {
+        icon: "eyedropper",
+        showHex: true,
+      });
       // The hidden input travels inside the tile, so the grid sees one item.
       this.#colour.swatch.append(this.#colour.input);
       return this.#colour.swatch;
     }
     if (tool.widget === "pickComp") return this.#eyedroppers.comp(this.#plainTile(tool, "Pick a colour from the comp's frame at the playhead"));
     if (tool.widget === "pickScreen") return this.#eyedroppers.screen(this.#plainTile(tool, "Pick a colour from anywhere on your screen"), tool.label);
+    if (tool.screen !== undefined) return this.#screenTile(tool, tool.screen);
     return this.#buttons.button(tool.command ?? tool.id, { label: tool.label, icon: tool.icon, variant: "qtile" });
+  }
+
+  /** A shortcut to a feature's own screen, marked with a corner arrow. Alt-click runs it with its last settings instead. */
+  #screenTile(tool: QuickTool, screen: QuickScreen): HTMLButtonElement {
+    const mark = createIcon("chevron-right", IconSize.tiny);
+    mark.classList.add("kvfx-qtile__opens");
+    const tile = h(
+      "button",
+      {
+        class: "kvfx-qtile kvfx-qtile--opens",
+        type: "button",
+        title: `${tool.label} — opens its options. Alt-click runs it with your last settings.`,
+        attrs: { "aria-label": `${tool.label}: opens its options` },
+      },
+      createIcon(tool.icon),
+      h("span", { text: tool.label }),
+      mark,
+    );
+    tile.addEventListener("click", (event) => {
+      if (event.altKey && tool.command !== undefined) void this.#panel.session.run(tool.command);
+      else this.#panel.openFeature(screen);
+    });
+    return tile;
   }
 
   #plainTile(tool: QuickTool, title: string): HTMLButtonElement {

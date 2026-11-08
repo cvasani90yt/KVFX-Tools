@@ -121,6 +121,14 @@ export function writeBase64(path: string, base64: string): boolean {
   return api.writeFile(path, base64, encoding).err === CEP_FS_NO_ERROR;
 }
 
+/** A file's contents as UTF-8 text, or undefined when it can't be read. */
+export function readText(path: string): string | undefined {
+  const api = fs();
+  if (api === undefined) return undefined;
+  const result = api.readFile(path);
+  return result.err === CEP_FS_NO_ERROR && typeof result.data === "string" ? result.data : undefined;
+}
+
 /** A file's contents as Base64, or undefined when it can't be read. */
 export function readBase64(path: string): string | undefined {
   const api = fs();

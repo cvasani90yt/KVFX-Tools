@@ -67,6 +67,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   picker and eyedroppers, Duplicate Comp, Precomp, Null Parent, Split,
   Sequence, Trim to Work Area, Same Label, Unlock All, Apply Ease, Wiggle,
   Shadow, Glow, Transition, Speed Ramp, Animate Text and Null
+- Tiles for tools with choices of their own — Transition, Speed Ramp,
+  Counter, Carousel, Extrude, Animate, Explode, Style Text, Kinetic, Sequence,
+  Follow, Gradient Lock and Wiggle — are shortcuts, marked with a corner arrow:
+  they open that tool's screen (its tab and filter, the section unfolded,
+  scrolled into view and highlighted). Alt-click runs one with its last
+  settings instead
+- The Colour tile carries an eyedropper badge, so it reads as the colour picker
 - **Customize**: drag tiles to reorder (with edge scrolling) or use the arrow
   keys, remove with × or Delete, add from a catalog of 69 tools in nine
   groups, labels on or off, and Reset (it asks)
@@ -80,11 +87,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **From comp**: the open comp's frame at the playhead, in the panel, with a
   magnifier and a live hex readout; click (or arrow keys and Enter) takes the
   colour. The frame goes through KVFX's cache folder and is deleted once read
-- **From screen**: the browser engine's eyedropper, for any pixel on screen.
-  It hides itself on a version of After Effects that refuses it, and a second
-  click cancels it
+- **From screen**: any pixel on screen, other apps included. It uses the
+  browser engine's eyedropper where After Effects allows it, and otherwise the
+  operating system's own picker, starting on the panel's colour — the macOS
+  colour panel, or on Windows a still copy of the screens to click (Esc
+  cancels) — so inside After Effects it is always there. A second click stops
+  the panel waiting
 - Host: `comp.frame` saves the frame (only into KVFX's cache folder), run as a
   plan so a heavy frame gets the longer time limit
+- Host: `color.screenPick` starts the system picker detached, so After Effects
+  isn't held while you pick. It writes only to a text file in KVFX's cache
+  folder, and the Windows script goes in encoded, so no script policy blocks it.
+  `callSystem` joins the environment
 
 ### Added — Colour picker (Tools)
 - A **Colour picker** at the top of Tools ▸ Colour: an eyedropper icon, the
@@ -99,13 +113,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tab; a section order saved by an earlier build is updated to match
 
 ### Fixed
+- **From Screen** was missing from the Quick tab and Tools ▸ Colour inside
+  After Effects: it hid itself because After Effects' panel engine has no
+  working browser eyedropper. It now opens the system colour picker there
+  instead
 - After Effects refused to load the host script ("Unable to execute script at
   line 3201. Expected: ;"), so the panel couldn't reach it: the Pick from comp
   path check used a regex with an unescaped "/" inside [...], which
   ExtendScript's ECMAScript 3 grammar reads as the end of the regex. The
   slashes are escaped, and the ES3 guard now reads every regex in the host
   bundle with a real tokenizer and fails the build on that, on flags other
-  than g, i and m, and on lookbehind and named groups
+  than g, i and m, and on lookbehind and named groups. The lint rules for the
+  host allow that escaped "/", which the commit with the fix had failed on
 - Settings ▸ Sections: the up and down arrows now move a section one place
   per click. The list used to redraw before the panel had moved the section,
   so it lagged a click behind and every second click did nothing. The list

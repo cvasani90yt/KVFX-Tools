@@ -110,6 +110,8 @@ export interface AeEnvironment {
   language(): string;
   /** `$.os`. */
   os(): string;
+  /** Runs a command line (`system.callSystem`) and returns what it printed. */
+  callSystem(command: string): string;
   /** `$.version` — the ExtendScript engine version. */
   engineVersion(): string;
   hasProject(): boolean;

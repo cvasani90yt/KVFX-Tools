@@ -1,4 +1,4 @@
-import { AlignEdge, type AlignReference, type Platform, alignCommandIdFor, orderTabs } from "@kvfx/core";
+import { AlignEdge, type AlignReference, type Platform, type QuickScreen, alignCommandIdFor, orderTabs } from "@kvfx/core";
 import { IconSize, createIcon } from "../components/icons.js";
 import { PaletteOverlay } from "../palette/palette-view.js";
 import { SettingsDialog } from "../settings/settings-dialog.js";
@@ -21,6 +21,9 @@ import type { Session, SessionState } from "./session.js";
  * actions people reach for between every other action.
  */
 
+/** Room left above a section opened from the Quick tab, and how long it is highlighted. */
+const SCROLL_MARGIN_PX = 6;
+const FLASH_MS = 1400;
 const GIB = 1_073_741_824;
 /** The RAM bar's full scale; see #updateHeader. */
 const NOMINAL_GB = 32;
@@ -293,6 +296,27 @@ export class Shell implements Panel {
 
   openSettings(): void {
     this.#settings.open();
+  }
+
+  openFeature(target: QuickScreen): void {
+    const session = this.session;
+    const ui = session.state.settings.ui;
+    // A feature the user asked for comes back if they had hidden or folded it away.
+    if (ui.hiddenTabs.includes(target.tab)) session.toggleHiddenTab(target.tab);
+    if (ui.hiddenSections.includes(target.section)) session.toggleSection(target.section);
+    if (ui.collapsedGroups.includes(target.section)) session.toggleGroup(target.section);
+    if (target.filter !== undefined) session.setToolParams(target.tab, { filter: target.filter });
+    session.setActiveTab(target.tab);
+    // Once the tab is on screen: scroll the section to the top of the view and flash it.
+    requestAnimationFrame(() => {
+      const section = this.#viewHost.querySelector<HTMLElement>(`[data-section="${target.section}"]`);
+      if (section === null) return;
+      this.#viewHost.scrollTop += section.getBoundingClientRect().top - this.#viewHost.getBoundingClientRect().top - SCROLL_MARGIN_PX;
+      section.classList.remove("kvfx-section--flash");
+      void section.offsetWidth;
+      section.classList.add("kvfx-section--flash");
+      setTimeout(() => section.classList.remove("kvfx-section--flash"), FLASH_MS);
+    });
   }
 
   confirm(options: ConfirmOptions): Promise<boolean> {

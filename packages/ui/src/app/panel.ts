@@ -1,3 +1,4 @@
+import type { QuickScreen } from "@kvfx/core";
 import type { Session, SessionState } from "./session.js";
 
 /**
@@ -17,6 +18,8 @@ export interface Panel {
   confirm(options: ConfirmOptions): Promise<boolean>;
   openPalette(): void;
   openSettings(): void;
+  /** Shows a feature's own screen: its tab, filtered to it, scrolled to it and briefly highlighted. */
+  openFeature(target: QuickScreen): void;
 }
 
 export interface Availability {

@@ -51,6 +51,17 @@ export default tseslint.config(
     },
   },
 
+  // The After Effects host runs in ExtendScript, which reads regex literals by
+  // ECMAScript 3's grammar: there an unescaped "/" ends the literal even inside
+  // [...], and the whole host script fails to load. Escaping it is required,
+  // not useless. (The ES3 guard checks the built bundle for the unescaped form.)
+  {
+    files: ["packages/host/src/**/*.ts"],
+    rules: {
+      "no-useless-escape": ["error", { allowRegexCharacters: ["/"] }],
+    },
+  },
+
   // Tests — the same type safety, minus the production-only restrictions.
   {
     files: ["packages/*/tests/**/*.ts"],

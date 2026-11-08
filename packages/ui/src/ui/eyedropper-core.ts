@@ -49,3 +49,19 @@ export const INSTANT_REJECTION_MS = 200;
 export function refusedByHost(elapsedMs: number): boolean {
   return elapsedMs < INSTANT_REJECTION_MS;
 }
+
+/**
+ * What the system colour picker wrote: "#rrggbb" from the Windows picker,
+ * "R, G, B" in 16-bit from the macOS colour panel. "cancelled" when the user
+ * backed out (Windows writes "cancel", macOS reports error -128); undefined
+ * when the picker couldn't run at all.
+ */
+export function parsePicked(text: string): { readonly hex: string } | "cancelled" | undefined {
+  const t = text.trim();
+  const hex = /^#([0-9a-f]{6})$/i.exec(t);
+  if (hex?.[1] !== undefined) return { hex: `#${hex[1].toLowerCase()}` };
+  const mac = /^(\d+),\s*(\d+),\s*(\d+)$/.exec(t);
+  if (mac !== null) return { hex: rgbToHex([Number(mac[1]) / 65535, Number(mac[2]) / 65535, Number(mac[3]) / 65535]) };
+  if (/^cancel$/i.test(t) || /-128/.test(t)) return "cancelled";
+  return undefined;
+}
