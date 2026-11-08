@@ -449,6 +449,58 @@ describe("comp.deepDuplicateComps", () => {
     const out = result(command("kvfx.op.comp.deepDuplicateComps"));
     expect(out["from"]).toBe("viewer");
     expect(out["createdNames"]).toEqual(["Comp 1 2"]);
+    expect(out["notes"]).toEqual(["copied into the Project panel"]);
+  });
+
+  it("copies a precomp layer selected in the timeline directly above it, ahead of the Project panel", () => {
+    const { ae, command, main, inner } = project();
+    const original = ae.comp!.addLayer({ name: "Main", kind: "precomp", source: main });
+    original.selected = true;
+    // A comp left selected in the Project panel doesn't take over from the layer in hand.
+    inner.selected = true;
+    const out = result(command("kvfx.op.comp.deepDuplicateComps"));
+    expect(out["from"]).toBe("timeline");
+    expect(out["createdNames"]).toEqual(["Main 2"]);
+    expect(out["compCount"]).toBe(3);
+    expect(out["notes"]).toEqual(["copied above the selected layer"]);
+
+    const stack = ae.comp!.stack;
+    expect(stack[0]!.id).toBe((out["ids"] as number[])[0]);
+    expect(stack[1]).toBe(original);
+    const copy = stack[0]!.source as MockComp;
+    expect(copy.name).toBe("Main 2");
+    expect((copy.stack[0]!.source as MockComp).name).toBe("Inner 2");
+    // The original layer and comps are untouched.
+    expect(original.source).toBe(main);
+    expect(main.stack[0]!.source).toBe(inner);
+  });
+
+  it("copies each selected precomp layer above itself, and says why it left the others", () => {
+    const { ae, command, main, inner } = project();
+    const a = ae.comp!.addLayer({ name: "Main", kind: "precomp", source: main });
+    const b = ae.comp!.addLayer({ name: "Inner", kind: "precomp", source: inner });
+    const locked = ae.comp!.addLayer({ name: "Locked", kind: "precomp", source: inner });
+    a.selected = true;
+    b.selected = true;
+    locked.selected = true;
+    locked.locked = true;
+    ae.comp!.stack.find((l) => l.name === "Layer")!.selected = true;
+    const out = result(command("kvfx.op.comp.deepDuplicateComps"));
+    expect(out["from"]).toBe("timeline");
+    expect(out["notes"]).toEqual(["each copy is above its layer"]);
+    expect([...(out["createdNames"] as string[])].sort()).toEqual(["Inner 2", "Main 2"]);
+    expect((out["skipped"] as { reason: string }[]).map((s) => s.reason).sort()).toEqual(["Layer is locked", "Not a precomp layer"]);
+    const names = ae.comp!.stack.map((l) => l.name);
+    expect(names.indexOf("Main")).toBe(names.lastIndexOf("Main") - 1);
+    expect(names.indexOf("Inner")).toBe(names.lastIndexOf("Inner") - 1);
+  });
+
+  it("copies the open comp into the Project panel when only plain layers are selected", () => {
+    const { ae, command } = project();
+    ae.comp!.stack.find((l) => l.name === "Layer")!.selected = true;
+    const out = result(command("kvfx.op.comp.deepDuplicateComps"));
+    expect(out["from"]).toBe("viewer");
+    expect(out["createdNames"]).toEqual(["Comp 1 2"]);
   });
 
   it("explains what to select when there is nothing to duplicate", () => {

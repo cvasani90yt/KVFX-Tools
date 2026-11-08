@@ -152,7 +152,10 @@ reference to **Comp** and align again.
 **3. Tools.** Select a comp that contains precomps in the Project panel, click
 the panel, and press **Duplicate Comp + Nested Comps**: you get `Name 2` plus a
 copy of every comp inside it — change something in a nested copy and the
-original stays as it was. Then select two layers and try **Precomp Each** (two new comps),
+original stays as it was. Then select a precomp layer in the timeline and press
+it again (or **Dup Comp** on the Quick tab): a copy of the layer appears
+directly above it, pointing at its own new comp, and the original layer is
+unchanged. Then select two layers and try **Precomp Each** (two new comps),
 **Sequence Layers** (staggered by 5 frames), **Null Parent**, **Gradient Lock**
 on a text layer (then type more text: the gradient should stay fitted). Edit the
 **Transform** fields: on an animated property a keyframe should appear at the

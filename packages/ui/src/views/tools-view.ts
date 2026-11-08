@@ -152,9 +152,9 @@ export class ToolsView implements View {
         variant: "wide",
         className: "kvfx-primary",
       }),
+      // One button for both cases: with a precomp layer selected it copies that
+      // layer in place (the precomp-only command stays in search and Quick).
       this.#duplicateTarget,
-      b.button("kvfx.comp.deepduplicate", { label: "Duplicate Precomp Layer + Nested", icon: "precompose", variant: "wide" }),
-      hint("For a precomp layer selected in this timeline: the copy sits above it and uses its own comps."),
     );
 
     // --- Arrange -------------------------------------------------------------
@@ -394,16 +394,20 @@ export class ToolsView implements View {
     this.#extras.update(state);
   }
 
-  /** Says what "Duplicate Comp" will copy, so the Project-panel rule is visible. */
+  /** Says what "Duplicate Comp" will copy and where the copy goes, in the order the host decides it. */
   #updateDuplicateTarget(state: SessionState): void {
-    const { projectComps, comp } = state.snapshot;
+    const { projectComps, comp, layers } = state.snapshot;
+    const precomps = layers.filter((layer) => layer.kind === "precomp");
+    const list = (names: readonly string[]): string =>
+      names.slice(0, NAMES_SHOWN).join(", ") + (names.length > NAMES_SHOWN ? ` +${String(names.length - NAMES_SHOWN)} more` : "");
     let text: string;
-    if (projectComps.length > 0) {
-      const names = projectComps.slice(0, NAMES_SHOWN).map((c) => c.name).join(", ");
-      const more = projectComps.length > NAMES_SHOWN ? ` +${String(projectComps.length - NAMES_SHOWN)} more` : "";
-      text = `Will copy: ${names}${more} — selected in the Project panel.`;
+    if (precomps.length > 0) {
+      const one = precomps.length === 1;
+      text = `Will copy: ${list(precomps.map((l) => l.name))} — the selected precomp layer${one ? "" : "s"}. ${one ? "The copy goes" : "Each copy goes"} directly above ${one ? "it" : "its layer"}, using its own comps.`;
+    } else if (projectComps.length > 0) {
+      text = `Will copy: ${list(projectComps.map((c) => c.name))} — selected in the Project panel. The copies go in the Project panel.`;
     } else if (comp !== undefined) {
-      text = `Will copy: ${comp.name} — the open comp. Select comps in the Project panel to copy those instead.`;
+      text = `Will copy: ${comp.name} — the open comp, into the Project panel. Select a precomp layer to copy it into this timeline instead.`;
     } else {
       text = "Select a comp in the Project panel, or open one.";
     }

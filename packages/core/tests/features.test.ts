@@ -350,4 +350,14 @@ describe("deep duplicate of whole comps", () => {
       summarizeResult({ steps: [{ result: { createdNames: ["A 2", "B 2", "C 2"], compCount: 3, dynamicExpressions: 1 } }] }),
     ).toBe("Done · created A 2, B 2 and 1 more · 1 expression names a comp at runtime and still points at the original");
   });
+
+  it("says where the copy went: above the layer, or in the Project panel", async () => {
+    const { summarizeResult } = await import("../src/index.js");
+    expect(
+      summarizeResult({ steps: [{ result: { createdNames: ["Main 2"], compCount: 2, notes: ["copied above the selected layer"] } }] }),
+    ).toBe("Done · copied above the selected layer · created Main 2 (+1 nested)");
+    expect(
+      summarizeResult({ steps: [{ result: { createdNames: ["Comp 1 2"], compCount: 1, notes: ["copied into the Project panel"] } }] }),
+    ).toBe("Done · copied into the Project panel · created Comp 1 2");
+  });
 });

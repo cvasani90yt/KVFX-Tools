@@ -66,17 +66,18 @@ function hasPrecomp(ctx: CommandContext): CommandAvailability {
 }
 
 /**
- * Duplicates whole comps — the ones selected in the Project panel, or the open
- * one — with every comp nested inside them copied too. The host decides which
- * at the moment of the click, from After Effects' live selection.
+ * Duplicates comps with every comp nested inside them copied too: the precomp
+ * layers selected in the timeline (each copy lands above its layer), else the
+ * comps selected in the Project panel, else the open comp. The host decides
+ * which at the moment of the click, from After Effects' live selection.
  */
 export const deepDuplicateComp = simpleCommand({
   id: "kvfx.comp.deepduplicatecomp",
   name: "Duplicate Comp + Nested Comps",
   description:
-    "Duplicate the comps selected in the Project panel — or the open comp — together with every comp nested inside them, so editing the copy never changes the original",
+    "Duplicate the selected precomp layers — each copy directly above its layer — or, with none selected, the comps selected in the Project panel or the open comp, together with every comp nested inside, so editing the copy never changes the original",
   category: CommandCategory.Project,
-  keywords: ["duplicate", "comp", "composition", "deep", "nested", "inside", "everything", "unique", "independent", "copy", "template", "version"],
+  keywords: ["duplicate", "comp", "composition", "deep", "nested", "inside", "everything", "unique", "independent", "copy", "template", "version", "precomp", "layer", "above"],
   icon: "duplicate",
   metadata: { destructive: false, minLayers: 0, requiresComp: false },
   check: (ctx) =>

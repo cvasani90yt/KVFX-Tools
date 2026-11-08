@@ -301,6 +301,39 @@ function createDeepCopier(env: OperationContext["env"]): DeepCopier {
   };
 }
 
+function isPrecompLayer(layer: AeRawLayer, env: OperationContext["env"]): boolean {
+  const source = layer.source;
+  return !!source && env.isComp(source) && typeof layer.replaceSource === "function";
+}
+
+interface LayerCopies {
+  created: number[];
+  names: string[];
+  skips: HostJson[];
+}
+
+/** Each precomp layer gets a duplicate directly above it, using a deep copy of its comp. */
+function duplicatePrecompLayers(layers: AeRawLayer[], env: OperationContext["env"], copier: DeepCopier): LayerCopies {
+  const out: LayerCopies = { created: [], names: [], skips: [] };
+  for (let i = 0; i < layers.length; i += 1) {
+    const layer = layers[i] as AeRawLayer;
+    if (!isPrecompLayer(layer, env)) {
+      out.skips[out.skips.length] = skipped(layer, "Not a precomp layer");
+      continue;
+    }
+    if (layer.locked) {
+      out.skips[out.skips.length] = skipped(layer, "Layer is locked");
+      continue;
+    }
+    const duplicate = layer.duplicate();
+    const copy = copier.copy(layer.source as AeRawComp);
+    (duplicate.replaceSource as NonNullable<AeRawLayer["replaceSource"]>)(copy, false);
+    out.created[out.created.length] = duplicate.id;
+    out.names[out.names.length] = copy.name;
+  }
+  return out;
+}
+
 /**
  * Duplicates precomp layers in the open comp, each pointing at a deep copy of
  * its composition. The copy lands directly above the original layer.
@@ -311,50 +344,36 @@ export const deepDuplicateOperation: Operation = {
   run: function (ctx: OperationContext): HostJson {
     const comp = requireComp(ctx);
     const resolved = targets(comp, ctx.args);
-    const env = ctx.env;
-    const copier = createDeepCopier(env);
-    const created: number[] = [];
-    const names: string[] = [];
-    const skips: HostJson[] = [];
-
-    for (let i = 0; i < resolved.layers.length; i += 1) {
-      const layer = resolved.layers[i] as AeRawLayer;
-      const source = layer.source;
-      if (!source || !env.isComp(source) || typeof layer.replaceSource !== "function") {
-        skips[skips.length] = skipped(layer, "Not a precomp layer");
-        continue;
-      }
-      if (layer.locked) {
-        skips[skips.length] = skipped(layer, "Layer is locked");
-        continue;
-      }
-      const duplicate = layer.duplicate();
-      const copy = copier.copy(source as AeRawComp);
-      (duplicate.replaceSource as NonNullable<AeRawLayer["replaceSource"]>)(copy, false);
-      created[created.length] = duplicate.id;
-      names[names.length] = copy.name;
-    }
-
+    const copier = createDeepCopier(ctx.env);
+    const done = duplicatePrecompLayers(resolved.layers, ctx.env, copier);
     const stats = copier.finish();
     return {
-      ids: created as unknown as HostJson,
-      createdNames: names as unknown as HostJson,
+      ids: done.created as unknown as HostJson,
+      createdNames: done.names as unknown as HostJson,
       compCount: stats.compCount,
       rewrittenExpressions: stats.rewritten,
       dynamicExpressions: stats.dynamic,
-      skipped: skips as unknown as HostJson,
+      skipped: done.skips as unknown as HostJson,
       missingIds: resolved.missing as unknown as HostJson,
     };
   },
 };
 
 /**
- * Duplicates whole compositions, with everything nested inside them.
+ * Duplicate Comp, with everything nested inside — copying what the user is
+ * pointing at, read live at execution like every other selection-driven
+ * operation (ADR-0002):
  *
- * Acts on the comps selected in the Project panel; with none selected there,
- * on the comp open in the viewer. Read live at execution, like every other
- * selection-driven operation (ADR-0002). The copies are new project items in
- * the same folder as their originals; nothing is placed in any timeline.
+ *   1. precomp layers selected in the open comp's timeline: each gets a copy
+ *      directly above it, using its own deep copy of the comp (as
+ *      comp.deepDuplicate). People select the layer and expect the copy next
+ *      to it, so this comes first;
+ *   2. otherwise the comps selected in the Project panel;
+ *   3. otherwise the comp open in the viewer.
+ *
+ * In cases 2 and 3 the copies are new project items in the same folder as
+ * their originals, and nothing is placed in any timeline. A note says which
+ * happened, so a copy is never somewhere the user doesn't look.
  */
 export const deepDuplicateCompsOperation: Operation = {
   id: "kvfx.op.comp.deepDuplicateComps",
@@ -363,6 +382,33 @@ export const deepDuplicateCompsOperation: Operation = {
     const env = ctx.env;
     const project = env.rawProject();
     if (!project) throw hostError(ErrorCode.PreconditionFailed, "Open a project first.");
+
+    const open = env.rawComp();
+    if (open) {
+      const selected = targets(open, { target: "selection" }).layers;
+      let precomps = 0;
+      for (let i = 0; i < selected.length; i += 1) {
+        if (isPrecompLayer(selected[i] as AeRawLayer, env)) precomps += 1;
+      }
+      if (precomps > 0) {
+        const layerCopier = createDeepCopier(env);
+        const done = duplicatePrecompLayers(selected, env, layerCopier);
+        const layerStats = layerCopier.finish();
+        const notes: string[] = [];
+        if (done.created.length === 1) notes[0] = "copied above the selected layer";
+        else if (done.created.length > 1) notes[0] = "each copy is above its layer";
+        return {
+          ids: done.created as unknown as HostJson,
+          createdNames: done.names as unknown as HostJson,
+          from: "timeline",
+          compCount: layerStats.compCount,
+          rewrittenExpressions: layerStats.rewritten,
+          dynamicExpressions: layerStats.dynamic,
+          skipped: done.skips as unknown as HostJson,
+          notes: notes as unknown as HostJson,
+        };
+      }
+    }
 
     const sources: AeRawComp[] = [];
     const seen: { [id: string]: boolean } = {};
@@ -375,12 +421,9 @@ export const deepDuplicateCompsOperation: Operation = {
       }
     }
     let from = "project";
-    if (sources.length === 0) {
-      const active = env.rawComp();
-      if (active) {
-        sources[0] = active;
-        from = "viewer";
-      }
+    if (sources.length === 0 && open) {
+      sources[0] = open;
+      from = "viewer";
     }
     if (sources.length === 0) {
       throw hostError(ErrorCode.PreconditionFailed, "Select a comp in the Project panel, or open one.");
@@ -408,6 +451,7 @@ export const deepDuplicateCompsOperation: Operation = {
       compCount: stats.compCount,
       rewrittenExpressions: stats.rewritten,
       dynamicExpressions: stats.dynamic,
+      notes: ["copied into the Project panel"] as unknown as HostJson,
     };
   },
 };

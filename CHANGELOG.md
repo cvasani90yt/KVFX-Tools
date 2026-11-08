@@ -113,6 +113,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tab; a section order saved by an earlier build is updated to match
 
 ### Fixed
+- **Dup Comp** (Quick) and **Duplicate Comp + Nested Comps** (Tools) only
+  ever added the copy to the Project panel, even with a precomp layer selected
+  in the timeline. Now each selected precomp layer gets a copy directly above
+  it, using its own copies of the comps; with none selected it copies the
+  comps selected in the Project panel, or the open comp, as before. The message
+  says where the copy went
 - **From Screen** was missing from the Quick tab and Tools ▸ Colour inside
   After Effects: it hid itself because After Effects' panel engine has no
   working browser eyedropper. It now opens the system colour picker there
@@ -273,10 +279,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   match their buttons everywhere, including search
 
 ### Added — duplicate a comp with everything inside
-- **Duplicate Comp + Nested Comps** (Tools tab and search): copies the comps
-  selected in the Project panel, or the open comp, together with every comp
-  nested inside them; the panel shows what it will copy before you click
-- The precomp-layer variant is renamed **Duplicate Precomp Layer + Nested**
+- **Duplicate Comp + Nested Comps** (Tools tab and search): copies the precomp
+  layers selected in the timeline (each copy directly above its layer), or
+  else the comps selected in the Project panel, or the open comp, together with
+  every comp nested inside them; the panel shows what it will copy before you
+  click
+- The precomp-layer-only variant is renamed **Duplicate Precomp Layer +
+  Nested**; it stays in search and the Quick catalog (**Dup Precomp**)
 - Result messages name the comps created and any expressions that could not be
   retargeted
 
