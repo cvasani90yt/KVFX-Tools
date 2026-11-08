@@ -130,13 +130,18 @@ export const addTransition = measuredCommand({
         if (g.opacity !== undefined) {
           expressions.push({ path: ["ADBE Vector Transform Group", "ADBE Vector Group Opacity"], expression: scalarExpression(g.opacity, seed) });
         }
+        if (g.trim !== undefined) {
+          expressions.push({ path: ["ADBE Vectors Group", "Trim", "ADBE Vector Trim Start"], expression: scalarExpression(g.trim[0], seed) });
+          expressions.push({ path: ["ADBE Vectors Group", "Trim", "ADBE Vector Trim End"], expression: scalarExpression(g.trim[1], seed) });
+        }
         const color = [...tones[g.tone]];
+        const items: JsonObject[] = [{ type: g.item.type, name: g.name, size: [...g.item.size] }];
+        // Trim Paths sits between the path and its stroke, so the stroke draws the trimmed path.
+        if (g.trim !== undefined) items.push({ type: "trim", name: "Trim", start: 0, end: 100 });
+        items.push(g.stroke === undefined ? { type: "fill", name: "Fill", color } : { type: "stroke", name: "Stroke", color, width: g.stroke });
         return {
           name: g.name,
-          items: [
-            { type: g.item.type, name: g.name, size: [...g.item.size] },
-            g.stroke === undefined ? { type: "fill", name: "Fill", color } : { type: "stroke", name: "Stroke", color, width: g.stroke },
-          ],
+          items,
           ...(g.rotation === undefined ? {} : { transform: { rotation: g.rotation } }),
           expressions,
         };

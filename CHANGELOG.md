@@ -26,6 +26,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Kinetic Title**: a phrase as big type in eight styles, starred words in
   accent colours, in this comp or a new 16:9, 9:16, 1:1 or 4:5 comp
 
+### Added — Trending transitions (Generate)
+- A **Trending** group first in the grid: Zoom Shake, Blur Zoom, Spin Blur,
+  Swipe, Beat Pulse, Strobe, Chroma Split and Kaleido — the punch-ins, blurs,
+  flicker and splits short-form edits are cut with
+- Also new: Swing (moves), Light Burst and Film Burn (light), and Diamond,
+  Stripes, Bubbles and Clock wipes (graphic) — 42 presets in all
+- The preview draws Radial Blur, CC Kaleida, a radial Gradient Ramp and Trim
+  Paths, so every new preset plays in the panel before it is added
+
+### Fixed
+- Colour fields no longer close when you type a hex code: the system colour
+  dialog (a separate window inside After Effects, which took the keystrokes)
+  is replaced by a picker drawn in the panel — a saturation and brightness
+  square, a hue bar, a hex box that takes typing, and swatches with the
+  session's recent colours. Enter keeps the colour, Escape puts it back
+
 ### Added — Transitions (Generate)
 - **Add Transition**: 27 presets placed across the cut at the playhead, each
   built from After Effects' own effects: whips in four directions, zoom in and

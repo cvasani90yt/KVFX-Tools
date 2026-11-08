@@ -182,6 +182,19 @@ const EFFECT_PARAMS: Readonly<Record<string, readonly LeafDef[]>> = {
     leaf("ADBE Channel Blur-0003", "Blue Blurriness", PVT.OneD, 0),
     leaf("ADBE Channel Blur-0004", "Alpha Blurriness", PVT.OneD, 0),
     leaf("ADBE Channel Blur-0005", "Edge Behavior", PVT.OneD, 0),
+    leaf("ADBE Channel Blur-0006", "Blur Dimensions", PVT.OneD, 1),
+  ],
+  "ADBE Radial Blur": [
+    leaf("ADBE Radial Blur-0001", "Amount", PVT.OneD, 10),
+    leaf("ADBE Radial Blur-0002", "Center", PVT.TwoD_SPATIAL, [960, 540], true),
+    leaf("ADBE Radial Blur-0003", "Type", PVT.OneD, 1),
+    leaf("ADBE Radial Blur-0004", "Antialiasing (Best Quality)", PVT.OneD, 1),
+  ],
+  "CC Kaleida": [
+    leaf("CC Kaleida-0001", "Center", PVT.TwoD_SPATIAL, [960, 540], true),
+    leaf("CC Kaleida-0002", "Size", PVT.OneD, 100),
+    leaf("CC Kaleida-0003", "Mirroring", PVT.OneD, 1),
+    leaf("CC Kaleida-0004", "Rotation", PVT.OneD, 0),
   ],
   "ADBE Invert": [
     leaf("ADBE Invert-0001", "Channel", PVT.OneD, 1),

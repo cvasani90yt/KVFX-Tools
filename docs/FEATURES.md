@@ -158,18 +158,19 @@ Chips at the top filter the tab: **Transitions**, **Layouts**, **UI Motion**, **
 
 ### Transitions
 
-Twenty-seven transitions, each built from After Effects' own effects — no
+Forty-two transitions, each built from After Effects' own effects — no
 third-party plugins, no stock footage — and placed across the cut in one undo
 step. Hover a preset to see it in the preview, click to pick it, then **Add
 Transition**.
 
 | Group | Presets | Built as |
 |---|---|---|
-| **Moves** | Whip Left, Whip Right, Whip Up, Whip Down, Zoom In, Zoom Out, Spin, Roll, Stretch, Stretch Up, Impact | An adjustment layer: Motion Tile and the Transform effect, with the Transform effect's own motion blur. |
+| **Trending** | Zoom Shake, Blur Zoom, Spin Blur, Swipe, Beat Pulse, Strobe, Chroma Split, Kaleido | The short-form edit staples: punch-ins and shakes for beat drops, zoom and spin blurs (Radial Blur), a stretched swipe, a double pulse that lands on the cut, white strobe frames, a red/blue split (Channel Blur, horizontal) and a turning kaleidoscope (CC Kaleida). |
+| **Moves** | Whip Left, Whip Right, Whip Up, Whip Down, Zoom In, Zoom Out, Spin, Roll, Stretch, Stretch Up, Impact, Swing | An adjustment layer: Motion Tile and the Transform effect, with the Transform effect's own motion blur. |
 | **Optical** | Blur, Lens Warp, Twist, Liquid, Pixelate, Wave | An adjustment layer: Gaussian Blur, Optics Compensation, Twirl, Turbulent Displace, Mosaic or Wave Warp. |
-| **Light** | Flash, Light Leak, Dip to Black | A solid in Add, Screen or Normal mode; the light leak is a moving 4-Color Gradient. |
+| **Light** | Flash, Light Leak, Dip to Black, Light Burst, Film Burn | A solid in Add, Screen or Normal mode; the light leak and film burn are moving 4-Color Gradients, the light burst a radial Gradient Ramp. |
 | **Glitch** | Glitch, Signal Loss | An adjustment layer: tearing Wave Warp, jumps, colour fringing (Channel Blur), inverted frames, noise and tone. |
-| **Graphic** | Bars, Circle, Split, Slash, Blinds | A shape layer in your colour, in three tones of it. |
+| **Graphic** | Bars, Circle, Split, Slash, Blinds, Diamond, Stripes, Bubbles, Clock | A shape layer in your colour, in three tones of it; Clock sweeps round with Trim Paths. |
 
 * **Where it goes.** Centred on the cut nearest the playhead — a selected
   clip's in or out point within reach — or on the playhead itself, and placed
@@ -181,8 +182,8 @@ Transition**.
   stay closed over the frames either side of the cut, so the switch never shows.
 * **Afterwards.** Trim the layer to retime it — every value runs on the
   layer's own length. Its **KVFX Strength** slider sets the amount (motion
-  blur, distortion, brightness). Glitch, Impact and Signal Loss come out
-  different each time you add them.
+  blur, distortion, brightness). Glitch, Impact, Zoom Shake, Chroma Split,
+  Film Burn and Signal Loss come out different each time you add them.
 
 ### Layouts
 
@@ -338,10 +339,15 @@ are on the first real-host checklist ([TESTING.md](../TESTING.md)):
 * Transitions: the parameter match names they address — Motion Tile
   (`ADBE Tile-0004/5` output size), Transform (`ADBE Geometry2-0009/10`
   shutter), Optics Compensation, Twirl, Turbulent Displace, Mosaic, Wave Warp
-  (wave types 1 = sine, 2 = square, 9 = smooth noise), Channel Blur, Invert,
-  Brightness & Contrast — and the Compositing Options effect opacity
+  (wave types 1 = sine, 2 = square, 9 = smooth noise), Channel Blur (and its
+  Blur Dimensions, 2 = horizontal), Invert, Brightness & Contrast, Radial Blur
+  (`ADBE Radial Blur-0001` amount, `-0003` type: 1 = spin, 2 = zoom), Gradient
+  Ramp (`-0005` shape 2 = radial) — and the Compositing Options effect opacity
   (`ADBE Effect Built In Params` ▸ `ADBE Effect Mask Opacity`) that fades
-  Mosaic in and out.
+  Mosaic and CC Kaleida in and out.
+* Transitions: the Clock wipe's Trim Paths start and end expressions, found by
+  the item's name ("Trim") inside its group, and ellipse paths starting at
+  three o'clock (the group is turned −90° so the sweep starts at twelve).
 * Convert Audio to Keyframes analysing the selected layer within the work area,
   and its slider names.
 * `CompItem.openInViewer()` making the new comp the active item for the rest of

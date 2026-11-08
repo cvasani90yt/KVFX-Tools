@@ -20,6 +20,7 @@ const SLOW = 1.8;
 const HOLD_MS = 450;
 /** Sub-frames drawn for the Transform effect's motion blur. */
 const BLUR_SAMPLES = 5;
+const RADIAL_SAMPLES = 6;
 const MS = 1000;
 
 const css = (rgb: Rgb, alpha = 1): string =>
@@ -221,6 +222,35 @@ export class TransitionPreview {
         g.imageSmoothingEnabled = true;
       }
     }
+    const radial = a["ADBE Radial Blur-0001"] ?? 0;
+    if (radial > 0.5) {
+      // Radial Blur: faded copies scaled out from the centre (zoom) or turned round it (spin).
+      const copy = this.#snapshot(w, h);
+      const zoom = (a["ADBE Radial Blur-0003"] ?? 1) === 2;
+      g.save();
+      for (let i = 1; i <= RADIAL_SAMPLES; i += 1) {
+        const step = (radial / 100) * (i / RADIAL_SAMPLES);
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalAlpha = 0.5 / i + 0.08;
+        g.translate(w / 2, h / 2);
+        if (zoom) g.scale(1 + step * 0.35, 1 + step * 0.35);
+        else g.rotate(step * 0.5);
+        g.drawImage(copy, -w / 2, -h / 2);
+      }
+      g.restore();
+    }
+    const kaleida = a["CC Kaleida mix"] ?? 0;
+    if (kaleida > 1) {
+      // Kaleida: the top-left quarter mirrored into the other three, faded in by its own opacity.
+      const copy = this.#snapshot(w, h);
+      g.save();
+      g.globalAlpha = Math.min(1, kaleida / 100);
+      for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]] as const) {
+        g.setTransform(sx, 0, 0, sy, w / 2, h / 2);
+        g.drawImage(copy, w * 0.25, h * 0.25, w * 0.5, h * 0.5, -w / 2, -h / 2, w / 2, h / 2);
+      }
+      g.restore();
+    }
     const red = a["ADBE Channel Blur-0001"] ?? 0;
     if (red > 0.5) {
       const copy = this.#snapshot(w, h);
@@ -265,16 +295,30 @@ export class TransitionPreview {
     g.save();
     g.globalCompositeOperation = solid.blend === "add" ? "lighter" : solid.blend === "screen" ? "screen" : "source-over";
     g.globalAlpha = Math.min(1, solid.opacity / 100);
+    const colours =
+      preset.build.kind === "solid"
+        ? preset.build.effects
+            .flatMap((e) => e.params)
+            .map((p) => p.value)
+            .filter((v): v is number[] => Array.isArray(v) && v.length === 4)
+            .map((v) => [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0] as Rgb)
+        : [];
+    const [from, to] = solid.points ?? [];
     if (solid.points === undefined || preset.build.kind !== "solid") {
       g.fillStyle = css(solid.color);
       g.fillRect(0, 0, w, h);
+    } else if (solid.gradient === "ramp" && from !== undefined && to !== undefined) {
+      // A radial Gradient Ramp: the start colour at the first point, out to the end colour.
+      const x = w / 2 + from[0] * k;
+      const y = h / 2 + from[1] * k;
+      const r = Math.max(1, Math.hypot(to[0] - from[0], to[1] - from[1]) * k);
+      const ramp = g.createRadialGradient(x, y, 0, x, y, r);
+      ramp.addColorStop(0, css(colours[0] ?? solid.color));
+      ramp.addColorStop(1, css(colours[1] ?? solid.color));
+      g.fillStyle = ramp;
+      g.fillRect(0, 0, w, h);
     } else {
       // A light leak: soft pools of each gradient colour at its point.
-      const colours = preset.build.effects
-        .flatMap((e) => e.params)
-        .map((p) => p.value)
-        .filter((v): v is number[] => Array.isArray(v) && v.length === 4)
-        .map((v) => [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0] as Rgb);
       solid.points.forEach(([px, py], i) => {
         const colour = colours[i];
         if (colour === undefined || colour[0] + colour[1] + colour[2] === 0) return;
@@ -303,7 +347,16 @@ export class TransitionPreview {
       const sw = s.size[0] * k;
       const sh = s.size[1] * k;
       g.beginPath();
-      if (s.type === "ellipse") g.ellipse(0, 0, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+      if (s.type === "ellipse" && s.trim !== undefined) {
+        // Trim Paths: only the stretch of the path between start and end, from three o'clock, clockwise.
+        const start = Math.min(...s.trim) / 100;
+        const end = Math.max(...s.trim) / 100;
+        if (end - start <= 0.001) {
+          g.restore();
+          continue;
+        }
+        g.ellipse(0, 0, sw / 2, sh / 2, 0, start * Math.PI * 2, end * Math.PI * 2);
+      } else if (s.type === "ellipse") g.ellipse(0, 0, sw / 2, sh / 2, 0, 0, Math.PI * 2);
       else g.rect(-sw / 2, -sh / 2, sw, sh);
       if (s.stroke === undefined) {
         g.fillStyle = css(s.color);

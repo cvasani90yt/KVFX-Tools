@@ -24,9 +24,10 @@ import type { JsonValue } from "../types/json.js";
 
 /* eslint-disable no-magic-numbers -- each preset's amounts, timings and colours are the content */
 
-export type TransitionGroup = "move" | "optical" | "light" | "glitch" | "graphic";
+export type TransitionGroup = "trend" | "move" | "optical" | "light" | "glitch" | "graphic";
 
 export const TRANSITION_GROUPS: readonly { readonly id: TransitionGroup; readonly label: string }[] = [
+  { id: "trend", label: "Trending" },
   { id: "move", label: "Moves" },
   { id: "optical", label: "Optical" },
   { id: "light", label: "Light" },
@@ -131,6 +132,8 @@ export interface ShapeGroupSpec {
   readonly position?: readonly [Channel, Channel];
   readonly scale?: readonly [Channel, Channel];
   readonly opacity?: Channel;
+  /** Trim Paths start and end, in percent, for a stroked shape that wipes round like a clock hand. */
+  readonly trim?: readonly [Channel, Channel];
 }
 
 export type TransitionBuild =
@@ -330,6 +333,87 @@ function blinds(W: number, H: number): ShapeGroupSpec[] {
   });
 }
 
+const r4 = (n: number): number => Number(n.toFixed(4));
+
+function diamond(W: number, H: number): ShapeGroupSpec[] {
+  // A square turned 45° covers the frame once |x| + |y| ≤ (W + H) / 2 fits inside it.
+  const side = Math.ceil(((W + H) / 2) * Math.SQRT2 * 1.04);
+  const outer = growShrink(0);
+  const inner = growShrink(0.06);
+  return [
+    { name: "Inner", item: { type: "rect", size: [Math.ceil(side * 0.55), Math.ceil(side * 0.55)] }, tone: 1, rotation: 45, scale: [inner, inner] },
+    { name: "Diamond", item: { type: "rect", size: [side, side] }, tone: 0, rotation: 45, scale: [outer, outer] },
+  ];
+}
+
+function stripes(W: number, H: number): ShapeGroupSpec[] {
+  const count = 7;
+  const angle = -30;
+  const hyp = Math.hypot(W, H);
+  const a = (angle * Math.PI) / 180;
+  const thick = hyp / count;
+  return Array.from({ length: count }, (_, i) => {
+    // Side by side across the stripe, each sliding in along its length, alternately from either end.
+    const offset = (i - (count - 1) / 2) * thick;
+    const dir = i % 2 === 0 ? 1 : -1;
+    const ox = r4(-Math.sin(a) * offset);
+    const oy = r4(Math.cos(a) * offset);
+    const ux = r4(Math.cos(a) * dir * 1.3);
+    const uy = r4(Math.sin(a) * dir * 1.3);
+    const travel = arriveLeave(i * 0.03);
+    return {
+      name: `Stripe ${String(i + 1)}`,
+      item: { type: "rect" as const, size: [Math.ceil(hyp * 1.3), Math.ceil(thick + 3)] as const },
+      tone: (i % 3) as 0 | 1 | 2,
+      rotation: angle,
+      position: [
+        ch(`${String(ox)} + (${travel.src}) * ${String(ux)} * Math.sqrt(W * W + H * H)`, (v) => ox + travel.at(v) * ux * Math.hypot(v.W, v.H)),
+        ch(`${String(oy)} + (${travel.src}) * ${String(uy)} * Math.sqrt(W * W + H * H)`, (v) => oy + travel.at(v) * uy * Math.hypot(v.W, v.H)),
+      ] as const,
+    };
+  });
+}
+
+function bubbles(W: number, H: number): ShapeGroupSpec[] {
+  const cols = 4;
+  const rows = 3;
+  const cw = W / cols;
+  const chh = H / rows;
+  // Each circle covers its own cell, so together they close the frame.
+  const d = Math.ceil(Math.hypot(cw, chh) * 1.08);
+  return Array.from({ length: cols * rows }, (_, i) => {
+    const grow = growShrink(r4((((i * 5) % 12) / 12) * 0.14));
+    return {
+      name: `Bubble ${String(i + 1)}`,
+      item: { type: "ellipse" as const, size: [d, d] as const },
+      tone: (i % 3) as 0 | 1 | 2,
+      position: [k(Math.round(((i % cols) + 0.5) * cw - W / 2)), k(Math.round((Math.floor(i / cols) + 0.5) * chh - H / 2))] as const,
+      scale: [grow, grow] as const,
+    };
+  });
+}
+
+function clock(W: number, H: number): ShapeGroupSpec[] {
+  // A ring as thick as its radius is a disc; trimming it sweeps it round like a hand.
+  const d = Math.ceil(Math.hypot(W, H) * 1.04);
+  const span = 0.5 - HOLD;
+  const leave = 0.5 + HOLD;
+  return [
+    {
+      name: "Clock",
+      item: { type: "ellipse", size: [Math.ceil(d / 2), Math.ceil(d / 2)] },
+      tone: 0,
+      stroke: Math.ceil(d / 2) + 2,
+      // Ellipse paths start at three o'clock; turned back a quarter, the hand starts at twelve.
+      rotation: -90,
+      trim: [
+        ch(`t < 0.5 ? 0 : 100 * ei(cl((t - ${String(leave)}) / ${String(span)}))`, (v) => (v.t < 0.5 ? 0 : 100 * ei(cl((v.t - leave) / span)))),
+        ch(`t < 0.5 ? 100 * eo(cl(t / ${String(span)})) : 100`, (v) => (v.t < 0.5 ? 100 * eo(cl(v.t / span)) : 100)),
+      ],
+    },
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // The presets
 // ---------------------------------------------------------------------------
@@ -355,7 +439,145 @@ const WARM: Rgb = [1, 0.48, 0.1];
 const BLACK: Rgb = [0, 0, 0];
 const WHITE: Rgb = [1, 1, 1];
 
+/** Radial Blur: 1 spins round the centre, 2 zooms out from it. */
+const radialBlur = (type: 1 | 2, amount: Channel): EffectSpec => ({
+  matchName: "ADBE Radial Blur",
+  name: type === 1 ? "KVFX Spin Blur" : "KVFX Zoom Blur",
+  params: [
+    { param: "ADBE Radial Blur-0001", channel: amount },
+    { param: "ADBE Radial Blur-0003", value: type },
+  ],
+});
+
+/** A short Gaussian bump centred on progress `c`: a beat. */
+const beat = (c: number, w: number): Channel =>
+  ch(`Math.exp(-Math.pow((t - ${String(c)}) / ${String(w)}, 2))`, (v) => Math.exp(-Math.pow((v.t - c) / w, 2)));
+const PULSE = ((): Channel => {
+  const a = beat(0.3, 0.045);
+  const b = beat(0.5, 0.045);
+  return ch(`(${a.src} + ${b.src})`, (v) => a.at(v) + b.at(v));
+})();
+
 export const TRANSITIONS: readonly TransitionPreset[] = [
+  // --- Trending ----------------------------------------------------------------
+  {
+    id: "zoomShake",
+    name: "Zoom Shake",
+    group: "trend",
+    frames: 14,
+    about: "Punches in on the cut and shakes it off, made for beat drops.",
+    build: adjust(
+      tile(300),
+      move({
+        scale: ch("100 * (1 + 1.2 * s * pk(t, 2))", (v) => 100 * (1 + 1.2 * v.s * pk(v.t, 2))),
+        x: ch("(rnd(f + 3) * 2 - 1) * 0.035 * W * s * pk(t, 1.2)", (v) => (rnd(v.f + 3, v.seed) * 2 - 1) * 0.035 * v.W * v.s * pk(v.t, 1.2)),
+        y: ch("(rnd(f + 17) * 2 - 1) * 0.035 * H * s * pk(t, 1.2)", (v) => (rnd(v.f + 17, v.seed) * 2 - 1) * 0.035 * v.H * v.s * pk(v.t, 1.2)),
+        rotation: ch("(rnd(f + 29) * 2 - 1) * 3 * s * pk(t, 1.2)", (v) => (rnd(v.f + 29, v.seed) * 2 - 1) * 3 * v.s * pk(v.t, 1.2)),
+      }),
+    ),
+  },
+  {
+    id: "blurZoom",
+    name: "Blur Zoom",
+    group: "trend",
+    frames: 14,
+    about: "Rushes into the frame through a zoom blur and out the other side.",
+    build: adjust(
+      tile(300),
+      move({ scale: ch("100 * (1 + 1.8 * s * pk(t, 3))", (v) => 100 * (1 + 1.8 * v.s * pk(v.t, 3))) }),
+      radialBlur(2, ch("Math.min(100, 70 * s * pk(t, 2))", (v) => Math.min(100, 70 * v.s * pk(v.t, 2)))),
+    ),
+  },
+  {
+    id: "spinBlur",
+    name: "Spin Blur",
+    group: "trend",
+    frames: 16,
+    about: "A full turn smeared by a spin blur, fastest on the cut.",
+    build: adjust(
+      tile(300),
+      move({ rotation: ch("360 * io(t)", (v) => 360 * io(v.t)), scale: push(20) }),
+      radialBlur(1, ch("Math.min(100, 45 * s * pk(t, 2))", (v) => Math.min(100, 45 * v.s * pk(v.t, 2)))),
+    ),
+  },
+  {
+    id: "swipe",
+    name: "Swipe",
+    group: "trend",
+    frames: 14,
+    about: "Swipes left and stretches into a streak, like a thumb flick.",
+    build: adjust(tile(), move({ x: ch("-W * io(t)", (v) => -v.W * io(v.t)), width: ch("100 + 240 * s * pk(t, 3)", (v) => 100 + 240 * v.s * pk(v.t, 3)) })),
+  },
+  {
+    id: "beatPulse",
+    name: "Beat Pulse",
+    group: "trend",
+    frames: 14,
+    about: "Two quick pulses, the second on the cut: drop it on the beat.",
+    build: adjust(
+      tile(300),
+      move({ scale: ch(`100 * (1 + 0.3 * s * ${PULSE.src})`, (v) => 100 * (1 + 0.3 * v.s * PULSE.at(v))) }),
+      {
+        matchName: "ADBE Brightness & Contrast 2",
+        name: "KVFX Pulse Light",
+        params: [{ param: "ADBE Brightness & Contrast 2-0001", channel: ch(`30 * s * ${PULSE.src}`, (v) => 30 * v.s * PULSE.at(v)) }],
+      },
+    ),
+  },
+  {
+    id: "strobe",
+    name: "Strobe",
+    group: "trend",
+    frames: 12,
+    about: "White flicker frames either side of the cut.",
+    build: {
+      kind: "solid",
+      color: WHITE,
+      blend: "add",
+      opacity: ch("pk(t, 1) > 0.25 && f % 2 === 0 ? 100 * Math.min(1, s) * Math.sqrt(pk(t, 1)) : 0", (v) =>
+        pk(v.t, 1) > 0.25 && v.f % 2 === 0 ? 100 * Math.min(1, v.s) * Math.sqrt(pk(v.t, 1)) : 0,
+      ),
+      effects: [],
+    },
+  },
+  {
+    id: "chromaSplit",
+    name: "Chroma Split",
+    group: "trend",
+    frames: 12,
+    about: "Red and blue smear sideways off the picture, then snap back.",
+    build: adjust(
+      tile(200),
+      {
+        matchName: "ADBE Channel Blur",
+        name: "KVFX Split",
+        params: [
+          { param: "ADBE Channel Blur-0001", channel: ch("90 * s * pk(t, 2)", (v) => 90 * v.s * pk(v.t, 2)) },
+          { param: "ADBE Channel Blur-0003", channel: ch("45 * s * pk(t, 2)", (v) => 45 * v.s * pk(v.t, 2)) },
+          { param: "ADBE Channel Blur-0005", value: 1 },
+          { param: "ADBE Channel Blur-0006", value: 2 },
+        ],
+      },
+      move({
+        x: ch("(rnd(Math.floor(f / 2) + 41) * 2 - 1) * 0.025 * W * s * pk(t, 2)", (v) => (rnd(Math.floor(v.f / 2) + 41, v.seed) * 2 - 1) * 0.025 * v.W * v.s * pk(v.t, 2)),
+        scale: push(6),
+      }),
+    ),
+  },
+  {
+    id: "kaleido",
+    name: "Kaleido",
+    group: "trend",
+    frames: 16,
+    about: "Folds into a turning kaleidoscope through the cut.",
+    build: adjust(
+      tile(300),
+      move({ rotation: ch("90 * s * Math.sin(Math.PI * t)", (v) => 90 * v.s * Math.sin(Math.PI * v.t)), scale: push(12) }),
+      // Kaleida has no "off" setting, so it fades in and out through its own opacity.
+      { matchName: "CC Kaleida", name: "KVFX Kaleido", params: [], mix: ch("100 * pk(t, 1.5)", (v) => 100 * pk(v.t, 1.5)) },
+    ),
+  },
+
   // --- Moves -------------------------------------------------------------------
   whip("whipLeft", "Whip Left", "to the left", "x", -1),
   whip("whipRight", "Whip Right", "to the right", "x", 1),
@@ -419,6 +641,14 @@ export const TRANSITIONS: readonly TransitionPreset[] = [
     frames: 14,
     about: "A hit on the cut: a jolt, a shake and a punch in.",
     build: adjust(tile(), move({ x: shakeX, y: shakeY, rotation: shakeR, scale: push(14, 4) })),
+  },
+  {
+    id: "swing",
+    name: "Swing",
+    group: "move",
+    frames: 16,
+    about: "Pans left while the frame swings like a pendulum through the cut.",
+    build: adjust(tile(), move({ x: ch("-W * io(t)", (v) => -v.W * io(v.t)), rotation: ch("16 * s * Math.sin(2 * Math.PI * t)", (v) => 16 * v.s * Math.sin(2 * Math.PI * v.t)) })),
   },
 
   // --- Optical -----------------------------------------------------------------
@@ -582,6 +812,69 @@ export const TRANSITIONS: readonly TransitionPreset[] = [
     build: { kind: "solid", color: BLACK, blend: "normal", opacity: ch("100 * cl(1.6 * s * pk(t, 1))", (v) => 100 * cl(1.6 * v.s * pk(v.t, 1))), effects: [] },
   },
 
+  {
+    id: "lightBurst",
+    name: "Light Burst",
+    group: "light",
+    frames: 14,
+    about: "A bloom of light bursts out from the centre on the cut.",
+    build: {
+      kind: "solid",
+      color: BLACK,
+      blend: "add",
+      opacity: ch("100 * Math.min(1, 1.3 * s * pk(t, 1.5))", (v) => 100 * Math.min(1, 1.3 * v.s * pk(v.t, 1.5))),
+      effects: [
+        {
+          matchName: "ADBE Ramp",
+          name: "KVFX Burst",
+          params: [
+            { param: "ADBE Ramp-0001", point: [k(0), k(0)] },
+            { param: "ADBE Ramp-0002", value: [1, 0.96, 0.88, 1] },
+            { param: "ADBE Ramp-0003", point: [ch("W * (0.1 + 0.8 * pk(t, 1))", (v) => v.W * (0.1 + 0.8 * pk(v.t, 1))), k(0)] },
+            { param: "ADBE Ramp-0004", value: [0, 0, 0, 1] },
+            { param: "ADBE Ramp-0005", value: 2 },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: "filmBurn",
+    name: "Film Burn",
+    group: "light",
+    frames: 20,
+    about: "Hot orange film burn flares and flickers over the cut.",
+    build: {
+      kind: "solid",
+      color: BLACK,
+      blend: "screen",
+      opacity: ch("100 * Math.min(1, 1.5 * s * pk(t, 1)) * (0.7 + 0.3 * rnd(f + 5))", (v) => 100 * Math.min(1, 1.5 * v.s * pk(v.t, 1)) * (0.7 + 0.3 * rnd(v.f + 5, v.seed))),
+      effects: [
+        {
+          matchName: "ADBE 4ColorGradient",
+          name: "KVFX Burn",
+          params: [
+            {
+              param: "ADBE 4ColorGradient-0001",
+              point: [
+                ch("W * (0.35 - 0.2 * t + 0.08 * (rnd(f + 1) - 0.5))", (v) => v.W * (0.35 - 0.2 * v.t + 0.08 * (rnd(v.f + 1, v.seed) - 0.5))),
+                ch("H * (0.1 + 0.08 * (rnd(f + 2) - 0.5))", (v) => v.H * (0.1 + 0.08 * (rnd(v.f + 2, v.seed) - 0.5))),
+              ],
+            },
+            { param: "ADBE 4ColorGradient-0002", value: [1, 0.25, 0.05, 1] },
+            { param: "ADBE 4ColorGradient-0003", point: [ch("W * (-0.3 + 0.25 * t)", (v) => v.W * (-0.3 + 0.25 * v.t)), ch("-0.3 * H", (v) => -0.3 * v.H)] },
+            { param: "ADBE 4ColorGradient-0004", value: [1, 0.62, 0.12, 1] },
+            { param: "ADBE 4ColorGradient-0005", point: [ch("0.45 * W", (v) => 0.45 * v.W), ch("H * (0.35 - 0.3 * t)", (v) => v.H * (0.35 - 0.3 * v.t))] },
+            { param: "ADBE 4ColorGradient-0006", value: [1, 0.92, 0.6, 1] },
+            { param: "ADBE 4ColorGradient-0007", point: [ch("-0.35 * W", (v) => -0.35 * v.W), ch("0.4 * H", (v) => 0.4 * v.H)] },
+            { param: "ADBE 4ColorGradient-0008", value: [0, 0, 0, 1] },
+            { param: "ADBE 4ColorGradient-0009", value: 160 },
+          ],
+        },
+      ],
+    },
+  },
+
   // --- Glitch ------------------------------------------------------------------
   {
     id: "glitch",
@@ -675,6 +968,10 @@ export const TRANSITIONS: readonly TransitionPreset[] = [
   { id: "split", name: "Split", group: "graphic", frames: 16, about: "Two panels slam shut on the cut and part again.", build: { kind: "shape", groups: split } },
   { id: "slash", name: "Slash", group: "graphic", frames: 16, about: "A diagonal band slices across the frame.", build: { kind: "shape", groups: slash } },
   { id: "blinds", name: "Blinds", group: "graphic", frames: 16, about: "Vertical blinds close left to right and open again.", build: { kind: "shape", groups: blinds } },
+  { id: "diamond", name: "Diamond", group: "graphic", frames: 16, about: "Two diamonds burst open over the cut and close on the new shot.", build: { kind: "shape", groups: diamond } },
+  { id: "stripes", name: "Stripes", group: "graphic", frames: 18, about: "Diagonal stripes zip in from both ends and on out.", build: { kind: "shape", groups: stripes } },
+  { id: "bubbles", name: "Bubbles", group: "graphic", frames: 16, about: "Circles pop up all over the frame, then pop away.", build: { kind: "shape", groups: bubbles } },
+  { id: "clock", name: "Clock", group: "graphic", frames: 16, about: "Sweeps round like a clock hand to cover, and round again to reveal.", build: { kind: "shape", groups: clock } },
 ];
 
 export function transitionById(id: unknown): TransitionPreset | undefined {
@@ -781,6 +1078,8 @@ export interface ShapePose {
   readonly opacity: number;
   readonly color: Rgb;
   readonly stroke?: number;
+  /** Trim Paths start and end in percent, for shapes that sweep round. */
+  readonly trim?: readonly [number, number];
 }
 
 export interface TransitionPose {
@@ -794,7 +1093,14 @@ export interface TransitionPose {
   readonly rotation: number;
   /** Effect amounts by effect match name and parameter, for the preview to approximate. */
   readonly amounts: Readonly<Record<string, number>>;
-  readonly solid?: { readonly color: Rgb; readonly blend: BlendMode; readonly opacity: number; readonly points?: readonly (readonly [number, number])[] };
+  readonly solid?: {
+    readonly color: Rgb;
+    readonly blend: BlendMode;
+    readonly opacity: number;
+    /** A 4-Color Gradient's four points, or a radial Gradient Ramp's start and end. */
+    readonly gradient?: "four" | "ramp";
+    readonly points?: readonly (readonly [number, number])[];
+  };
   readonly shapes: readonly ShapePose[];
 }
 
@@ -841,9 +1147,14 @@ export function transitionPose(
 
   let solid: TransitionPose["solid"];
   if (preset.build.kind === "solid") {
-    const gradient = preset.build.effects.find((e) => e.matchName === "ADBE 4ColorGradient");
+    const gradient = preset.build.effects.find((e) => e.matchName === "ADBE 4ColorGradient" || e.matchName === "ADBE Ramp");
     const points = gradient?.params.filter((p) => p.point !== undefined).map((p) => [p.point![0].at(v), p.point![1].at(v)] as const);
-    solid = { color: preset.build.color, blend: preset.build.blend, opacity: preset.build.opacity.at(v), ...(points === undefined ? {} : { points }) };
+    solid = {
+      color: preset.build.color,
+      blend: preset.build.blend,
+      opacity: preset.build.opacity.at(v),
+      ...(gradient === undefined || points === undefined ? {} : { gradient: gradient.matchName === "ADBE Ramp" ? ("ramp" as const) : ("four" as const), points }),
+    };
   }
 
   const shapes: ShapePose[] = [];
@@ -861,6 +1172,7 @@ export function transitionPose(
         opacity: g.opacity?.at(v) ?? 100,
         color: tones[g.tone],
         ...(g.stroke === undefined ? {} : { stroke: g.stroke }),
+        ...(g.trim === undefined ? {} : { trim: [g.trim[0].at(v), g.trim[1].at(v)] as const }),
       });
     }
   }

@@ -58,6 +58,10 @@ function drives(preset: TransitionPreset): Drive[] {
       if (pos !== undefined) out.push({ label: `${g.name} position`, source: (seed) => pairExpression(pos[0], pos[1], seed), expect: (v) => [pos[0].at(v), pos[1].at(v)] });
       if (scale !== undefined) out.push({ label: `${g.name} scale`, source: (seed) => pairExpression(scale[0], scale[1], seed), expect: (v) => [scale[0].at(v), scale[1].at(v)] });
       if (g.opacity !== undefined) out.push(one(`${g.name} opacity`, g.opacity));
+      if (g.trim !== undefined) {
+        out.push(one(`${g.name} trim start`, g.trim[0]));
+        out.push(one(`${g.name} trim end`, g.trim[1]));
+      }
     }
     return out;
   }
@@ -122,7 +126,7 @@ describe("transition presets", () => {
         expect(pose.scaleY, label).toBeCloseTo(100, 6);
         if (pose.solid !== undefined) expect(pose.solid.opacity, label).toBe(0);
         for (const [param, amount] of Object.entries(pose.amounts)) {
-          if (/Gaussian Blur 2-0001|Twirl-0001|Turbulent Displace-0002|Optics|Wave Warp-0002|Channel Blur-000[13]|Noise-0001|Brightness/.test(param)) {
+          if (/Gaussian Blur 2-0001|Twirl-0001|Turbulent Displace-0002|Optics|Wave Warp-0002|Channel Blur-000[13]|Noise-0001|Brightness|Radial Blur-0001/.test(param)) {
             expect(Math.abs(amount), `${label} ${param}`).toBeCloseTo(0, 6);
           }
           if (/mix$/.test(param)) expect(amount, `${label} ${param}`).toBe(0);
@@ -170,13 +174,23 @@ function uncovered(shapes: ReturnType<typeof transitionPose>["shapes"]): number 
       const py = (gy / 9) * H - H / 2;
       total += 1;
       const covered = shapes.some((s) => {
-        if (s.stroke !== undefined || s.opacity < 50 || s.scaleX <= 0 || s.scaleY <= 0) return false;
+        if (s.opacity < 50 || s.scaleX <= 0 || s.scaleY <= 0) return false;
         const a = (-s.rotation * Math.PI) / 180;
         const dx = px - s.x;
         const dy = py - s.y;
         const lx = (dx * Math.cos(a) - dy * Math.sin(a)) / (s.scaleX / 100);
         const ly = (dx * Math.sin(a) + dy * Math.cos(a)) / (s.scaleY / 100);
         const [w, h] = s.size;
+        if (s.stroke !== undefined) {
+          // Only a trimmed ring counts: a band round the circle, over the part of the path the trim keeps.
+          if (s.type !== "ellipse" || s.trim === undefined) return false;
+          const r = Math.hypot(lx, ly);
+          if (Math.abs(r - w / 2) > s.stroke / 2) return false;
+          // The path starts at three o'clock and runs clockwise.
+          const along = (((Math.atan2(ly, lx) / (2 * Math.PI)) % 1) + 1) % 1;
+          const [start, end] = [Math.min(...s.trim) / 100, Math.max(...s.trim) / 100];
+          return end - start >= 1 || (end > start && along >= start && along <= end);
+        }
         if (s.type === "ellipse") return (lx / (w / 2)) ** 2 + (ly / (h / 2)) ** 2 <= 1;
         return Math.abs(lx) <= w / 2 && Math.abs(ly) <= h / 2;
       });
@@ -270,6 +284,34 @@ describe("Add Transition", () => {
     expect(first.property("ADBE Vector Transform Group")!.property("ADBE Vector Position")!.expression).toContain("eo(cl(");
     const fill = first.property("ADBE Vectors Group")!.property(2)!;
     expect(fill.property("ADBE Vector Fill Color")!.value).toEqual([0.2, 0.4, 1, 1]);
+  });
+
+  it("sweeps the clock wipe round with Trim Paths between the ring and its stroke", () => {
+    const ae = edit();
+    runCommand(ae, "kvfx.rig.transition", { preset: "clock" });
+    const group = ae.raw("KVFX Transition · Clock").property("ADBE Root Vectors Group")!.property(1)!;
+    const contents = group.property("ADBE Vectors Group")!;
+    expect(contents.property(2)!.matchName).toBe("ADBE Vector Filter - Trim");
+    expect(contents.property(3)!.matchName).toBe("ADBE Vector Graphic - Stroke");
+    expect(contents.property("Trim")!.property("ADBE Vector Trim End")!.expression).toContain("eo(cl(t /");
+    expect(contents.property("Trim")!.property("ADBE Vector Trim Start")!.expression).toContain("ei(cl((t -");
+    expect(group.property("ADBE Vector Transform Group")!.property("ADBE Vector Rotation")!.value).toBe(-90);
+  });
+
+  it("drives Radial Blur's amount and sets its type for the blur zoom", () => {
+    const ae = edit();
+    runCommand(ae, "kvfx.rig.transition", { preset: "blurZoom" });
+    const blur = ae.raw("KVFX Transition · Blur Zoom").effects.property("KVFX Zoom Blur")!;
+    expect(blur.matchName).toBe("ADBE Radial Blur");
+    expect(blur.property("ADBE Radial Blur-0001")!.expression).toContain("70 * s * pk(t, 2)");
+    expect(blur.property("ADBE Radial Blur-0003")!.value).toBe(2);
+  });
+
+  it("fades the kaleidoscope through its own effect opacity", () => {
+    const ae = edit();
+    runCommand(ae, "kvfx.rig.transition", { preset: "kaleido" });
+    const kaleida = ae.raw("KVFX Transition · Kaleido").effects.property("KVFX Kaleido")!;
+    expect(kaleida.property("ADBE Effect Built In Params")!.property("ADBE Effect Mask Opacity")!.expression).toContain("pk(t, 1.5)");
   });
 
   it("builds every preset without the host refusing a step", () => {
