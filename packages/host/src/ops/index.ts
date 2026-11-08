@@ -8,6 +8,7 @@ import { layerEditOperations } from "./layer/edit.js";
 import { setFlagOperation } from "./layer/flags.js";
 import { measureOperation, setTransformOperation } from "./layer/geometry.js";
 import { offsetPositionOperation } from "./layer/offset.js";
+import { speedRampOperation } from "./layer/speed.js";
 import { stackOperations } from "./layer/stack.js";
 import { reorderOperation } from "./layer/reorder.js";
 import { projectOperations } from "./project.js";
@@ -37,6 +38,7 @@ export function createProductionRegistry(): OperationRegistry {
     setTransformOperation,
     offsetPositionOperation,
     ...stackOperations,
+    speedRampOperation,
     ...shapeOperations,
     resizeCompsOperation,
     createCompOperation,

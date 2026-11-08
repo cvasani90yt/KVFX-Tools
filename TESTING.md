@@ -164,7 +164,12 @@ switch an effect off, and remove one — it asks first.
 **7. Generate.** **Create Counter** (watch it count from the playhead).
 Select one layer and **Build Carousel** — then change the **Spin** angle on the
 `KVFX Carousel` null. Select a text or logo layer and **Extrude**, then orbit
-a camera around it.
+a camera around it. Put the playhead on a cut between two clips and **Add
+Transition** with a few presets, including **Clock** and **Blur Zoom**. Select
+a video clip, put the playhead on a moment, pick **Velocity** under **Speed**
+and **Add Speed Ramp**; then drag the `KVFX Speed Ramp` marker on the layer and
+play again. Click any colour swatch and type a hex code into the picker: it
+should take every key and stay open until **Enter** or **Done**.
 
 **8. Library and Media.** **Add Folder** in Library, click an image (imported
 and placed) and an `.ffx` preset with a layer selected (applied). In Media, copy
@@ -195,6 +200,10 @@ real thing. Please look closely at these, which the model cannot settle
 * **Ease** on **Scale** keyframes: does the Graph Editor match the curve?
 * **Gradient Lock**: does the gradient span the layer from edge to edge?
 * **Media**: does dragging a file from the desktop onto the drop zone import it?
+* **Speed Ramp**: does the clip slow and speed up as the preview showed, does
+  dragging or stretching the ramp marker move or retime it, and does the clip
+  still end on its last frame with **Keep the ending** on?
+* **Clock** transition: does the sweep start at twelve o'clock?
 
 ## If something does not work
 

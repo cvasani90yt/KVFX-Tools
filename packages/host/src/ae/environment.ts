@@ -164,6 +164,8 @@ export interface AeEnvironment {
   trackMatteTypes(): TrackMatteTypes;
   /** BlendingMode constants for the modes plans may ask for. */
   blendingModes(): BlendingModes;
+  /** FrameBlendingType constants. */
+  frameBlendingTypes(): FrameBlendingTypes;
   /** ParagraphJustification constants. */
   justifications(): Justifications;
 }
@@ -183,6 +185,12 @@ export interface BlendingModes {
   readonly multiply: number;
   readonly overlay: number;
   readonly softLight: number;
+}
+
+export interface FrameBlendingTypes {
+  readonly none: number;
+  readonly frameMix: number;
+  readonly pixelMotion: number;
 }
 
 export interface Justifications {

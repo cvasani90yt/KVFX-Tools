@@ -4,6 +4,7 @@ import type {
   AeEnvironment,
   AeLayerHandle,
   BlendingModes,
+  FrameBlendingTypes,
   InterpolationTypes,
   Justifications,
   TrackMatteTypes,
@@ -259,6 +260,7 @@ export interface HostGlobals {
   readonly newMarker: (comment: string, duration: number) => unknown;
   readonly trackMatteTypes: TrackMatteTypes;
   readonly blendingModes: BlendingModes;
+  readonly frameBlendingTypes: FrameBlendingTypes;
   readonly justifications: Justifications;
 }
 
@@ -364,6 +366,9 @@ export function createEnvironment(g: HostGlobals): AeEnvironment {
     blendingModes: function (): BlendingModes {
       return g.blendingModes;
     },
+    frameBlendingTypes: function (): FrameBlendingTypes {
+      return g.frameBlendingTypes;
+    },
     justifications: function (): Justifications {
       return g.justifications;
     },
@@ -425,6 +430,11 @@ export function createLiveEnvironment(): AeEnvironment {
       alphaInverted: TrackMatteType.ALPHA_INVERTED,
       luma: TrackMatteType.LUMA,
       lumaInverted: TrackMatteType.LUMA_INVERTED,
+    },
+    frameBlendingTypes: {
+      none: FrameBlendingType.NO_FRAME_BLEND,
+      frameMix: FrameBlendingType.FRAME_MIX,
+      pixelMotion: FrameBlendingType.PIXEL_MOTION,
     },
     blendingModes: {
       normal: BlendingMode.NORMAL,

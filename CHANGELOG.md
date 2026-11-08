@@ -35,6 +35,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The preview draws Radial Blur, CC Kaleida, a radial Gradient Ramp and Trim
   Paths, so every new preset plays in the panel before it is added
 
+### Added — Speed Ramp (Generate)
+- **Add Speed Ramp**: twelve speed curves on the selected video or precomp
+  clips — Velocity, Flash Hit, Beat Hits and Boomerang; Slow-Mo, Bullet Time,
+  Freeze Hit and Impact; Speed Up, Ramp Up, Slam Stop and Rewind — with the
+  key moment on the playhead
+- Built on Time Remapping: each ramp is a layer marker (drag to move, stretch
+  to retime, edit its percentage to change the strength) read by one Time
+  Remap expression, so a clip can carry several ramps
+- Keep the ending moves the out point so the clip still ends on its last
+  frame; Frame blending sets Frame Mix on the clip; a Time Remap expression
+  that isn't KVFX's is never replaced
+- A live preview — a shot played at the ramped speed over its speed graph —
+  from the same maths as the expression; the tests run the expression against it
+- Host: `layer.speedRamp`, with `FrameBlendingType` in the environment
+
 ### Fixed
 - Colour fields no longer close when you type a hex code: the system colour
   dialog (a separate window inside After Effects, which took the keystrokes)

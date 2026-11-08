@@ -9,6 +9,7 @@ import { orderCommands } from "./layer/order.js";
 import { toolCommands } from "./layer/tools.js";
 import { rigCommands } from "./rig/index.js";
 import { templateCommands } from "./rig/templates.js";
+import { speedRampCommands } from "./rig/speed-ramp.js";
 import { transitionCommands } from "./rig/transitions.js";
 import { uiKitCommands } from "./rig/ui-kit.js";
 import { uiMotionCommands } from "./rig/ui-motion.js";
@@ -61,6 +62,7 @@ export function createProductionCommandRegistry(): CommandRegistry {
     ...uiKitCommands,
     ...templateCommands,
     ...transitionCommands,
+    ...speedRampCommands,
     ...projectCommands,
     ...labelCommands,
     selectSameLabel,

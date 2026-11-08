@@ -154,7 +154,7 @@ generated expression runs unchanged on both After Effects expression engines.
 | **3D Carousel** | The selected layers — or copies of one — on a ring around a **KVFX Carousel** null, each facing outwards. | **Radius** and **Spin** sliders on the null; rotate the null itself to tilt the ring. |
 | **3D Extrude** | Depth for the selected layers: stacked, parented slices behind each face, filled with the side colour. | **KVFX Extrude** slider on the face layer. |
 
-Chips at the top filter the tab: **Transitions**, **Layouts**, **UI Motion**, **Scenes**, **Builders**.
+Chips at the top filter the tab: **Transitions**, **Speed**, **Layouts**, **UI Motion**, **Scenes**, **Builders**.
 
 ### Transitions
 
@@ -184,6 +184,40 @@ Transition**.
   layer's own length. Its **KVFX Strength** slider sets the amount (motion
   blur, distortion, brightness). Glitch, Impact, Zoom Shake, Chroma Split,
   Film Burn and Signal Loss come out different each time you add them.
+
+### Speed Ramp
+
+Twelve speed curves for the selected video or precomp clips, played through
+After Effects' own Time Remapping. Hover a preset to watch it in the preview —
+a shot drawn at the ramped speed over its speed graph — click to pick it, then
+**Add Speed Ramp**.
+
+| Group | Presets |
+|---|---|
+| **Trending** | Velocity (rush in, hang slow on the beat, rush out), Flash Hit, Beat Hits (two slow beats), Boomerang (forward, back, forward) |
+| **Slow motion** | Slow-Mo, Bullet Time, Freeze Hit, Impact |
+| **Speed up** | Speed Up, Ramp Up, Slam Stop, Rewind |
+
+* **Where it goes.** The ramp's key moment — the slow beat, the freeze, the
+  peak — lands on the playhead. **Length** sets the window in frames;
+  **Strength** makes the curve gentler (under 100 %) or more extreme.
+* **How it's built.** Time Remapping is turned on and the ramp is written as a
+  layer marker, `KVFX Speed Ramp: Velocity (100%)`, whose duration is the
+  window. One expression on Time Remap reads every such marker and plays the
+  speed curve between them, so a clip can carry as many ramps as you like.
+  Speeds ease between levels the way flat keyframe handles do, and the
+  footage played is worked out exactly rather than step by step.
+* **Afterwards.** Drag a ramp's marker to move it, stretch it to retime it,
+  change the percentage in its comment to change the strength, or delete it to
+  remove the ramp. **Keep the ending** (on by default) moves the out point when
+  the ramp is added, so the clip still ends on its last frame — slow motion
+  makes it longer, speed shorter; turn it off to keep the edit's timing.
+  **Frame blending** sets the layer to Frame Mix; switch on the comp's Frame
+  Blending to see it in the preview.
+* **Safe with your own remaps.** A layer whose Time Remap already carries an
+  expression KVFX didn't write is skipped and listed, never overwritten. Text,
+  shape, solid and null layers are skipped too — they have no footage to
+  retime.
 
 ### Layouts
 
@@ -345,6 +379,12 @@ are on the first real-host checklist ([TESTING.md](../TESTING.md)):
   Ramp (`-0005` shape 2 = radial) — and the Compositing Options effect opacity
   (`ADBE Effect Built In Params` ▸ `ADBE Effect Mask Opacity`) that fades
   Mosaic and CC Kaleida in and out.
+* Speed Ramp: `canSetTimeRemapEnabled` on video and precomp layers (and
+  false on stills and solids), the two keyframes After Effects adds when Time
+  Remapping is turned on, `valueAtTime` on Time Remap returning those
+  keyframes' value under the expression, layer marker `duration` and `comment`
+  being readable from expressions in both engines, and `frameBlendingType`
+  accepting `FrameBlendingType.FRAME_MIX`.
 * Transitions: the Clock wipe's Trim Paths start and end expressions, found by
   the item's name ("Trim") inside its group, and ellipse paths starting at
   three o'clock (the group is turned −90° so the sweep starts at twelve).

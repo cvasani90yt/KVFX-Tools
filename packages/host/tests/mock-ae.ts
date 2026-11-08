@@ -11,6 +11,7 @@ import {
   PURGE_IMAGE,
   PVT,
   BLEND,
+  FRAME_BLEND,
   JUSTIFY,
   TRACK_MATTE,
   createMockApp,
@@ -202,6 +203,7 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
     newMarker: (comment, duration) => ({ comment, duration }),
     trackMatteTypes: TRACK_MATTE,
     blendingModes: BLEND,
+    frameBlendingTypes: FRAME_BLEND,
     justifications: JUSTIFY,
     nowMs: () => {
       const value = clock;

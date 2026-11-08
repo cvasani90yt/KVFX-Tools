@@ -35,6 +35,7 @@ export const INTERP = { linear: 6612, bezier: 6613, hold: 6614 } as const;
 export const TRACK_MATTE = { none: 5012, alpha: 5013, alphaInverted: 5014, luma: 5015, lumaInverted: 5016 } as const;
 export const BLEND = { normal: 5212, add: 5220, screen: 5219, multiply: 5216, overlay: 5225, softLight: 5226 } as const;
 export const JUSTIFY = { left: 7413, center: 7415, right: 7414 } as const;
+export const FRAME_BLEND = { none: 4012, frameMix: 4013, pixelMotion: 4014 } as const;
 export const PURGE_ALL = 1;
 export const PURGE_IMAGE = 4;
 
@@ -890,6 +891,7 @@ export class MockLayer {
   blendingMode = BLEND.normal;
   hasAudio = false;
   timeRemapEnabled = false;
+  frameBlendingType?: number;
 
   constructor(comp: MockComp, options: MockLayerOptions) {
     this.containingComp = comp;
@@ -905,10 +907,13 @@ export class MockLayer {
       this.collapseTransformation = false;
       this.motionBlur = false;
       this.nullLayer = this.kind === "null";
+      this.frameBlendingType = FRAME_BLEND.none;
     }
     const groups: Def[] = [leaf("ADBE Marker", "Marker", PVT.MARKER, null), transformDef()];
     if (this.kind === "camera") groups.push({ kind: "group", matchName: "ADBE Camera Options Group", name: "Camera Options" });
     if (this.kind === "light") groups.push({ kind: "group", matchName: "ADBE Light Options Group", name: "Light Options" });
+    // AV layers always have Time Remap; After Effects only shows it once it is enabled.
+    if (this.isAV) groups.push(leaf("ADBE Time Remapping", "Time Remap", PVT.OneD, 0));
     if (this.isAV) {
       groups.push({
         kind: "group",
@@ -943,6 +948,13 @@ export class MockLayer {
 
   get isAV(): boolean {
     return this.kind !== "camera" && this.kind !== "light";
+  }
+
+  /** Video and precomps can be time-remapped; stills, solids, text, shapes and nulls can't. */
+  get canSetTimeRemapEnabled(): boolean {
+    if (this.kind === "precomp") return true;
+    if (this.kind !== "av" || this.adjustmentLayer === true) return false;
+    return !(this.source instanceof MockItem && this.source.mainSource?.color !== undefined);
   }
 
   /** As in After Effects, moving a layer's start moves its in and out points with it. */

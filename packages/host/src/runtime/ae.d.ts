@@ -151,8 +151,12 @@ interface AeRawLayer {
   trackMatteType?: number;
   readonly trackMatteLayer?: AeRawLayer | null;
   setTrackMatte?(trackMatteLayer: AeRawLayer, trackMatteType: number): void;
-  /** AVLayer: true when the layer's time is remapped. */
-  readonly timeRemapEnabled?: boolean;
+  /** AVLayer: true when the layer's time is remapped. Writable where `canSetTimeRemapEnabled`. */
+  timeRemapEnabled?: boolean;
+  /** AVLayer: false for stills, solids and other sources without time. */
+  readonly canSetTimeRemapEnabled?: boolean;
+  /** AVLayer: FrameBlendingType. */
+  frameBlendingType?: number;
   /** Copies the layer into another comp, as Edit ▸ Copy and Paste would; the copy is that comp's layer 1. */
   copyToComp?(intoComp: AeRawComp): void;
   blendingMode?: number;
@@ -308,6 +312,11 @@ declare const BlendingMode: {
   readonly MULTIPLY: number;
   readonly OVERLAY: number;
   readonly SOFT_LIGHT: number;
+};
+declare const FrameBlendingType: {
+  readonly NO_FRAME_BLEND: number;
+  readonly FRAME_MIX: number;
+  readonly PIXEL_MOTION: number;
 };
 declare const ParagraphJustification: {
   readonly LEFT_JUSTIFY: number;

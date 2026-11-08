@@ -25,3 +25,4 @@ export * from "./color/index.js";
 export * from "./audio/silence.js";
 export * from "./layouts/index.js";
 export * from "./transitions/index.js";
+export * from "./speed/index.js";
