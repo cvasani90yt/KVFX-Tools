@@ -1124,6 +1124,13 @@ export class MockComp extends MockItem {
   workAreaDuration: number;
   stack: MockLayer[] = [];
   readonly project: MockProject;
+  bgColor: [number, number, number] = [0, 0, 0];
+  /** Frames saved with saveFrameToPng: when, and where. */
+  savedFrames: { time: number; path: string }[] = [];
+
+  saveFrameToPng(time: number, file: AeFile): void {
+    this.savedFrames.push({ time, path: file.fsName });
+  }
 
   constructor(project: MockProject, name: string, width = 1920, height = 1080, frameRate = 25, duration = 10) {
     super(name, "Composition");
@@ -1245,6 +1252,7 @@ export class MockProject {
 
   activeItem: unknown = null;
   file: AeFile | null = null;
+  bitsPerChannel = 8;
   usedFonts: AeUsedFont[] = [];
   fontReplacements: { from: string; to: string }[] = [];
   imported: string[] = [];

@@ -54,6 +54,8 @@ whose parent is also selected travels with the parent rather than twice.
 | Control | What it does | Limits |
 |---|---|---|
 | **Colour picker** (Colour — first in the tab) | The panel's colour, shown with an eyedropper icon and its hex code. Click it for the in-panel picker: a saturation and brightness square, a hue bar, a hex box you can type into, preset swatches and the colours you used recently. It is the same colour as the header's **Solid** swatch — change either and the other follows. | |
+| **From comp** (eyedropper) | Grabs the open comp's frame at the playhead into the panel. Hover it for a magnifier and the colour under the pointer, then click (or move with the arrow keys and press Enter) to take that exact colour. Transparent areas read as the comp's background colour, as in the viewer; refresh re-grabs after you move the playhead. | The frame is saved to KVFX's cache folder and deleted once read. In a 32-bit project After Effects can save the frame darker than the viewer shows; the panel says so. |
+| **From screen** (eyedropper) | Picks a colour from anywhere on your screen — other apps too — with the browser engine's own eyedropper. Click again to cancel. | Works only where After Effects lets panels use it. If After Effects refuses, the button hides itself for that version of After Effects and points to **From comp**. |
 | **Fill** · **Text** · **Solid** | Apply the picked colour: **Fill** adds a Fill effect to the selected layers; **Text** recolours the selected text layers (font, size and tracking stay as they are); **Solid** adds a comp-size solid in it. | Text skips layers that aren't text, and text whose Source Text is animated, with a reason. |
 | **Gradient Lock** | Adds a Gradient Ramp whose ends follow the layer's own bounds via `sourceRectAtTime`, so the gradient stays fitted as text or shapes change size. Vertical, horizontal or diagonal. | |
 | **Precomp** (Precompose Each) | Precomposes every selected layer into its *own* composition, moving all attributes so the outer comp looks unchanged. | Locked layers are skipped. |
@@ -392,6 +394,10 @@ are on the first real-host checklist ([TESTING.md](../TESTING.md)):
   Ramp (`-0005` shape 2 = radial) — and the Compositing Options effect opacity
   (`ADBE Effect Built In Params` ▸ `ADBE Effect Mask Opacity`) that fades
   Mosaic and CC Kaleida in and out.
+* Pick from comp: `CompItem.saveFrameToPng` (undocumented; it can return
+  before the file is written, which the panel waits out) and its colours in
+  8, 16 and 32-bit projects. Pick from screen: whether After Effects' panel
+  engine lets the browser eyedropper open at all.
 * Speed Ramp: `canSetTimeRemapEnabled` on video and precomp layers (and
   false on stills and solids), the two keyframes After Effects adds when Time
   Remapping is turned on, `valueAtTime` on Time Remap returning those

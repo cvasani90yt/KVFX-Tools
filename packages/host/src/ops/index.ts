@@ -13,6 +13,7 @@ import { stackOperations } from "./layer/stack.js";
 import { reorderOperation } from "./layer/reorder.js";
 import { projectOperations } from "./project.js";
 import { propertyOperations } from "./prop.js";
+import { compFrameOperation } from "./comp-frame.js";
 import { createCompOperation, resizeCompsOperation } from "./comp-resize.js";
 import { mediaOperations } from "./media.js";
 import { shapeOperations } from "./shape.js";
@@ -42,6 +43,7 @@ export function createProductionRegistry(): OperationRegistry {
     ...shapeOperations,
     resizeCompsOperation,
     createCompOperation,
+    compFrameOperation,
     ...mediaOperations,
     ...layerEditOperations,
     ...propertyOperations,

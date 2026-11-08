@@ -1,5 +1,6 @@
 import {
   HostClient,
+  MAX_PLAN_BUDGET_MS,
   PLAN_OPERATION_ID,
   TransportUnavailableError,
   type HostTransport,
@@ -425,6 +426,33 @@ export class Session {
     if (client === undefined) return { ok: false, message: "Not connected to After Effects." };
     const result = await client.send({ kind: "query", op, args, ...(budgetMs === undefined ? {} : { budgetMs }) });
     return result.ok ? { ok: true, value: result.value ?? null } : { ok: false, message: userMessage(result.error) };
+  }
+
+  /**
+   * Renders the open comp's frame at the playhead to `path`, for Pick from
+   * comp. Sent as a plan, because a heavy frame can take After Effects longer
+   * than a query may run; it changes nothing, so its undo group stays empty.
+   * No toast: the eyedropper reports for itself.
+   */
+  async grabCompFrame(path: string): Promise<QueryResult> {
+    const client = this.#client;
+    if (client === undefined) return { ok: false, message: "Not connected to After Effects." };
+    if (this.#state.busy) return { ok: false, message: "KVFX is still busy with the last action. Try again in a moment." };
+    this.#set({ busy: true });
+    try {
+      const result = await client.send({
+        kind: "plan",
+        op: PLAN_OPERATION_ID,
+        args: { steps: [{ op: "kvfx.op.comp.frame", args: { path } }] },
+        undoGroup: "KVFX Tools — Pick from comp",
+        budgetMs: MAX_PLAN_BUDGET_MS,
+      });
+      if (!result.ok) return { ok: false, message: userMessage(result.error) };
+      const step = (result.value as { steps?: { result?: JsonValue }[] } | null)?.steps?.[0]?.result;
+      return { ok: true, value: step ?? null };
+    } finally {
+      this.#set({ busy: false });
+    }
   }
 
   /**

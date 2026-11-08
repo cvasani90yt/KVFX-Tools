@@ -121,6 +121,24 @@ export function writeBase64(path: string, base64: string): boolean {
   return api.writeFile(path, base64, encoding).err === CEP_FS_NO_ERROR;
 }
 
+/** A file's contents as Base64, or undefined when it can't be read. */
+export function readBase64(path: string): string | undefined {
+  const api = fs();
+  if (api === undefined) return undefined;
+  const result = api.readFile(path, window.cep?.encoding?.Base64 ?? "Base64");
+  return result.err === CEP_FS_NO_ERROR && typeof result.data === "string" ? result.data : undefined;
+}
+
+/** Files KVFX writes for itself and throws away: directly inside its own cache folder. */
+const CACHE_FILE = new RegExp(String.raw`[\\/]${USER_DATA_DIRNAME}[\\/]cache[\\/][^\\/]+$`, "i");
+
+/** Deletes one of KVFX's own cache files. Any other path is refused, so no user file can ever go. */
+export function removeCacheFile(path: string): boolean {
+  const api = fs();
+  if (api?.deleteFile === undefined || !CACHE_FILE.test(path)) return false;
+  return api.deleteFile(path).err === CEP_FS_NO_ERROR;
+}
+
 /** KVFX's folder in the platform application-data root. */
 export function appDataFolder(...sub: readonly string[]): string | undefined {
   const host = window.__adobe_cep__;

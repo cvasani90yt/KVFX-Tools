@@ -496,6 +496,100 @@ select:focus-visible,
   color: var(--kvfx-accent);
 }
 
+.kvfx-row.kvfx-pickrow > .kvfx-pill {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.kvfx-row.kvfx-pickrow > .kvfx-pill[hidden] {
+  display: none;
+}
+
+/* Pick from screen while the eyedropper is open: a click now cancels. */
+.kvfx-pill--busy {
+  border-color: var(--kvfx-accent);
+  color: var(--kvfx-accent);
+}
+
+/* Pick from comp: the frame, a magnifier beside the pointer and a readout. */
+.kvfx-overlay--eyedrop {
+  z-index: 55;
+}
+
+.kvfx-eyedrop__stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 6px 0;
+  border-radius: var(--kvfx-radius-md);
+  background:
+    repeating-conic-gradient(#20232a 0% 25%, #181a20 0% 50%) 50% / 16px 16px;
+  overflow: hidden;
+}
+
+.kvfx-eyedrop__stage[hidden] {
+  display: none;
+}
+
+.kvfx-eyedrop__view {
+  display: block;
+  cursor: crosshair;
+  outline: none;
+}
+
+.kvfx-eyedrop__view:focus-visible {
+  box-shadow: 0 0 0 2px var(--kvfx-accent);
+}
+
+.kvfx-eyedrop__loupe {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border: 3px solid var(--kvfx-text-primary);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.kvfx-eyedrop__loupe[hidden] {
+  display: none;
+}
+
+.kvfx-eyedrop__readout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.kvfx-eyedrop__chip {
+  width: 34px;
+  height: 18px;
+  border-radius: var(--kvfx-radius-pill);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.kvfx-eyedrop__hex {
+  font-family: var(--kvfx-font-mono);
+  font-size: var(--kvfx-text-md);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-eyedrop__where {
+  margin-left: auto;
+  font-size: var(--kvfx-text-xs);
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-eyedrop__status--error {
+  color: var(--kvfx-warn);
+}
+
+.kvfx-eyedrop__note {
+  color: var(--kvfx-warn);
+}
+
 /* The colour picker: drawn in the panel, so a hex code can be typed. */
 .kvfx-cpick {
   position: fixed;

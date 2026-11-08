@@ -187,6 +187,10 @@ interface AeRawLayerCollection {
 interface AeRawComp extends AeRawItem {
   readonly width: number;
   readonly height: number;
+  /** The comp's background colour, 0–1. */
+  readonly bgColor?: [number, number, number];
+  /** Undocumented but long-standing: renders the frame at `time` to a PNG. It can return before the file is written. */
+  saveFrameToPng?(time: number, file: AeFile): void;
   readonly frameRate: number;
   readonly frameDuration: number;
   readonly duration: number;
@@ -234,6 +238,8 @@ interface AeRawProject {
   replaceFont?(fromFont: AeFont, toFont: AeFont, noFontLocking?: boolean): boolean;
   /** Saves to the project's existing file. */
   save?(): void;
+  /** 8, 16 or 32: the project's colour depth. */
+  readonly bitsPerChannel?: number;
 }
 
 interface AeApplication {

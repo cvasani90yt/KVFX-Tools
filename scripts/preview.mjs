@@ -123,6 +123,34 @@ const STUB = `
     ] }
   };
   var RELINKED = false;
+  // Files the panel and the fake host write for each other (the Pick from comp frame).
+  var FILES = {};
+  // A stand-in comp frame: sky, sun, ground and a few swatches of colour to pick from.
+  function fakeFrame() {
+    var c = document.createElement("canvas");
+    c.width = 1280;
+    c.height = 720;
+    var g = c.getContext("2d");
+    var sky = g.createLinearGradient(0, 0, 0, 470);
+    sky.addColorStop(0, "#1b2a55");
+    sky.addColorStop(1, "#ff9a5c");
+    g.fillStyle = sky;
+    g.fillRect(0, 0, 1280, 470);
+    g.fillStyle = "#ffe08a";
+    g.beginPath();
+    g.arc(930, 330, 110, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "#2a2e37";
+    g.fillRect(0, 470, 1280, 250);
+    ["#ff3b6b", "#3fb950", "#5ec8b0", "#7fa8ff", "#e3c44a"].forEach(function (colour, i) {
+      g.fillStyle = colour;
+      g.fillRect(90 + i * 150, 540, 120, 120);
+    });
+    g.fillStyle = "#ffffff";
+    g.font = "800 120px sans-serif";
+    g.fillText("KVFX", 90, 260);
+    return c.toDataURL("image/png").split(",")[1];
+  }
   // A voice take, one loudness value per frame at 25 fps: words with pauses between.
   var VOICE = (function () {
     var out = [];
@@ -158,6 +186,13 @@ const STUB = `
           });
         }
       }
+      if (source.indexOf("kvfx.op.comp.frame") !== -1) {
+        var target = /"path":"([^"]+)"/.exec(source);
+        var path = target ? target[1] : "";
+        // After Effects can say it's done before the file is on disk; so does this.
+        setTimeout(function () { FILES[path] = fakeFrame(); }, 350);
+        result = { stepCount: 1, steps: [{ op: "kvfx.op.comp.frame", result: { path: path, width: 1280, height: 720, time: 2, background: [0.07, 0.07, 0.09], bitsPerChannel: 8 } }] };
+      }
       if (/"op":"kvfx\\.op\\.audio\\.analyse"/.test(source)) {
         result = { stepCount: 1, steps: [{ op: "kvfx.op.audio.analyse", result: { id: 11, name: "Voiceover", start: 0, frameDuration: 0.04, samples: VOICE } }] };
       }
@@ -177,11 +212,17 @@ const STUB = `
   window.cep = {
     encoding: { UTF8: "UTF-8", Base64: "Base64" },
     fs: {
-      readFile: function () { return { err: 0, data: JSON.stringify(__KVFX_SEED__) }; },
+      readFile: function (path) {
+        if (FILES[path] !== undefined) return { err: 0, data: FILES[path] };
+        return { err: 0, data: JSON.stringify(__KVFX_SEED__) };
+      },
+      deleteFile: function (path) { delete FILES[path]; return { err: 0 }; },
       writeFile: function () { return { err: 0 }; },
       makedir: function () { return { err: 0 }; },
       readdir: function (path) { return DIRS[path] ? { err: 0, data: DIRS[path] } : { err: 3 }; },
       stat: function (path) {
+        // KVFX's cache holds only what was really written.
+        if (/\\/KVFXTools\\/cache\\/[^\\/]+$/.test(path) && FILES[path] === undefined) return { err: 2 };
         return { err: 0, data: { isDirectory: function () { return isDir(path); }, isFile: function () { return !isDir(path); } } };
       },
       showOpenDialog: function (multiple, folders, title) {

@@ -31,10 +31,12 @@ export interface AdobeCepHost {
  * not freeze After Effects the way a host round-trip would.
  */
 export interface AdobeCepFs {
-  readFile(path: string): { data?: string; err: number };
+  /** `encoding` is a value from `cep.encoding`; UTF-8 when omitted. */
+  readFile(path: string, encoding?: string): { data?: string; err: number };
   /** `encoding` is a value from `cep.encoding`; UTF-8 when omitted. */
   writeFile(path: string, data: string, encoding?: string): { err: number };
   makedir(path: string): { err: number };
+  deleteFile?(path: string): { err: number };
   readdir(path: string): { data?: string[]; err: number };
   stat(path: string): { data?: { isFile(): boolean; isDirectory(): boolean; mtime?: Date }; err: number };
   showOpenDialog(

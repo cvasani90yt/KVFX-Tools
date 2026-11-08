@@ -169,7 +169,8 @@ Transition** with a few presets, including **Clock** and **Blur Zoom**. Select
 a video clip, put the playhead on a moment, pick **Velocity** under **Speed**
 and **Add Speed Ramp**; then drag the `KVFX Speed Ramp` marker on the layer and
 play again. Click any colour swatch and type a hex code into the picker: it
-should take every key and stay open until **Enter** or **Done**.
+should take every key and stay open until **Enter** or **Done**. In Tools ▸
+Colour, try **From comp** (click a spot on the frame) and **From screen**.
 
 **8. Library and Media.** **Add Folder** in Library, click an image (imported
 and placed) and an `.ffx` preset with a layer selected (applied). In Media, copy
@@ -209,6 +210,9 @@ real thing. Please look closely at these, which the model cannot settle
   dragging or stretching the ramp marker move or retime it, and does the clip
   still end on its last frame with **Keep the ending** on?
 * **Clock** transition: does the sweep start at twelve o'clock?
+* **From comp**: does the frame match the viewer, including in a 32-bit
+  project? **From screen**: does an eyedropper appear, or does the button
+  hide itself with a message?
 
 ## If something does not work
 

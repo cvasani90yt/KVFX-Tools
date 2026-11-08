@@ -61,6 +61,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the same maths as the expression; the tests run the expression against it
 - Host: `layer.speedRamp`, with `FrameBlendingType` in the environment
 
+### Added — eyedroppers (Tools ▸ Colour)
+- **From comp**: the open comp's frame at the playhead, in the panel, with a
+  magnifier and a live hex readout; click (or arrow keys and Enter) takes the
+  colour. The frame goes through KVFX's cache folder and is deleted once read
+- **From screen**: the browser engine's eyedropper, for any pixel on screen.
+  It hides itself on a version of After Effects that refuses it, and a second
+  click cancels it
+- Host: `comp.frame` saves the frame (only into KVFX's cache folder), run as a
+  plan so a heavy frame gets the longer time limit
+
 ### Added — Colour picker (Tools)
 - A **Colour picker** at the top of Tools ▸ Colour: an eyedropper icon, the
   colour and its hex code, opening the in-panel picker. It is the panel's one
