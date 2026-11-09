@@ -66,5 +66,3 @@ export const LABEL_COLORS: readonly LabelColor[] = [
   { index: 15, name: "Sandstone", hex: "#a89677" },
   { index: 16, name: "Dark Green", hex: "#1e401e" },
 ];
-
-export * from "./system-picker.js";

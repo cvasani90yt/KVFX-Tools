@@ -69,7 +69,7 @@ with its last settings instead.
 
 It ships with: **Colour** (the panel's colour, marked with an eyedropper —
 click for the picker),
-**From Comp** and **From Screen** (the eyedroppers), **Fill**, **Dup Comp**
+**From Comp** (the eyedropper), **Fill**, **Dup Comp**
 (Duplicate Comp + Nested Comps — with a precomp layer selected, the copy goes
 directly above it), **Precomp**, **Null Parent**, **Split**,
 **Sequence**, **Trim to WA**, **Same Label**, **Unlock All**, **Apply Ease**,
@@ -79,7 +79,7 @@ directly above it), **Precomp**, **Null Parent**, **Split**,
 **Customize** arranges it: drag a tile onto another to put it there (the view
 scrolls when you drag near its edge), or focus a tile and use the arrow keys —
 up and down move a whole row; **×** or Delete removes a tile; the catalog below
-the grid adds any of 69 tools, grouped Colour, Comp & layers, Organize,
+the grid adds any of 68 tools, grouped Colour, Comp & layers, Organize,
 Switches, Keyframes, Text, Effects, Generate and Create. **Labels under icons**
 off gives small icon-only tiles. **Reset** puts back the shipped tools, after
 asking. Resize Comps is left out on purpose: it needs its own screen to set the
@@ -95,7 +95,6 @@ compact, no anchor grid, creators or align bar — for a pure quick-tool panel.
 |---|---|---|
 | **Colour picker** (Colour — first in the tab) | The panel's colour, shown with an eyedropper icon and its hex code. Click it for the in-panel picker: a saturation and brightness square, a hue bar, a hex box you can type into, preset swatches and the colours you used recently. It is the same colour as the header's **Solid** swatch — change either and the other follows. | |
 | **From comp** (eyedropper) | Grabs the open comp's frame at the playhead into the panel. Hover it for a magnifier and the colour under the pointer, then click (or move with the arrow keys and press Enter) to take that exact colour. Transparent areas read as the comp's background colour, as in the viewer; refresh re-grabs after you move the playhead. | The frame is saved to KVFX's cache folder and deleted once read. In a 32-bit project After Effects can save the frame darker than the viewer shows; the panel says so. |
-| **From screen** (eyedropper) | Picks a colour from anywhere on your screen — other apps too — with the operating system's own picker, since After Effects' panels have no eyedropper: on Windows a still copy of all your screens with a crosshair (click a pixel; Esc cancels); on macOS the system colour panel, starting on the panel's colour (click its magnifier, click any pixel, then OK). The panel starts the picker itself, so After Effects is never held up while it is open. Click the button again to cancel and close the picker. Also on the Quick tab. | The Windows picker can take a second or two to appear, and closes itself after three minutes. Security software that blocks PowerShell stops it; the panel then says so. If the panel can't start programs, After Effects opens the picker instead: on Windows through a launcher file in KVFX's cache folder, which shows a console window for a moment. That route may need Preferences ▸ Scripting & Expressions ▸ **Allow Scripts to Write Files and Access Network**, and the panel says so. The answer comes back through KVFX's cache folder. |
 | **Fill** · **Text** · **Solid** | Apply the picked colour: **Fill** adds a Fill effect to the selected layers; **Text** recolours the selected text layers (font, size and tracking stay as they are); **Solid** adds a comp-size solid in it. | Text skips layers that aren't text, and text whose Source Text is animated, with a reason. |
 | **Gradient Lock** | Adds a Gradient Ramp whose ends follow the layer's own bounds via `sourceRectAtTime`, so the gradient stays fitted as text or shapes change size. Vertical, horizontal or diagonal. | |
 | **Precomp** (Precompose Each) | Precomposes every selected layer into its *own* composition, moving all attributes so the outer comp looks unchanged. | Locked layers are skipped. |
@@ -438,12 +437,7 @@ are on the first real-host checklist ([TESTING.md](../TESTING.md)):
   Mosaic and CC Kaleida in and out.
 * Pick from comp: `CompItem.saveFrameToPng` (undocumented; it can return
   before the file is written, which the panel waits out) and its colours in
-  8, 16 and 32-bit projects. Pick from screen: that `cep.process` starts the
-  picker from the panel (`createProcess` with the full path to powershell.exe
-  or /bin/sh) and that its `isRunning` and `terminate` behave as the panel
-  expects; that the Windows picker appears in front and covers every display
-  at the right scale; that the macOS colour panel comes to the front; and, on
-  the fallback route, that `File.execute` on the launcher returns at once.
+  8, 16 and 32-bit projects.
 * Speed Ramp: `canSetTimeRemapEnabled` on video and precomp layers (and
   false on stills and solids), the two keyframes After Effects adds when Time
   Remapping is turned on, `valueAtTime` on Time Remap returning those

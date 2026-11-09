@@ -160,7 +160,6 @@ export class QuickView implements View {
       return this.#colour.swatch;
     }
     if (tool.widget === "pickComp") return this.#eyedroppers.comp(this.#plainTile(tool, "Pick a colour from the comp's frame at the playhead"));
-    if (tool.widget === "pickScreen") return this.#eyedroppers.screen(this.#plainTile(tool, "Pick a colour from anywhere on your screen"), tool.label);
     if (tool.screen !== undefined) return this.#screenTile(tool, tool.screen);
     return this.#buttons.button(tool.command ?? tool.id, { label: tool.label, icon: tool.icon, variant: "qtile" });
   }

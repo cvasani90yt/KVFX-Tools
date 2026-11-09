@@ -125,33 +125,6 @@ const STUB = `
   var RELINKED = false;
   // Files the panel and the fake host write for each other (the Pick from comp frame).
   var FILES = {};
-  // Where the system colour picker answers, in the preview's application-data folder.
-  var PICK_FILE = "/preview/KVFXTools/cache/screen-pick.txt";
-  // CEP's process bridge, which the panel starts the system colour picker with.
-  // The fake picker answers after a moment; a test can choose the answer, the
-  // delay, a picker that ends without answering, or no bridge at all.
-  var PICKER = { pid: 4000, timer: null, running: false };
-  window.__KVFX_PROCESSES__ = [];
-  window.__KVFX_TERMINATED__ = [];
-  var PROCESS_BRIDGE = {
-    createProcess: function () {
-      window.__KVFX_PROCESSES__.push(Array.prototype.slice.call(arguments));
-      PICKER.pid += 1;
-      PICKER.running = true;
-      PICKER.timer = setTimeout(function () {
-        if (!window.__KVFX_SCREEN_PICK_EXIT__) FILES[PICK_FILE] = window.__KVFX_SCREEN_PICK__ || "#3366cc";
-        PICKER.running = false;
-      }, window.__KVFX_SCREEN_PICK_DELAY__ || 600);
-      return { err: 0, data: PICKER.pid };
-    },
-    isRunning: function () { return { err: 0, data: PICKER.running }; },
-    terminate: function (pid) {
-      window.__KVFX_TERMINATED__.push(pid);
-      clearTimeout(PICKER.timer);
-      PICKER.running = false;
-      return { err: 0 };
-    }
-  };
   // A stand-in comp frame: sky, sun, ground and a few swatches of colour to pick from.
   function fakeFrame() {
     var c = document.createElement("canvas");
@@ -213,17 +186,6 @@ const STUB = `
           });
         }
       }
-      if (op === "kvfx.op.color.screenPick") {
-        // The host's fallback, when the panel can't start the picker itself:
-        // a launcher file on Windows, an answer file to fill on macOS.
-        var launcher = /"launcher":"([^"]+)"/.exec(source);
-        var answer = /"out":"([^"]+)"/.exec(source);
-        var outPath = answer ? answer[1] : PICK_FILE;
-        window.__KVFX_HOST_PICKS__ = (window.__KVFX_HOST_PICKS__ || []).concat([launcher ? { launcher: launcher[1] } : { out: outPath }]);
-        // The system picker answers when the user has picked; a test can choose the answer.
-        setTimeout(function () { FILES[outPath] = window.__KVFX_SCREEN_PICK__ || "#3366cc"; }, 600);
-        result = { platform: launcher ? "windows" : "mac" };
-      }
       if (source.indexOf("kvfx.op.comp.frame") !== -1) {
         var target = /"path":"([^"]+)"/.exec(source);
         var path = target ? target[1] : "";
@@ -249,18 +211,13 @@ const STUB = `
   function isDir(path) { return DIRS[path] !== undefined; }
   window.cep = {
     encoding: { UTF8: "UTF-8", Base64: "Base64" },
-    process: window.__KVFX_NO_PROCESS__ ? undefined : PROCESS_BRIDGE,
     fs: {
       readFile: function (path) {
         if (FILES[path] !== undefined) return { err: 0, data: FILES[path] };
         return { err: 0, data: JSON.stringify(__KVFX_SEED__) };
       },
       deleteFile: function (path) { delete FILES[path]; return { err: 0 }; },
-      // Files written into KVFX's cache (the screen picker's launcher) can be read back.
-      writeFile: function (path, data) {
-        if (/\\/KVFXTools\\/cache\\/[^\\/]+$/.test(path)) FILES[path] = data;
-        return { err: 0 };
-      },
+      writeFile: function () { return { err: 0 }; },
       makedir: function () { return { err: 0 }; },
       readdir: function (path) { return DIRS[path] ? { err: 0, data: DIRS[path] } : { err: 3 }; },
       stat: function (path) {

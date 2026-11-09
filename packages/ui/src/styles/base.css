@@ -501,16 +501,6 @@ select:focus-visible,
   min-width: 0;
 }
 
-.kvfx-row.kvfx-pickrow > .kvfx-pill[hidden] {
-  display: none;
-}
-
-/* Pick from screen while the eyedropper is open: a click now cancels. */
-.kvfx-pill--busy {
-  border-color: var(--kvfx-accent);
-  color: var(--kvfx-accent);
-}
-
 /* Pick from comp: the frame, a magnifier beside the pointer and a readout. */
 .kvfx-overlay--eyedrop {
   z-index: 55;

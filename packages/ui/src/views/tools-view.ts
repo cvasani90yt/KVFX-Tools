@@ -83,11 +83,9 @@ export class ToolsView implements View {
       showHex: true,
     });
     const picked = (): JsonObject => ({ color: this.#picker.input.value });
-    // The eyedroppers: from the comp's frame (always), and from anywhere on
-    // screen where After Effects allows it.
+    // The eyedropper: a colour from the comp's frame at the playhead.
     this.#eyedroppers = new Eyedroppers(panel);
     const fromComp = this.#eyedroppers.comp(actionButton("From comp", () => undefined, { icon: "pick-comp", title: "Pick a colour from the comp's frame at the playhead" }));
-    const fromScreen = this.#eyedroppers.screen(actionButton("From screen", () => undefined, { icon: "pick-screen", title: "Pick a colour from anywhere on your screen" }), "From screen");
     const gradient = session.toolParams("gradient");
     const gradFrom = colorField("From", typeof gradient["from"] === "string" ? gradient["from"] : "#ff8f3f", (hex) =>
       session.setToolParams("gradient", { from: hex }),
@@ -112,7 +110,7 @@ export class ToolsView implements View {
     const colour = this.#section("tools.colour", "Colour", "fill · text · gradient");
     colour.body.append(
       h("div", { class: "kvfx-field kvfx-field--picker" }, h("span", { class: "kvfx-field__label", text: "Colour picker" }), this.#picker.swatch, this.#picker.input),
-      h("div", { class: "kvfx-row kvfx-pickrow" }, fromComp, fromScreen),
+      h("div", { class: "kvfx-row kvfx-pickrow" }, fromComp),
       pillGrid(
         b.button("kvfx.fx.fill", { label: "Fill", icon: "fill", params: picked }),
         b.button("kvfx.text.color", { label: "Text", icon: "text", params: picked }),

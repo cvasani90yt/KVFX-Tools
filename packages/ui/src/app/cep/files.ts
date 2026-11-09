@@ -121,14 +121,6 @@ export function writeBase64(path: string, base64: string): boolean {
   return api.writeFile(path, base64, encoding).err === CEP_FS_NO_ERROR;
 }
 
-/** A file's contents as UTF-8 text, or undefined when it can't be read. */
-export function readText(path: string): string | undefined {
-  const api = fs();
-  if (api === undefined) return undefined;
-  const result = api.readFile(path);
-  return result.err === CEP_FS_NO_ERROR && typeof result.data === "string" ? result.data : undefined;
-}
-
 /** A file's contents as Base64, or undefined when it can't be read. */
 export function readBase64(path: string): string | undefined {
   const api = fs();
@@ -145,19 +137,6 @@ export function removeCacheFile(path: string): boolean {
   const api = fs();
   if (api?.deleteFile === undefined || !CACHE_FILE.test(path)) return false;
   return api.deleteFile(path).err === CEP_FS_NO_ERROR;
-}
-
-/**
- * Writes UTF-8 text to a new file directly inside KVFX's cache folder. Any
- * other path, or a file that already exists, is refused: nothing is replaced.
- * The bytes go through Base64, so no byte-order mark is added — cmd.exe would
- * read one as part of a launcher's first command.
- */
-export function writeCacheText(path: string, text: string): boolean {
-  if (!CACHE_FILE.test(path) || exists(path)) return false;
-  let binary = "";
-  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
-  return writeBase64(path, btoa(binary));
 }
 
 /** KVFX's folder in the platform application-data root. */

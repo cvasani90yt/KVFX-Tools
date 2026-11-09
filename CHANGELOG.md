@@ -64,7 +64,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added — the Quick tab
 - A new first tab, which the panel opens on: the everyday tools from every tab
   as one minimal grid of tiles, each run with its last-used settings — colour
-  picker and eyedroppers, Duplicate Comp, Precomp, Null Parent, Split,
+  picker and From Comp eyedropper, Duplicate Comp, Precomp, Null Parent, Split,
   Sequence, Trim to Work Area, Same Label, Unlock All, Apply Ease, Wiggle,
   Shadow, Glow, Transition, Speed Ramp, Animate Text and Null
 - Tiles for tools with choices of their own — Transition, Speed Ramp,
@@ -75,7 +75,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   settings instead
 - The Colour tile carries an eyedropper badge, so it reads as the colour picker
 - **Customize**: drag tiles to reorder (with edge scrolling) or use the arrow
-  keys, remove with × or Delete, add from a catalog of 69 tools in nine
+  keys, remove with × or Delete, add from a catalog of 68 tools in nine
   groups, labels on or off, and Reset (it asks)
 - Settings ▸ Layout: **Opens on** Quick or the last tab, and a **Quick** preset
   that is the Quick tab alone; every preset now leads with Quick
@@ -83,23 +83,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   layouts, get the Quick tab at the front
 - Tabs now share the tab bar by label width, so nine fit without colliding
 
-### Added — eyedroppers (Tools ▸ Colour)
+### Added — From comp eyedropper (Tools ▸ Colour)
 - **From comp**: the open comp's frame at the playhead, in the panel, with a
   magnifier and a live hex readout; click (or arrow keys and Enter) takes the
   colour. The frame goes through KVFX's cache folder and is deleted once read
-- **From screen**: any pixel on screen, other apps included, through the
-  operating system's own picker — on Windows a still copy of the screens to
-  click (Esc cancels), on macOS the colour panel, starting on the panel's
-  colour — which the panel starts itself, so After Effects never waits on it.
-  A second click cancels and closes the picker. In a plain browser (the
-  preview) the browser's eyedropper does it
 - Host: `comp.frame` saves the frame (only into KVFX's cache folder), run as a
   plan so a heavy frame gets the longer time limit
-- Host: `color.screenPick`, the fallback for when the panel can't start
-  programs. On Windows it opens a launcher file the panel wrote in KVFX's cache
-  folder (`File.execute`, which returns at once) and never runs a command; on
-  macOS it runs osascript in the background. `callSystem` and `executeFile`
-  join the environment
 
 ### Added — Colour picker (Tools)
 - A **Colour picker** at the top of Tools ▸ Colour: an eyedropper icon, the
@@ -112,29 +101,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - **Colour** (Fill and Gradient Lock) is now the first section of the Tools
   tab; a section order saved by an earlier build is updated to match
+- **From Screen**, picking a colour from anywhere on screen, is taken out
+  again: After Effects' panels have no eyedropper of their own, and the system
+  pickers it had to use instead froze After Effects or made the screen flicker
+  on Windows. **From comp** stays. A Quick tab that had the tile simply drops it
 
 ### Fixed
-- **From Screen** froze After Effects on Windows, with no picker on screen.
-  After Effects started the picker as a system command, and it waits for a
-  command — on Windows for everything the command starts, too — so it hung
-  until the picker closed, while the picker's window could start out hidden.
-  The panel now starts the picker itself through CEP, so After Effects isn't
-  involved and stays responsive. A second click cancels and closes the picker,
-  which also closes itself after three minutes. Its window always shows, it
-  keeps working without DPI awareness, and the panel says so when it ends
-  without a colour (when security software blocks PowerShell, say). Inside
-  After Effects the browser eyedropper, which After Effects doesn't have, is no
-  longer tried first, so the picker opens straight away
 - **Dup Comp** (Quick) and **Duplicate Comp + Nested Comps** (Tools) only
   ever added the copy to the Project panel, even with a precomp layer selected
   in the timeline. Now each selected precomp layer gets a copy directly above
   it, using its own copies of the comps; with none selected it copies the
   comps selected in the Project panel, or the open comp, as before. The message
   says where the copy went
-- **From Screen** was missing from the Quick tab and Tools ▸ Colour inside
-  After Effects: it hid itself because After Effects' panel engine has no
-  working browser eyedropper. It now opens the system colour picker there
-  instead
 - After Effects refused to load the host script ("Unable to execute script at
   line 3201. Expected: ;"), so the panel couldn't reach it: the Pick from comp
   path check used a regex with an unescaped "/" inside [...], which

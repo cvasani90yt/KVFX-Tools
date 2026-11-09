@@ -134,11 +134,8 @@ few tiles (Precomp, Shadow, Null). Click **Speed Ramp** (it has a small arrow
 in its corner): the panel switches to Generate with Speed Ramp's presets and
 preview in view and highlighted. Back on Quick, put the playhead on a cut and
 **Alt-click** **Transition**: it adds your last transition without leaving
-Quick. Click **From Screen** and pick a colour outside After Effects (macOS:
-the colour panel's magnifier, then OK; Windows: click a pixel on the frozen
-screen, which can take a second or two to appear): the **Colour** tile turns
-that colour. After Effects should stay responsive the whole time. Click **From
-Screen** again while it says **Picking…**: the picker closes. Click **Customize**, drag a
+Quick. Click **From Comp** and click a spot on the frame: the **Colour** tile
+turns that colour. Click **Customize**, drag a
 tile somewhere else, remove one, add one from the list, then **Done**. Close
 and reopen the panel: it opens on Quick again, with your arrangement.
 
@@ -186,7 +183,7 @@ a video clip, put the playhead on a moment, pick **Velocity** under **Speed**
 and **Add Speed Ramp**; then drag the `KVFX Speed Ramp` marker on the layer and
 play again. Click any colour swatch and type a hex code into the picker: it
 should take every key and stay open until **Enter** or **Done**. In Tools ▸
-Colour, try **From comp** (click a spot on the frame) and **From screen**.
+Colour, try **From comp** (click a spot on the frame).
 
 **8. Library and Media.** **Add Folder** in Library, click an image (imported
 and placed) and an `.ffx` preset with a layer selected (applied). In Media, copy
@@ -228,12 +225,6 @@ real thing. Please look closely at these, which the model cannot settle
 * **Clock** transition: does the sweep start at twelve o'clock?
 * **From comp**: does the frame match the viewer, including in a 32-bit
   project?
-* **From screen**: does the picker appear within a couple of seconds (the
-  frozen screen on Windows, the colour panel on macOS), and does the picked
-  colour reach the panel? Does After Effects stay responsive while it is open,
-  and does a second click on From Screen close it? On Windows, does the frozen
-  screen line up with your displays, at every display scale? If the panel asks
-  you to allow scripts to write files, does turning that preference on fix it?
 
 ## If something does not work
 

@@ -28,7 +28,6 @@ const QUICK_FIRST_VERSION = 3;
 export const DEFAULT_QUICK_TOOLS: readonly string[] = [
   "colour",
   "pickComp",
-  "pickScreen",
   "kvfx.fx.fill",
   "kvfx.comp.deepduplicatecomp",
   "kvfx.layer.precomposeeach",

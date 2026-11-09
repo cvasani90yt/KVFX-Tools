@@ -51,7 +51,7 @@ describe("Quick tab catalog", () => {
 
   it("ships with the colour picker, Duplicate Comp and the organize tools first", () => {
     for (const id of DEFAULT_QUICK_TOOLS) expect(quickToolById(id), id).toBeDefined();
-    expect(DEFAULT_QUICK_TOOLS.slice(0, 3)).toEqual(["colour", "pickComp", "pickScreen"]);
+    expect(DEFAULT_QUICK_TOOLS.slice(0, 2)).toEqual(["colour", "pickComp"]);
     expect(DEFAULT_QUICK_TOOLS).toContain("kvfx.comp.deepduplicatecomp");
     expect(DEFAULT_QUICK_TOOLS).toContain("kvfx.layer.sequence");
     expect(defaultSettings().ui.quickTools).toEqual(DEFAULT_QUICK_TOOLS);

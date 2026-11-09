@@ -151,8 +151,6 @@ const ICONS: Readonly<Record<string, readonly Shape[]>> = {
   edit: [solid("M10.8 1.8 L13.4 4.4 L5.4 12.4 L2.2 13 L2.8 9.8 Z"), rule(7.5, 14.8, 14.5, 14.8)],
   // Pick from comp: a frame with a target in it.
   "pick-comp": [box(1, 2.5, 14, 11), ring(8, 8, 2.6), rule(8, 3.8, 8, 5), rule(8, 11, 8, 12.2), rule(3.8, 8, 5, 8), rule(11, 8, 12.2, 8)],
-  // Pick from screen: a monitor on its stand, with a target on it.
-  "pick-screen": [box(1, 1.5, 14, 10), bar(5.5, 13.5, 5, 1.5), rule(8, 11.5, 8, 13.5), ring(8, 6.5, 2.2), dot(8, 6.5, 0.9)],
   // Eyedropper: the bulb and collar filled, the glass tube drawn, tipped down-left.
   eyedropper: [
     solid("M10.6 2.1 A2.3 2.3 0 0 1 13.9 5.4 L12.3 7 L13 7.7 L11.8 8.9 L7.1 4.2 L8.3 3 L9 3.7 Z"),

@@ -2,8 +2,8 @@
  * The Quick tab: the everyday tools from every tab, one click each.
  *
  * Each tool is a tile. Most run a command with that command's last-used
- * settings — the same ones its own tab would use — and three are widgets: the
- * panel's colour, and the two eyedroppers. The user picks which tiles show and
+ * settings — the same ones its own tab would use — and two are widgets: the
+ * panel's colour, and the From Comp eyedropper. The user picks which tiles show and
  * in what order; the list lives in settings (`quickTools`).
  */
 
@@ -21,7 +21,7 @@ export const QUICK_GROUPS: readonly { readonly id: QuickGroup; readonly label: s
   { id: "create", label: "Create" },
 ];
 
-export type QuickWidget = "colour" | "pickComp" | "pickScreen";
+export type QuickWidget = "colour" | "pickComp";
 
 /** Where a feature's own screen is: its tab, its section, and the tab's filter chip when it has them. */
 export interface QuickScreen {
@@ -62,7 +62,6 @@ export const QUICK_TOOLS: readonly QuickTool[] = [
   // Colour
   widget("colour", "Colour", "eyedropper"),
   widget("pickComp", "From Comp", "pick-comp"),
-  widget("pickScreen", "From Screen", "pick-screen"),
   cmd("kvfx.fx.fill", "Fill", "fill", "colour"),
   cmd("kvfx.text.color", "Text Colour", "text", "colour"),
   cmd("kvfx.fx.gradientlock", "Grad Lock", "gradient", "colour", { tab: "tools", section: "tools.colour" }),

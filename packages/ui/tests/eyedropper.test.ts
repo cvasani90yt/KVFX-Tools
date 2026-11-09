@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitWithin, hexAt, parsePicked, pngComplete, refusedByHost } from "../src/ui/eyedropper-core.js";
+import { fitWithin, hexAt, pngComplete } from "../src/ui/eyedropper-core.js";
 
 /** A real 1×1 PNG (an orange pixel), as Base64. */
 const PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg==";
@@ -37,27 +37,5 @@ describe("fitWithin", () => {
   it("keeps the frame's shape inside the space", () => {
     expect(fitWithin(1920, 1080, 340, 400)).toEqual({ width: 340, height: 191 });
     expect(fitWithin(1080, 1920, 340, 400)).toEqual({ width: 225, height: 400 });
-  });
-});
-
-describe("refusedByHost", () => {
-  it("tells an instant refusal from a person cancelling", () => {
-    expect(refusedByHost(12)).toBe(true);
-    expect(refusedByHost(900)).toBe(false);
-  });
-});
-
-describe("parsePicked", () => {
-  it("reads the Windows picker's hex and the macOS colour panel's 16-bit channels", () => {
-    expect(parsePicked("#FF8F3F\r\n")).toEqual({ hex: "#ff8f3f" });
-    expect(parsePicked("65535, 36751, 16191\n")).toEqual({ hex: "#ff8f3f" });
-    expect(parsePicked("0, 0, 0")).toEqual({ hex: "#000000" });
-  });
-
-  it("tells a cancel from a picker that couldn't run", () => {
-    expect(parsePicked("cancel")).toBe("cancelled");
-    expect(parsePicked("31:39: execution error: User canceled. (-128)")).toBe("cancelled");
-    expect(parsePicked("error: Exception calling ShowDialog")).toBeUndefined();
-    expect(parsePicked("")).toBeUndefined();
   });
 });
