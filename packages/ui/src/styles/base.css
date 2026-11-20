@@ -40,6 +40,15 @@ textarea {
 button {
   font: inherit;
   color: inherit;
+  /*
+   * Chromium 99, which CEP 12 embeds, still gives buttons align-items:
+   * flex-start in its own stylesheet; later Chrome dropped it. Without this a
+   * flex button's children stop stretching inside After Effects only: a Quick
+   * card's preview strip, which has no content of its own, collapses to zero
+   * width, and Library thumbnails shrink to a sliver. Reset to what the
+   * browser the panel is designed in does.
+   */
+  align-items: normal;
 }
 
 [hidden] {

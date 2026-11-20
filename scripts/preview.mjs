@@ -282,13 +282,24 @@ function seedFor(tab) {
   };
 }
 
+/**
+ * Defaults from Chromium 99's own stylesheet that later Chrome dropped, so the
+ * preview lays out as After Effects does rather than as the newer browser
+ * rendering it would. `:where()` keeps them as weak as a browser default: any
+ * rule of the panel's own wins. Buttons there still default to
+ * align-items: flex-start, which once left Quick cards blank inside After
+ * Effects while they looked fine here.
+ */
+const CEP_DEFAULTS = "<style>:where(button) { align-items: flex-start; }</style>";
+
 const indexPath = join(workDir, "index.html");
 const html = await readFile(indexPath, "utf8");
 for (const tab of tabs) {
   // The tab's own "open" action, so its interesting state is what gets captured.
   const autoOpen = open || (tab === "library" ? "library" : tab === "fx" ? "fx" : "");
   const stub = `<script>var __KVFX_SEED__ = ${JSON.stringify(seedFor(tab))}; var __KVFX_OPEN__ = ${JSON.stringify(autoOpen)};${STUB}</script>`;
-  await writeFile(join(workDir, `panel-${tab}.html`), html.replace("</head>", `${stub}</head>`), "utf8");
+  const page = html.replace("<head>", `<head>${CEP_DEFAULTS}`).replace("</head>", `${stub}</head>`);
+  await writeFile(join(workDir, `panel-${tab}.html`), page, "utf8");
 }
 
 /**
