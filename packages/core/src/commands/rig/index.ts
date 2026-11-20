@@ -151,6 +151,8 @@ export const carousel = measuredCommand({
     if (single) groups.push({ ids: ref("copies") });
     for (const group of groups) {
       steps.push({ op: "kvfx.op.layer.setFlag", args: { target: "ids", ...group, flag: "threeD", value: true } });
+      // In place: a card keeps the size and turn it shows now; position and
+      // orientation come from the expressions below.
       steps.push({ op: "kvfx.op.layer.set", args: { ...group, parent: ref("hub") } });
       steps.push({
         op: "kvfx.op.prop.expression",
@@ -215,7 +217,10 @@ export const extrusion = measuredCommand({
       steps.push(
         { op: "kvfx.op.layer.setFlag", args: { target: "ids", ids: [layer.id], flag: "threeD", value: true } },
         { op: "kvfx.op.layer.duplicate", args: { id: layer.id, count: slices }, bind: copies },
-        { op: "kvfx.op.layer.set", args: { ...all, parent: layer.id } },
+        // Values kept: the expressions below set every transform the face
+        // passes on, so compensating would only rewrite each copied keyframe,
+        // and divide by the face's scale at the playhead, which may be zero.
+        { op: "kvfx.op.layer.set", args: { ...all, parent: layer.id, keepPlace: false } },
         {
           op: "kvfx.op.effect.add",
           args: {

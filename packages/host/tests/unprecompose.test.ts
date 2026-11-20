@@ -29,7 +29,8 @@ function setup(): Setup {
   place(bg, [960, 540], [960, 540]);
   const card = place(scene.addLayer({ name: "Card", kind: "shape" }), [0, 0], [700, 600]);
   const badge = place(scene.addLayer({ name: "Badge", kind: "shape" }), [0, 0], [40, -30]);
-  badge.parent = card;
+  // The badge's values are relative to the card.
+  badge.setParentWithJump(card);
   const title = scene.addLayer({ name: "Title", kind: "text", text: "Hello" });
   const position = title.transform("ADBE Position");
   position.setValueAtTime(0, [960, 300, 0]);

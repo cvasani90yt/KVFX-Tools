@@ -485,3 +485,9 @@ are on the first real-host checklist ([TESTING.md](../TESTING.md)):
 * `CompItem.openInViewer()` making the new comp the active item for the rest of
   a Kinetic Title plan.
 * Layer Control values tracking the leader when layers are reordered.
+* Parenting: assigning `layer.parent` (the pick whip) offsetting position,
+  scale and rotation, keyframes included, so the layer stays put, and
+  `setParentWithJump` keeping the values. The mock models both in 2D (Z
+  rotation only). Layouts, Input Bar, Null and the carousels parent in place
+  (`kvfx.op.layer.set`'s default); Extrude and the cursor tag pass
+  `keepPlace: false`, and Unprecompose uses `setParentWithJump` directly.

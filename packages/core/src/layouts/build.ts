@@ -269,6 +269,8 @@ export function layoutSteps(
   steps.push(
     { op: "kvfx.op.layer.create", args: { kind: "null", name: `KVFX Layout · ${template.name}` }, bind: "hub" },
     { op: "kvfx.op.prop.set", args: { id: ref("hub"), path: [TRANSFORM, "ADBE Position"], value: [cx, cy, 0] } },
+    // Parts are placed in comp space above, so they are parented in place
+    // (the pick whip, layer.set's default) and stay where they were built.
     { op: "kvfx.op.layer.set", args: { ids: binds, parent: ref("hub") } },
   );
   return steps;

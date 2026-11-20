@@ -176,7 +176,8 @@ export function createMockAe(options: MockAeOptions = {}): MockAe {
 
     for (const [i, layerSpec] of (spec.layers ?? []).entries()) {
       const parentName = layerSpec.geometry?.parent;
-      if (parentName !== undefined) built[i]!.parent = built.find((l) => l.name === parentName) ?? null;
+      // The spec's values are already in the parent's space, so they are linked as they are.
+      if (parentName !== undefined) built[i]!.setParentWithJump(built.find((l) => l.name === parentName) ?? null);
     }
   }
 

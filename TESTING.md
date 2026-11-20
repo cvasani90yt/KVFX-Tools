@@ -221,6 +221,13 @@ real thing. Please look closely at these, which the model cannot settle
 * **Explode**: does each piece show exactly its own letters, including on a
   text layer with several lines?
 * **Carousel**: do the cards face outwards (front card facing the camera)?
+* **Layouts** (Generate ▸ Layout, any template) and **Input Bar**: once built,
+  is every part exactly where it was placed, centred in the comp, with nothing
+  pushed down and to the right by about half the frame? Move the
+  `KVFX Layout · …` or `KVFX Input Bar` null: the parts follow it. These rely
+  on parenting keeping layers in place, which the model only approximates.
+* **Extrude** on a layer that is moved, scaled and rotated: do the slices sit
+  exactly behind the face, rather than offset from it?
 * **Ease** on **Scale** keyframes: does the Graph Editor match the curve?
 * **Gradient Lock**: does the gradient span the layer from edge to edge?
 * **Media**: does dragging a file from the desktop onto the drop zone import it?

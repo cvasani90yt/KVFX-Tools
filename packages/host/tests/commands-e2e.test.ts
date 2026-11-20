@@ -176,6 +176,7 @@ describe("generators build what they promise", () => {
     let faceId = 0;
     const ae = runWith("kvfx.rig.extrude", { slices: 4, depth: 80 }, (scene) => {
       scene.select("Card");
+      scene.raw("Card").transform("ADBE Position").setValue([700, 400, 0]);
       faceId = scene.idOf("Card");
     });
     // The slices are duplicates and share the face's name, so find it by id.
@@ -187,6 +188,8 @@ describe("generators build what they promise", () => {
     expect(slices.every((s) => s.effects.property("KVFX Extrude Side") !== null)).toBe(true);
     const depths = slices.map((s) => /depth \* (\d+) \/ 4/.exec(s.transform("ADBE Position").expression)?.[1]).sort();
     expect(depths).toEqual(["1", "2", "3", "4"]);
+    // Parented keeping their copied values (the expressions place them), not offset in place.
+    expect(slices.every((s) => JSON.stringify(s.transform("ADBE Position").value) === "[700,400,0]")).toBe(true);
   });
 
   it("text exploder: one layer per word, original hidden", () => {

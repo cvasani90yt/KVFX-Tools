@@ -391,10 +391,13 @@ export const cursorRig = measuredCommand({
         { op: "kvfx.op.prop.expression", args: { id: ref("plate"), path: ["ADBE Root Vectors Group", 1, "ADBE Vectors Group", 1, "ADBE Vector Rect Size"], expression: TAG_PLATE_SIZE } },
         { op: "kvfx.op.prop.expression", args: { id: ref("plate"), path: ["ADBE Root Vectors Group", 1, "ADBE Vectors Group", 1, "ADBE Vector Rect Position"], expression: TAG_PLATE_POSITION } },
         // The plate shares the text's layer space; the text rides on the cursor.
-        { op: "kvfx.op.layer.set", args: { id: ref("plate"), parent: ref("tag") } },
+        // Both are parented keeping their values, then placed in the parent's
+        // space, so nothing depends on the cursor's scale or tilt at the
+        // playhead (neutral there today: it is at rest on its first key).
+        { op: "kvfx.op.layer.set", args: { id: ref("plate"), parent: ref("tag"), keepPlace: false } },
         { op: "kvfx.op.prop.set", args: { id: ref("plate"), path: [TRANSFORM, "ADBE Anchor Point"], value: [0, 0, 0] } },
         { op: "kvfx.op.prop.set", args: { id: ref("plate"), path: [TRANSFORM, "ADBE Position"], value: [0, 0, 0] } },
-        { op: "kvfx.op.layer.set", args: { id: ref("tag"), parent: ref("cursor") } },
+        { op: "kvfx.op.layer.set", args: { id: ref("tag"), parent: ref("cursor"), keepPlace: false } },
         { op: "kvfx.op.prop.set", args: { id: ref("tag"), path: [TRANSFORM, "ADBE Position"], value: [size * 0.75, size * 1.25, 0] } },
       );
       below.push(ref("tag"), ref("plate"));
@@ -491,6 +494,8 @@ export const cardCarousel = measuredCommand({
         op: "kvfx.op.prop.expression",
         args: { id: ref("hub"), path: ["ADBE Effect Parade", c.index, 1], expression: cardIndexExpression(ordered.length), relative: true },
       },
+      // Parented in place, so each card keeps the size and turn it shows now
+      // (the scale expression multiplies it); position is the expression's.
       { op: "kvfx.op.layer.set", args: { ids: ordered, parent: ref("hub") } },
     ];
     ordered.forEach((id, slot) => {

@@ -251,6 +251,18 @@ describe("interface rigs", () => {
     expect(ae.raw("KVFX Input Send").transform("ADBE Scale").expression).toContain("0.75");
     expect(ae.stack().indexOf("KVFX Input Text")).toBeLessThan(ae.stack().indexOf("KVFX Input Box"));
   });
+
+  it("Input Bar: parenting to the bar moves nothing — every part stays where it was built", () => {
+    const ae = ui();
+    // 1000 wide on 1920 × 1080: 90 tall, text 32 px, centred on the comp.
+    runCommand(ae, "kvfx.rig.inputbar", { text: "Hello", width: 1000 });
+    const at = (name: string): number[] => ae.raw(name).onScreen().position.slice(0, 2).map((v) => Math.round(v * 1000) / 1000);
+    expect(ae.raw("KVFX Input Box").parent).toBe(ae.raw("KVFX Input Bar"));
+    expect(at("KVFX Input Box")).toEqual([960, 540]);
+    expect(at("KVFX Input Send")).toEqual([1415, 540]);
+    expect(at("KVFX Input Placeholder")).toEqual([500.5, 551.2]);
+    expect(at("KVFX Input Text")).toEqual([500.5, 551.2]);
+  });
 });
 
 describe("save reminder", () => {

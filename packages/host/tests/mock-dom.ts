@@ -856,6 +856,88 @@ function shapeBounds(contents: MockProp | null | undefined): Box | undefined {
   return box;
 }
 
+// ---------------------------------------------------------------------------
+// Placement: where a layer lands in its comp
+// ---------------------------------------------------------------------------
+
+/**
+ * A layer's transform as a map from its own space to its parent's: x and y
+ * through anchor point, scale and Z rotation; z through anchor point, scale and
+ * position alone. X/Y rotation and orientation are not modelled.
+ *
+ * That is enough to tell After Effects' two ways of parenting apart. Assigning
+ * `parent` (the pick whip) rewrites the child's position, scale and rotation,
+ * keyframes included, so it stays where it is on screen; `setParentWithJump`
+ * keeps the values, so the child moves by its new parent's transform.
+ *
+ *   x' = a·x + c·y + e,  y' = b·x + d·y + f,  z' = k·z + t
+ */
+interface Placement {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+  k: number;
+  t: number;
+}
+
+const IDENTITY: Placement = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, k: 1, t: 0 };
+const MAX_PARENT_DEPTH = 64;
+
+function compose(outer: Placement, inner: Placement): Placement {
+  return {
+    a: outer.a * inner.a + outer.c * inner.b,
+    b: outer.b * inner.a + outer.d * inner.b,
+    c: outer.a * inner.c + outer.c * inner.d,
+    d: outer.b * inner.c + outer.d * inner.d,
+    e: outer.a * inner.e + outer.c * inner.f + outer.e,
+    f: outer.b * inner.e + outer.d * inner.f + outer.f,
+    k: outer.k * inner.k,
+    t: outer.k * inner.t + outer.t,
+  };
+}
+
+/** Undefined for a parent scaled to nothing, which has no inverse. */
+function invert(m: Placement): Placement | undefined {
+  const det = m.a * m.d - m.b * m.c;
+  if (Math.abs(det) < 1e-12 || Math.abs(m.k) < 1e-12) return undefined;
+  return {
+    a: m.d / det,
+    b: -m.b / det,
+    c: -m.c / det,
+    d: m.a / det,
+    e: (m.c * m.f - m.d * m.e) / det,
+    f: (m.b * m.e - m.a * m.f) / det,
+    k: 1 / m.k,
+    t: -m.t / m.k,
+  };
+}
+
+function applyPlacement(m: Placement, point: readonly number[]): number[] {
+  const [x = 0, y = 0, z = 0] = point;
+  return [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f, m.k * z + m.t];
+}
+
+/** Rotation in degrees and scale per axis (1 = 100 %), ignoring skew as After Effects does. */
+function decompose(m: Placement): { rotation: number; scale: [number, number, number] } {
+  const sx = Math.hypot(m.a, m.b);
+  const det = m.a * m.d - m.b * m.c;
+  return { rotation: (Math.atan2(m.b, m.a) * 180) / Math.PI, scale: [sx, sx === 0 ? 0 : det / sx, m.k] };
+}
+
+/** Rewrites a property's value, or every keyframe's value when it has keys. Scalars map as one-element arrays. */
+function rewrite(prop: MockProp, map: (value: number[]) => number[]): void {
+  const through = (value: unknown): unknown =>
+    Array.isArray(value) ? map(value as number[]).slice(0, value.length) : map([value as number])[0];
+  if (prop.keys.length > 0) {
+    for (const key of prop.keys) key.value = through(key.value);
+  } else {
+    prop.setValue(through(prop.value));
+  }
+}
+
 export class MockLayer {
   readonly id = nextId++;
   name: string;
@@ -864,7 +946,8 @@ export class MockLayer {
   shy = false;
   label = 1;
   comment = "";
-  parent: MockLayer | null = null;
+  /** The parent link itself; `parent` and `setParentWithJump` decide what happens to the values. */
+  private parentLayer: MockLayer | null = null;
   inPoint = 0;
   outPoint: number;
   private shiftOrigin = 0;
@@ -1071,7 +1154,7 @@ export class MockLayer {
   /** Layer.copyToComp: a copy at the top of another comp, with no parent there. */
   copyToComp(intoComp: MockComp): void {
     const copy = Object.create(MockLayer.prototype) as MockLayer;
-    Object.assign(copy, this, { selected: false, appliedPresets: [], parent: null, trackMatteLayer: null, containingComp: intoComp });
+    Object.assign(copy, this, { selected: false, appliedPresets: [], parentLayer: null, trackMatteLayer: null, containingComp: intoComp });
     (copy as { id: number }).id = nextId++;
     copy.root = this.root.cloneInto(null, copy);
     intoComp.stack.unshift(copy);
@@ -1091,11 +1174,99 @@ export class MockLayer {
   remove(): void {
     const stack = this.containingComp.stack;
     stack.splice(stack.indexOf(this), 1);
+    // Its children are unparented the way the pick whip would, staying put on screen.
     for (const layer of stack) if (layer.parent === this) layer.parent = null;
   }
 
+  get parent(): MockLayer | null {
+    return this.parentLayer;
+  }
+
+  /**
+   * Layer.parent: the pick whip. After Effects works out the offset that
+   * cancels the change of parent at the current time and applies it to
+   * position, scale and rotation, keyframes included, so the layer stays
+   * where it is on screen.
+   */
+  set parent(next: MockLayer | null) {
+    const before = this.parentLayer === null ? IDENTITY : this.parentLayer.placement();
+    this.parentLayer = next;
+    const back = invert(next === null ? IDENTITY : next.placement());
+    // A parent scaled to nothing has no inverse; the values are left alone.
+    if (back === undefined) return;
+    const shift = compose(back, before);
+    const { rotation, scale } = decompose(shift);
+
+    const position = this.transform("ADBE Position");
+    if (position.dimensionsSeparated) {
+      const axes = ["ADBE Position_0", "ADBE Position_1", "ADBE Position_2"].map((m) => this.transform(m));
+      const pointAt = (time: number): number[] => axes.map((p) => p.valueAtTime(time) as number);
+      // Each axis maps with the others as they stand at its own keys, so all
+      // three are read before any is written.
+      const mapped = axes.map((prop, axis) =>
+        (prop.keys.length > 0 ? prop.keys.map((k) => k.time) : [this.containingComp.time]).map((time) => applyPlacement(shift, pointAt(time))[axis] ?? 0),
+      );
+      axes.forEach((prop, axis) => {
+        const values = mapped[axis] ?? [];
+        if (prop.keys.length === 0) prop.setValue(values[0]);
+        prop.keys.forEach((key, i) => {
+          key.value = values[i];
+        });
+      });
+    } else {
+      rewrite(position, (value) => applyPlacement(shift, value));
+    }
+    rewrite(this.transform("ADBE Scale"), (value) => value.map((v, i) => v * (scale[i] ?? 1)));
+    rewrite(this.transform("ADBE Rotate Z"), ([r = 0]) => [r + rotation]);
+  }
+
+  /** Layer.setParentWithJump: the values stay as they are and now count from the new parent. */
   setParentWithJump(newParent: MockLayer | null): void {
-    this.parent = newParent;
+    this.parentLayer = newParent;
+  }
+
+  /** This layer's own transform at the current time, as a map into its parent's space. */
+  private ownPlacement(): Placement {
+    const time = this.containingComp.time;
+    const read = (matchName: string): number[] => {
+      const value = this.transform(matchName).valueAtTime(time);
+      return Array.isArray(value) ? (value as number[]) : [value as number];
+    };
+    const [ax = 0, ay = 0, az = 0] = read("ADBE Anchor Point");
+    const [px = 0, py = 0, pz = 0] = this.positionNow();
+    const [sx = 100, sy = 100, sz = 100] = read("ADBE Scale").map((v) => v / 100);
+    const radians = ((read("ADBE Rotate Z")[0] ?? 0) * Math.PI) / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const a = cos * sx;
+    const b = sin * sx;
+    const c = -sin * sy;
+    const d = cos * sy;
+    return { a, b, c, d, e: px - (a * ax + c * ay), f: py - (b * ax + d * ay), k: sz, t: pz - sz * az };
+  }
+
+  /** The map from this layer's space into the comp's, through every parent. */
+  private placement(depth = 0): Placement {
+    if (depth > MAX_PARENT_DEPTH) throw new Error("Parenting loop");
+    const own = this.ownPlacement();
+    return this.parentLayer === null ? own : compose(this.parentLayer.placement(depth + 1), own);
+  }
+
+  /**
+   * Test helper: where the layer is on screen at the current time — the comp
+   * point its anchor point lands on, and its total rotation and scale (%).
+   */
+  onScreen(): { position: number[]; rotation: number; scale: number[] } {
+    const parent = this.parentLayer === null ? IDENTITY : this.parentLayer.placement();
+    const total = decompose(this.placement());
+    return { position: applyPlacement(parent, this.positionNow()), rotation: total.rotation, scale: total.scale.map((s) => s * 100) };
+  }
+
+  /** Position at the current time, read from X/Y/Z Position when dimensions are separated. */
+  private positionNow(): number[] {
+    const time = this.containingComp.time;
+    if (!this.transform("ADBE Position").dimensionsSeparated) return this.transform("ADBE Position").valueAtTime(time) as number[];
+    return ["ADBE Position_0", "ADBE Position_1", "ADBE Position_2"].map((m) => this.transform(m).valueAtTime(time) as number);
   }
 
   /** Test helper: the transform property with the given match name. */
@@ -1229,7 +1400,7 @@ export class MockComp extends MockItem {
     }
     // Parenting is remapped to the copies, as After Effects does on duplicate.
     for (const [i, layer] of this.stack.entries()) {
-      if (layer.parent !== null) copy.stack[i]!.parent = copy.stack[this.stack.indexOf(layer.parent)] ?? null;
+      if (layer.parent !== null) copy.stack[i]!.setParentWithJump(copy.stack[this.stack.indexOf(layer.parent)] ?? null);
     }
     this.project.items.push(copy);
     return copy;

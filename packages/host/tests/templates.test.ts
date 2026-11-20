@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { KINETIC_STYLES, LAYOUT_TEMPLATES, kineticLines, kineticWords, wrapText } from "@kvfx/core";
+import { type JsonValue, KINETIC_STYLES, LAYOUT_TEMPLATES, kineticLines, kineticWords, wrapText } from "@kvfx/core";
 import { createMockAe, type MockAe } from "./mock-ae.js";
-import { runCommand } from "./run-command.js";
+import { execute, planFor, runCommand } from "./run-command.js";
 
 /**
  * Layout templates and kinetic titles, end to end.
@@ -22,6 +22,37 @@ describe("layout templates", () => {
       const parts = ae.comp!.stack.filter((l) => l.parent === hub);
       expect(parts.length).toBe(template.build((key) => template.fields.find((f) => f.key === key)?.value ?? "").length);
       expect(ae.raw("Existing").parent).toBeNull();
+    });
+
+    it(`${template.name}: every part stays where it was placed when parented to the null`, () => {
+      const ae = blank();
+      const plan = planFor(ae, "kvfx.rig.layout", { template: template.id });
+      // Where the plan puts each part, in comp space, before it is parented.
+      const placed = new Map<string, number[]>();
+      for (const step of plan.steps) {
+        const id = step.args["id"] as { $ref?: string } | undefined;
+        const path = step.args["path"] as JsonValue[] | undefined;
+        if (step.op === "kvfx.op.prop.set" && id?.$ref !== undefined && id.$ref !== "hub" && path?.[1] === "ADBE Position") {
+          placed.set(id.$ref, step.args["value"] as number[]);
+        }
+      }
+      const reply = execute(ae, plan);
+      expect(reply.ok).toBe(true);
+      const results = (reply.result as { steps: { result: Record<string, JsonValue> }[] }).steps;
+      const created = new Map<string, number>();
+      plan.steps.forEach((step, i) => {
+        if (step.op === "kvfx.op.layer.create" && step.bind !== undefined) created.set(step.bind, results[i]!.result["id"] as number);
+      });
+
+      const hub = ae.raw(`KVFX Layout · ${template.name}`);
+      expect(placed.size).toBeGreaterThan(0);
+      for (const [bind, [x = 0, y = 0]] of placed) {
+        const part = ae.comp!.stack.find((l) => l.id === created.get(bind))!;
+        expect(part.parent).toBe(hub);
+        const [sx = 0, sy = 0] = part.onScreen().position;
+        expect(sx, `${part.name} x`).toBeCloseTo(x, 6);
+        expect(sy, `${part.name} y`).toBeCloseTo(y, 6);
+      }
     });
   }
 

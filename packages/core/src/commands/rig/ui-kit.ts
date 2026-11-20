@@ -569,6 +569,7 @@ export const inputBar = simpleCommand({
         op: "kvfx.op.prop.expression",
         args: { id: ref("send"), path: [TRANSFORM, "ADBE Scale"], expression: buttonPressExpression(typed + 0.25, 14), relative: true },
       },
+      // Placed in comp space above, so parented in place (layer.set's default).
       { op: "kvfx.op.layer.set", args: { ids: [ref("box"), ref("placeholder"), ref("typed"), ref("send")], parent: ref("bar") } },
     ];
     return steps;

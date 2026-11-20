@@ -309,6 +309,72 @@ describe("layer.duplicate and layer.set", () => {
     result(command("kvfx.op.layer.set", { target: "selection", parent: null }));
     expect(ae.raw("Child").parent).toBeNull();
   });
+
+  // Boss: anchor (50, 50) at (1000, 500), half size, turned 90°. A point
+  // (x, y) in its space lands on the comp at (1025 - y / 2, 475 + x / 2).
+  const boss: MockLayerSpec = {
+    name: "Boss",
+    geometry: { anchorPoint: { x: 50, y: 50 }, position: { x: 1000, y: 500 }, scale: { x: 50, y: 50 }, rotation: 90 },
+  };
+  const child: MockLayerSpec = { name: "Child", selected: true, geometry: { position: { x: 300, y: 200 } } };
+  const close = (actual: readonly number[], expected: readonly number[]): void => {
+    expect(actual.length).toBeGreaterThanOrEqual(expected.length);
+    expected.forEach((v, i) => expect(actual[i]).toBeCloseTo(v, 6));
+  };
+
+  it("parents in place by default, as the pick whip does: the values change, the layer stays put", () => {
+    const { ae, command } = harness([child, boss]);
+    result(command("kvfx.op.layer.set", { target: "selection", parent: ae.idOf("Boss") }));
+    const layer = ae.raw("Child");
+    close(layer.transform("ADBE Position").value as number[], [-550, 1450]);
+    close(layer.transform("ADBE Scale").value as number[], [200, 200]);
+    expect(layer.transform("ADBE Rotate Z").value).toBeCloseTo(-90, 6);
+    const seen = layer.onScreen();
+    close(seen.position, [300, 200]);
+    close(seen.scale, [100, 100]);
+    expect(seen.rotation).toBeCloseTo(0, 6);
+
+    // Unparenting is in place too.
+    result(command("kvfx.op.layer.set", { target: "selection", parent: null }));
+    close(layer.transform("ADBE Position").value as number[], [300, 200]);
+    close(layer.transform("ADBE Scale").value as number[], [100, 100]);
+    expect(layer.transform("ADBE Rotate Z").value).toBeCloseTo(0, 6);
+  });
+
+  it("offsets every keyframe when parenting in place", () => {
+    const { ae, command } = harness([
+      child,
+      { name: "Boss", geometry: { position: { x: 1000, y: 500 } } },
+    ]);
+    const position = ae.raw("Child").transform("ADBE Position");
+    position.setValueAtTime(0, [300, 200, 0]);
+    position.setValueAtTime(1, [500, 200, 0]);
+    result(command("kvfx.op.layer.set", { target: "selection", parent: ae.idOf("Boss") }));
+    expect([position.keyValue(1), position.keyValue(2)]).toEqual([
+      [-700, -300, 0],
+      [-500, -300, 0],
+    ]);
+  });
+
+  it("with keepPlace: false, keeps the values and lets the layer move by the parent's transform", () => {
+    const { ae, command } = harness([child, boss]);
+    result(command("kvfx.op.layer.set", { target: "selection", parent: ae.idOf("Boss"), keepPlace: false }));
+    const layer = ae.raw("Child");
+    expect(layer.parent?.name).toBe("Boss");
+    expect(layer.transform("ADBE Position").value).toEqual([300, 200, 0]);
+    expect(layer.transform("ADBE Scale").value).toEqual([100, 100, 100]);
+    const seen = layer.onScreen();
+    close(seen.position, [925, 625]);
+    close(seen.scale, [50, 50]);
+    expect(seen.rotation).toBeCloseTo(90, 6);
+  });
+
+  it("rejects a keepPlace that is not a boolean", () => {
+    const { ae, command } = harness([child, boss]);
+    const reply = command("kvfx.op.layer.set", { target: "selection", parent: ae.idOf("Boss"), keepPlace: "yes" });
+    expect(reply.error?.code).toBe("invalid_argument");
+    expect(ae.raw("Child").parent).toBeNull();
+  });
 });
 
 describe("layer.select", () => {

@@ -54,6 +54,20 @@ export const duplicateLayerOperation: Operation = {
  * The attribute list is closed on purpose: a generic "set any attribute"
  * would let a plan reach things like `source` or `stretch` that need their own
  * reasoning. Times are in seconds, as After Effects stores them.
+ *
+ * Parenting (`parent`: a layer id, or null to unparent) has two flavours in
+ * After Effects, chosen with `keepPlace`:
+ *
+ *   - true (the default): assign `layer.parent`, as the pick whip does. After
+ *     Effects rewrites the layer's position, scale and rotation, keyframes
+ *     included, to cancel out the new parent's transform at the current time,
+ *     so nothing moves on screen. For layers already placed in comp space.
+ *   - false: `setParentWithJump`. The values stay as they are and now count
+ *     from the parent, so the layer jumps by the parent's transform. For plans
+ *     that write parent-space values afterwards, or whose expressions drive
+ *     the transform anyway: they get the values they wrote, not a counter-
+ *     transform baked in from wherever the parent happened to be at the
+ *     current time.
  */
 export const setLayerAttributesOperation: Operation = {
   id: "kvfx.op.layer.set",
@@ -74,6 +88,10 @@ export const setLayerAttributesOperation: Operation = {
     else if (typeof parentArg === "number") {
       parent = layerById(comp, parentArg);
       if (!parent) throw hostError(ErrorCode.PreconditionFailed, "The parent layer no longer exists.");
+    }
+    const keepPlace = args["keepPlace"];
+    if (keepPlace !== undefined && typeof keepPlace !== "boolean") {
+      throw hostError(ErrorCode.InvalidArgument, "keepPlace must be true or false.");
     }
 
     let changed = 0;
@@ -105,9 +123,11 @@ export const setLayerAttributesOperation: Operation = {
         if (typeof mode === "number") layer.blendingMode = mode;
       }
       if (parent !== undefined) {
-        // With jump: the layer keeps its place on screen, as when the user
-        // drags the pick whip. Without it the layer would leap.
-        if (typeof layer.setParentWithJump === "function") layer.setParentWithJump(parent);
+        // Assigning `parent` keeps the layer where it is on screen (the pick
+        // whip); setParentWithJump keeps its values and lets it move. Every
+        // supported After Effects has setParentWithJump; the check is only
+        // there because the type marks it optional.
+        if (keepPlace === false && typeof layer.setParentWithJump === "function") layer.setParentWithJump(parent);
         else layer.parent = parent;
       }
       changed += 1;

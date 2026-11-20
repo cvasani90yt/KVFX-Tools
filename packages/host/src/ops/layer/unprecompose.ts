@@ -102,6 +102,8 @@ function transformNull(comp: AeRawComp, layer: AeRawLayer): AeRawLayer {
   }
   copyProperty(from.property("ADBE Scale"), to.property("ADBE Scale"));
   copyProperty(from.property("ADBE Rotate Z"), to.property("ADBE Rotate Z"));
+  // The copied values are already in the parent's space, so they are kept
+  // (with jump); assigning `parent` would offset them a second time.
   if (layer.parent && typeof holder.setParentWithJump === "function") holder.setParentWithJump(layer.parent);
   holder.moveBefore(layer);
   return holder;
@@ -183,6 +185,9 @@ function release(ctx: OperationContext, comp: AeRawComp, layer: AeRawLayer, out:
     const innerParent = inner.parent;
     const parentCopy = innerParent ? copies[innerParent.index - 1] : null;
     const parent = parentCopy ? parentCopy : holder;
+    // With jump on purpose: a copy's values are in its inner parent's space,
+    // or the nested comp's, which the holder maps exactly as the precomp
+    // layer did. Kept as they are, they land where they were seen.
     if (typeof copy.setParentWithJump === "function") copy.setParentWithJump(parent);
     const matte = inner.trackMatteLayer;
     if (matte && typeof copy.setTrackMatte === "function" && typeof inner.trackMatteType === "number") {
