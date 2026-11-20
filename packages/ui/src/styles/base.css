@@ -2977,8 +2977,7 @@ select:focus-visible,
   left: 0;
   width: 1px;
   background: var(--kvfx-text-primary);
-  opacity: 0.7;
-  animation: kvfx-qscan 2.6s linear infinite;
+  opacity: 0;
 }
 
 @keyframes kvfx-qscan {
@@ -3000,12 +2999,31 @@ select:focus-visible,
 
 .kvfx-qpv--wipe i:last-child {
   background: linear-gradient(135deg, var(--g, var(--kvfx-accent)), #3a1606);
-  animation: kvfx-qwipe 2.6s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+  /* At rest, a still of the wipe halfway across: both shots show. */
+  clip-path: inset(0 50% 0 0);
 }
 
 @keyframes kvfx-qwipe {
   0%, 25% { clip-path: inset(0 100% 0 0); transform: scale(1.35); filter: blur(3px); }
   60%, 100% { clip-path: inset(0 0 0 0); transform: scale(1); filter: blur(0); }
+}
+
+/*
+ * The card previews play only while the pointer is on the card (or it has
+ * keyboard focus), starting from the top each time, so the Quick tab stays
+ * still. With reduced motion they never play.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .kvfx-qcard:hover .kvfx-qpv__scan,
+  .kvfx-qcard:focus-visible .kvfx-qpv__scan {
+    opacity: 0.7;
+    animation: kvfx-qscan 2.6s linear infinite;
+  }
+
+  .kvfx-qcard:hover .kvfx-qpv--wipe i:last-child,
+  .kvfx-qcard:focus-visible .kvfx-qpv--wipe i:last-child {
+    animation: kvfx-qwipe 2.6s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+  }
 }
 
 /* A command that ran: a check flashes over its tile in the section colour. */
@@ -3036,14 +3054,9 @@ select:focus-visible,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kvfx-qpv__scan,
-  .kvfx-qpv--wipe i:last-child,
   .kvfx-qtile.kvfx-ran::after,
   .kvfx-qmini.kvfx-ran::after {
     animation: none;
-  }
-  .kvfx-qpv--wipe i:last-child {
-    clip-path: inset(0 0 0 0);
   }
   .kvfx-qtile .kvfx-icon {
     transition: none;
