@@ -28,7 +28,12 @@ export interface ButtonOptions {
   readonly params?: () => JsonObject | undefined;
   /** Extra class names. */
   readonly className?: string;
+  /** Flash a check on the button when its command has run, for buttons that give no other sign. */
+  readonly flash?: boolean;
 }
+
+/** How long the check stays on a button after its command runs. */
+const FLASH_MS = 900;
 
 export class CommandButtons {
   readonly #panel: Panel;
@@ -49,15 +54,22 @@ export class CommandButtons {
     if (options.icon !== undefined) node.append(createIcon(options.icon));
     if (variant !== "tool") node.append(h("span", { text: options.label }));
     node.addEventListener("click", () => {
-      void this.#invoke(resolve(), options.params?.());
+      void this.#invoke(resolve(), options.params?.()).then((ran) => {
+        if (!ran || options.flash !== true) return;
+        node.classList.remove("kvfx-ran");
+        void node.offsetWidth;
+        node.classList.add("kvfx-ran");
+        setTimeout(() => node.classList.remove("kvfx-ran"), FLASH_MS);
+      });
     });
     this.#buttons.push({ node, commandId: resolve, label: options.label, variant });
     return node;
   }
 
-  async #invoke(commandId: string, params: JsonObject | undefined): Promise<void> {
+  /** Runs the command, asking first when it's destructive; true when it ran. */
+  async #invoke(commandId: string, params: JsonObject | undefined): Promise<boolean> {
     const command = this.#panel.session.command(commandId);
-    if (command === undefined) return;
+    if (command === undefined) return false;
     if (command.metadata.destructive) {
       const confirmed = await this.#panel.confirm({
         title: command.name,
@@ -65,9 +77,9 @@ export class CommandButtons {
         confirmLabel: command.name,
         danger: true,
       });
-      if (!confirmed) return;
+      if (!confirmed) return false;
     }
-    await this.#panel.session.run(command, params);
+    return this.#panel.session.run(command, params);
   }
 
   update(state: SessionState, availability: Availability): void {

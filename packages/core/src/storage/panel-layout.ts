@@ -43,13 +43,13 @@ export const PANEL_LAYOUTS: readonly PanelLayoutPreset[] = [
   {
     id: "quick",
     name: "Quick",
-    about: "A quick-tool panel: just the Quick tab and your essentials, nothing around them.",
+    about: "A quick-tool panel: just the Quick tab, with the anchor grid and the align bar still to hand.",
     layout: {
       ...base,
       hiddenTabs: DEFAULT_TAB_ORDER.filter((id) => id !== "quick"),
       tabStyle: "icons",
-      quickBar: false,
-      alignBar: false,
+      quickBar: true,
+      alignBar: true,
       compact: true,
     },
   },

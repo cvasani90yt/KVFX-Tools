@@ -1,16 +1,6 @@
 import { rgbToHex } from "../../color/index.js";
-import {
-  NEEDS_COMP,
-  NEEDS_LAYER,
-  SNAPSHOT_PROBE,
-  colorParam,
-  measuredCommand,
-  probedLayers,
-  rgbJson,
-  simpleCommand,
-  stringParam,
-} from "../define.js";
-import { type Command, CommandCategory, ref } from "../types.js";
+import { NEEDS_COMP, NEEDS_LAYER, colorParam, rgbJson, simpleCommand, stringParam } from "../define.js";
+import { type Command, CommandCategory } from "../types.js";
 
 /**
  * Layer creation.
@@ -22,15 +12,20 @@ import { type Command, CommandCategory, ref } from "../types.js";
 
 const WHITE = [1, 1, 1] as const;
 
+/**
+ * With layers selected — any kind — the null lands at them and they are
+ * linked to it, keeping their place; with none, it is a plain null on top.
+ * The host reads the selection before it makes the null.
+ */
 export const createNull = simpleCommand({
   id: "kvfx.layer.createnull",
   name: "Create Null",
-  description: "Add a null object at the top of the composition",
+  description: "Add a null — with layers selected, it sits at them and they are parented to it, staying where they are",
   category: CommandCategory.Layer,
-  keywords: ["null", "controller", "parent", "rig", "empty", "object"],
+  keywords: ["null", "controller", "parent", "link", "rig", "empty", "object", "control"],
   icon: "null",
   metadata: NEEDS_COMP,
-  steps: () => [{ op: "kvfx.op.layer.create", args: { kind: "null" } }],
+  steps: () => [{ op: "kvfx.op.layer.addNull", args: { target: "selection" } }],
 });
 
 export const createAdjustment = simpleCommand({
@@ -97,27 +92,16 @@ export const createCamera = simpleCommand({
   steps: () => [{ op: "kvfx.op.layer.create", args: { kind: "camera" } }],
 });
 
-/**
- * Measured, not selection-targeted: After Effects selects a layer it has just
- * created, so "the selection" after step one would be the new null itself.
- */
-export const nullParent = measuredCommand({
+/** Create Null for when there must be a selection: the same null, the same linking. */
+export const nullParent = simpleCommand({
   id: "kvfx.layer.nullparent",
   name: "Parent to New Null",
-  description: "Create a null and parent the selected layers to it, keeping them in place",
+  description: "Create a null at the selected layers and parent them to it, keeping them in place",
   category: CommandCategory.Rig,
-  keywords: ["null", "parent", "group", "control", "controller", "rig"],
+  keywords: ["null", "parent", "link", "group", "control", "controller", "rig"],
   icon: "link",
   metadata: NEEDS_LAYER,
-  probe: () => SNAPSHOT_PROBE,
-  steps: (_ctx, measurement) => {
-    const ids = probedLayers(measurement).map((layer) => layer.id);
-    if (ids.length === 0) return [];
-    return [
-      { op: "kvfx.op.layer.create", args: { kind: "null", name: "KVFX Control" }, bind: "ctrl" },
-      { op: "kvfx.op.layer.set", args: { ids, parent: ref("ctrl") } },
-    ];
-  },
+  steps: () => [{ op: "kvfx.op.layer.addNull", args: { target: "selection" } }],
 });
 
 export const createCommands: readonly Command[] = [

@@ -27,3 +27,4 @@ export * from "./layouts/index.js";
 export * from "./transitions/index.js";
 export * from "./speed/index.js";
 export * from "./quick/index.js";
+export * from "./quick/spotlight.js";

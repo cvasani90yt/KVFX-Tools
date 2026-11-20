@@ -210,7 +210,8 @@ describe("plans", () => {
   });
 
   it("maps creation commands to their kind", () => {
-    expect(command("kvfx.layer.createnull").plan(ctx()).steps[0]?.args).toEqual({ kind: "null" });
+    // Null reads the live selection in the host, which links whatever is selected.
+    expect(command("kvfx.layer.createnull").plan(ctx()).steps[0]).toEqual({ op: "kvfx.op.layer.addNull", args: { target: "selection" } });
     expect(command("kvfx.layer.createadjustment").plan(ctx()).steps[0]?.args).toEqual({
       kind: "adjustment",
     });

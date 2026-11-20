@@ -14,10 +14,14 @@ import type { JsonObject } from "../types/json.js";
  *    has its Colour section moved to the front of the tab's sections.
  * 3: The Quick tab leads the tab bar — a tab order saved by an earlier build,
  *    and the tab order in each saved layout, gets it at the front.
+ * 4: The Quick tab's Spotlight layout: pins, colour scheme and tile style
+ *    (filled with defaults), and a panel left in the old Quick-only layout gets
+ *    its anchor grid and align bar back.
  */
-export const CURRENT_SETTINGS_VERSION = 3;
+export const CURRENT_SETTINGS_VERSION = 4;
 const COLOUR_FIRST_VERSION = 2;
 const QUICK_FIRST_VERSION = 3;
+const SPOTLIGHT_VERSION = 4;
 
 /**
  * The Quick tab's tools as it ships: the colour picker and its eyedroppers,
@@ -29,9 +33,9 @@ export const DEFAULT_QUICK_TOOLS: readonly string[] = [
   "colour",
   "pickComp",
   "kvfx.fx.fill",
+  "kvfx.text.color",
   "kvfx.comp.deepduplicatecomp",
   "kvfx.layer.precomposeeach",
-  "kvfx.layer.nullparent",
   "kvfx.layer.split",
   "kvfx.layer.sequence",
   "kvfx.layer.trimworkarea",
@@ -41,11 +45,21 @@ export const DEFAULT_QUICK_TOOLS: readonly string[] = [
   "kvfx.keys.wiggle",
   "kvfx.fx.add.shadow",
   "kvfx.fx.add.glow",
+  "kvfx.fx.add.blur",
   "kvfx.rig.transition",
   "kvfx.rig.speedRamp",
   "kvfx.text.animate",
   "kvfx.layer.createnull",
 ];
+
+/** The Quick tab's large tiles as it ships. */
+export const DEFAULT_QUICK_PINS: readonly string[] = ["kvfx.comp.deepduplicatecomp", "kvfx.layer.precomposeeach"];
+const MAX_PINS = 4;
+
+/** How the Quick tab colours its icons: by section, all orange, warm steps, or the panel colour. */
+export type QuickColours = "sections" | "ember" | "spectrum" | "panel";
+/** How a Quick tile carries its colour: on the icon, in a small square behind it, or as a tint on the tile. */
+export type QuickTiles = "well" | "icon" | "soft";
 
 /** How many recently-used commands to remember. */
 export const MAX_RECENTS = 20;
@@ -113,6 +127,10 @@ export interface UiSettings {
   readonly quickTools: readonly string[];
   /** Labels under the Quick tab's icons. */
   readonly quickLabels: boolean;
+  /** Tools shown as large tiles at the top of the Quick tab, up to four. */
+  readonly quickPins: readonly string[];
+  readonly quickColours: QuickColours;
+  readonly quickTiles: QuickTiles;
   /** Which tab the panel opens on: always Quick, or wherever it was left. */
   readonly startTab: StartTab;
 }
@@ -176,6 +194,9 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   customLayouts: [],
   quickTools: DEFAULT_QUICK_TOOLS,
   quickLabels: true,
+  quickPins: DEFAULT_QUICK_PINS,
+  quickColours: "sections",
+  quickTiles: "well",
   startTab: "quick",
 };
 
@@ -308,7 +329,25 @@ export function migrateSettings(raw: unknown): MigrationResult {
       settings.ui.customLayouts.map((saved) => ({ ...saved, layout: { ...saved.layout, tabOrder: quickFirst(saved.layout.tabOrder) } })),
     );
   }
+  if (typeof version !== "number" || version < SPOTLIGHT_VERSION) {
+    if (quickOnly(settings.ui)) {
+      settings = setUiSetting(settings, "quickBar", true);
+      settings = setUiSetting(settings, "alignBar", true);
+    }
+  }
   return { settings, writable: true, warnings };
+}
+
+/** The tabs besides Quick, as they ship; duplicated from panel-layout.ts to keep storage free of feature imports. */
+const OTHER_TABS = ["tools", "ease", "text", "fx", "generate", "labels", "library", "media"];
+
+/**
+ * Version 3 → 4: the old Quick layout preset hid the anchor grid and the align
+ * bar along with every other tab. The preset now keeps both, so a panel left
+ * in that layout gets them back.
+ */
+function quickOnly(ui: UiSettings): boolean {
+  return !ui.quickBar && !ui.alignBar && !ui.hiddenTabs.includes("quick") && OTHER_TABS.every((tab) => ui.hiddenTabs.includes(tab));
 }
 
 /** Version 2 → 3: a saved tab order gets the new Quick tab at its front. An empty order already follows the built-in one. */
@@ -437,6 +476,10 @@ function uiSettings(value: unknown): UiSettings {
     // A file from before the Quick tab has no list: it gets the shipped one.
     quickTools: Array.isArray(value["quickTools"]) ? stringList(value["quickTools"]) : DEFAULT_QUICK_TOOLS,
     quickLabels: value["quickLabels"] !== false,
+    // A file from before Spotlight has no pins: it gets the shipped ones.
+    quickPins: Array.isArray(value["quickPins"]) ? stringList(value["quickPins"], MAX_PINS) : DEFAULT_QUICK_PINS,
+    quickColours: (["sections", "ember", "spectrum", "panel"] as const).find((v) => v === value["quickColours"]) ?? "sections",
+    quickTiles: (["well", "icon", "soft"] as const).find((v) => v === value["quickTiles"]) ?? "well",
     startTab: value["startTab"] === "last" ? "last" : "quick",
   };
 }

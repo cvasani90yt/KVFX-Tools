@@ -2607,7 +2607,8 @@ select:focus-visible,
 .kvfx-qtile .kvfx-icon {
   width: 18px;
   height: 18px;
-  color: var(--kvfx-accent);
+  color: var(--g, var(--kvfx-accent));
+  transition: transform 0.15s;
 }
 
 .kvfx-qtile > span:not(.kvfx-swatch__chip) {
@@ -2618,9 +2619,13 @@ select:focus-visible,
 }
 
 .kvfx-qtile:hover:not(:disabled) {
-  border-color: var(--kvfx-accent-edge);
+  border-color: var(--g32, var(--kvfx-accent-edge));
   background: var(--kvfx-surface-hover);
   color: var(--kvfx-text-primary);
+}
+
+.kvfx-qtile:hover:not(:disabled) > .kvfx-icon:not(.kvfx-qtile__opens) {
+  transform: translateY(-1px);
 }
 
 .kvfx-qtile:active:not(:disabled):not(.kvfx-qtile--edit) {
@@ -2629,7 +2634,7 @@ select:focus-visible,
 
 .kvfx-qtile:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--kvfx-accent);
+  box-shadow: 0 0 0 2px var(--g, var(--kvfx-accent));
 }
 
 .kvfx-qtile:disabled {
@@ -2639,6 +2644,459 @@ select:focus-visible,
 
 .kvfx-qtile[hidden] {
   display: none;
+}
+
+/* --- Spotlight: section colours --------------------------------------------
+   The Quick tab sets --kq-<section> (and its tints) from the chosen scheme;
+   each tile picks its section's set up as --g. Tints are made in script:
+   Chromium 99 has no color-mix(). */
+.kvfx-g-colour { --g: var(--kq-colour); --g8: var(--kq-colour-8); --g16: var(--kq-colour-16); --g22: var(--kq-colour-22); --g32: var(--kq-colour-32); }
+.kvfx-g-comp { --g: var(--kq-comp); --g8: var(--kq-comp-8); --g16: var(--kq-comp-16); --g22: var(--kq-comp-22); --g32: var(--kq-comp-32); }
+.kvfx-g-organize { --g: var(--kq-organize); --g8: var(--kq-organize-8); --g16: var(--kq-organize-16); --g22: var(--kq-organize-22); --g32: var(--kq-organize-32); }
+.kvfx-g-switches { --g: var(--kq-switches); --g8: var(--kq-switches-8); --g16: var(--kq-switches-16); --g22: var(--kq-switches-22); --g32: var(--kq-switches-32); }
+.kvfx-g-keys { --g: var(--kq-keys); --g8: var(--kq-keys-8); --g16: var(--kq-keys-16); --g22: var(--kq-keys-22); --g32: var(--kq-keys-32); }
+.kvfx-g-text { --g: var(--kq-text); --g8: var(--kq-text-8); --g16: var(--kq-text-16); --g22: var(--kq-text-22); --g32: var(--kq-text-32); }
+.kvfx-g-fx { --g: var(--kq-fx); --g8: var(--kq-fx-8); --g16: var(--kq-fx-16); --g22: var(--kq-fx-22); --g32: var(--kq-fx-32); }
+.kvfx-g-generate { --g: var(--kq-generate); --g8: var(--kq-generate-8); --g16: var(--kq-generate-16); --g22: var(--kq-generate-22); --g32: var(--kq-generate-32); }
+.kvfx-g-create { --g: var(--kq-create); --g8: var(--kq-create-8); --g16: var(--kq-create-16); --g22: var(--kq-create-22); --g32: var(--kq-create-32); }
+
+/* Tile styles: the colour in a small square behind the icon, or a soft tint on the tile. */
+.kvfx-quicktab[data-tiles="well"] .kvfx-qtile > .kvfx-icon:not(.kvfx-qtile__opens) {
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  padding: 5px;
+  border-radius: 7px;
+  background: var(--g16);
+}
+
+.kvfx-quicktab[data-tiles="soft"] .kvfx-qtile:not(.kvfx-qtile--edit),
+.kvfx-quicktab[data-tiles="soft"] .kvfx-qcard {
+  border-color: var(--g22);
+  background: linear-gradient(var(--g8), var(--g8)), var(--kvfx-surface-raised);
+}
+
+.kvfx-qspot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kvfx-qspot[hidden],
+.kvfx-quicktab > .kvfx-qgrid[hidden] {
+  display: none;
+}
+
+/* The hero strip: the panel colour, glowing, with the colour tools beside it. */
+.kvfx-qhero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--kq-pc-34);
+  border-radius: 8px;
+  background: radial-gradient(130% 160% at 0% 50%, var(--kq-pc-20), transparent 62%), var(--kvfx-surface-raised);
+}
+
+.kvfx-qhero__swatch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  cursor: pointer;
+}
+
+.kvfx-qhero__swatch .kvfx-swatch__chip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 18px -4px var(--kq-pc);
+}
+
+.kvfx-qhero__swatch:focus-visible {
+  outline: 2px solid var(--kvfx-accent);
+  outline-offset: 2px;
+}
+
+.kvfx-qhero__badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--kvfx-surface-base);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qhero__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.kvfx-qhero__text b {
+  font-family: var(--kvfx-font-mono);
+  font-size: var(--kvfx-text-md);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qhero__text small {
+  font-size: var(--kvfx-text-xxs);
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-qhero__tools {
+  display: flex;
+  gap: 4px;
+}
+
+.kvfx-qmini {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--kvfx-border);
+  border-radius: 7px;
+  background: var(--kvfx-surface-base);
+  color: var(--g, var(--kvfx-accent));
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.kvfx-qmini .kvfx-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--g, var(--kvfx-accent));
+}
+
+.kvfx-qmini:hover:not(:disabled) {
+  border-color: var(--g32);
+  background: var(--kvfx-surface-hover);
+}
+
+.kvfx-qmini:focus-visible {
+  outline: 2px solid var(--g, var(--kvfx-accent));
+  outline-offset: 1px;
+}
+
+.kvfx-qmini:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+/* Pinned tools: large tiles with one line on what they do. */
+.kvfx-qpins,
+.kvfx-qcards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.kvfx-qcards--odd > :last-child,
+.kvfx-qpins--odd > :last-child {
+  grid-column: 1 / -1;
+}
+
+.kvfx-qtile.kvfx-qbig {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-items: start;
+  column-gap: 9px;
+  row-gap: 1px;
+  min-height: 52px;
+  padding: 8px 9px;
+  text-align: left;
+}
+
+.kvfx-qtile.kvfx-qbig > .kvfx-icon:not(.kvfx-qtile__opens) {
+  grid-row: 1 / span 2;
+}
+
+.kvfx-quicktab[data-tiles] .kvfx-qtile.kvfx-qbig > .kvfx-icon:not(.kvfx-qtile__opens) {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--g16);
+}
+
+.kvfx-qtile.kvfx-qbig > span {
+  align-self: end;
+  font-size: var(--kvfx-text-sm);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qbig__hint {
+  align-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--kvfx-text-xxs);
+  font-weight: 500;
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-quicktab--nolabels .kvfx-qtile.kvfx-qbig > span {
+  display: block;
+}
+
+/* Cards: Transition and Speed Ramp, showing the preset a click will use. */
+.kvfx-qcard {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--kvfx-border);
+  border-radius: var(--kvfx-radius-md);
+  background: var(--kvfx-surface-raised);
+  color: var(--kvfx-text-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.08s;
+}
+
+.kvfx-qcard:hover {
+  border-color: var(--g32);
+  background: var(--kvfx-surface-hover);
+}
+
+.kvfx-qcard:active {
+  transform: scale(0.97);
+}
+
+.kvfx-qcard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--g, var(--kvfx-accent));
+}
+
+.kvfx-qcard .kvfx-icon.kvfx-qtile__opens {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-qcard__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.kvfx-qcard__text b {
+  font-size: var(--kvfx-text-sm);
+  font-weight: 600;
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qcard__text small,
+.kvfx-qcard__text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kvfx-qcard__text small {
+  font-size: var(--kvfx-text-xxs);
+  color: var(--kvfx-text-muted);
+}
+
+.kvfx-qpv {
+  position: relative;
+  display: block;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #0b0c0f;
+}
+
+.kvfx-qpv svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.kvfx-qpv__base {
+  stroke: #3a3f4a;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.kvfx-qpv__curve {
+  fill: none;
+  stroke: var(--g, var(--kvfx-accent));
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.kvfx-qpv__scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--kvfx-text-primary);
+  opacity: 0.7;
+  animation: kvfx-qscan 2.6s linear infinite;
+}
+
+@keyframes kvfx-qscan {
+  from { left: 0; }
+  to { left: 100%; }
+}
+
+.kvfx-qpv--wipe i {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.kvfx-qpv--wipe i:first-child {
+  background: linear-gradient(135deg, #1f3a6b, #0f1a33);
+}
+
+.kvfx-qpv--wipe i:last-child {
+  background: linear-gradient(135deg, var(--g, var(--kvfx-accent)), #3a1606);
+  animation: kvfx-qwipe 2.6s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+}
+
+@keyframes kvfx-qwipe {
+  0%, 25% { clip-path: inset(0 100% 0 0); transform: scale(1.35); filter: blur(3px); }
+  60%, 100% { clip-path: inset(0 0 0 0); transform: scale(1); filter: blur(0); }
+}
+
+/* A command that ran: a check flashes over its tile in the section colour. */
+.kvfx-qtile.kvfx-ran::after,
+.kvfx-qmini.kvfx-ran::after {
+  content: "✓";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba(14, 15, 18, 0.84);
+  color: var(--g, var(--kvfx-accent));
+  font-size: 16px;
+  font-weight: 700;
+  animation: kvfx-qran 0.9s ease-out forwards;
+}
+
+@keyframes kvfx-qran {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kvfx-qpv__scan,
+  .kvfx-qpv--wipe i:last-child,
+  .kvfx-qtile.kvfx-ran::after,
+  .kvfx-qmini.kvfx-ran::after {
+    animation: none;
+  }
+  .kvfx-qpv--wipe i:last-child {
+    clip-path: inset(0 0 0 0);
+  }
+  .kvfx-qtile .kvfx-icon {
+    transition: none;
+  }
+}
+
+/* Customize: the look pickers, and the star that pins a tool. */
+.kvfx-qlook {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.kvfx-qlook .kvfx-seg {
+  flex-wrap: wrap;
+}
+
+/* Inside the tile's corner, quiet until it's on: the remove badge keeps the outside corner. */
+.kvfx-qtile__pin {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--kvfx-text-muted);
+  cursor: pointer;
+}
+
+.kvfx-qtile .kvfx-qtile__pin .kvfx-icon {
+  width: 9px;
+  height: 9px;
+  color: currentColor;
+  opacity: 0.5;
+}
+
+.kvfx-qtile__pin:hover {
+  background: var(--kvfx-surface-overlay);
+  color: var(--kvfx-text-primary);
+}
+
+.kvfx-qtile__pin:focus-visible {
+  outline: 2px solid var(--kvfx-accent);
+}
+
+.kvfx-qtile__pin--on {
+  color: var(--kvfx-accent);
+}
+
+.kvfx-qtile .kvfx-qtile__pin--on .kvfx-icon {
+  opacity: 1;
+}
+
+.kvfx-qtile--pinned {
+  border-color: var(--g32);
 }
 
 /* The colour tile's eyedropper badge, and the corner arrow on tiles that open a feature's screen. */

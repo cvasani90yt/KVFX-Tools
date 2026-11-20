@@ -62,11 +62,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Host: `layer.speedRamp`, with `FrameBlendingType` in the environment
 
 ### Added — the Quick tab
-- A new first tab, which the panel opens on: the everyday tools from every tab
-  as one minimal grid of tiles, each run with its last-used settings — colour
-  picker and From Comp eyedropper, Duplicate Comp, Precomp, Null Parent, Split,
-  Sequence, Trim to Work Area, Same Label, Unlock All, Apply Ease, Wiggle,
-  Shadow, Glow, Transition, Speed Ramp, Animate Text and Null
+- A new first tab, which the panel opens on: the everyday tools from every tab,
+  each run with its last-used settings, in the **Spotlight** layout. The panel
+  colour leads as a strip that glows in it, with From Comp, Fill and Text
+  Colour beside it; pinned tools get large tiles with a line on what they do
+  (Dup Comp and Precomp as shipped); Transition and Speed Ramp are cards that
+  show the preset a click will use, over a short wipe or the ramp's speed
+  curve; and Split, Sequence, Trim to Work Area, Same Label, Unlock All, Apply
+  Ease, Wiggle, Shadow, Glow, Blur, Animate Text and Null fill a compact grid
+- Section colours on the icons, in four schemes — Sections (default), Ember,
+  Spectrum and Your colour (follows the panel colour, made readable) — and
+  three tile styles: Icon well (default), Icon and Soft fill. A check flashes
+  over a tile in its colour when its command has run
 - Tiles for tools with choices of their own — Transition, Speed Ramp,
   Counter, Carousel, Extrude, Animate, Explode, Style Text, Kinetic, Sequence,
   Follow, Gradient Lock and Wiggle — are shortcuts, marked with a corner arrow:
@@ -75,10 +82,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   settings instead
 - The Colour tile carries an eyedropper badge, so it reads as the colour picker
 - **Customize**: drag tiles to reorder (with edge scrolling) or use the arrow
-  keys, remove with × or Delete, add from a catalog of 68 tools in nine
-  groups, labels on or off, and Reset (it asks)
+  keys, pin up to four with the star, remove with × or Delete, pick the colours
+  and tiles, add from a catalog of 68 tools in nine groups, labels on or off,
+  and Reset (it asks)
 - Settings ▸ Layout: **Opens on** Quick or the last tab, and a **Quick** preset
-  that is the Quick tab alone; every preset now leads with Quick
+  that is the Quick tab alone, keeping the anchor grid and the align bar on
+  screen; every preset now leads with Quick
+- Settings schema 4: pins, colour scheme and tile style; a panel left in the
+  earlier Quick-only layout gets its anchor grid and align bar back
 - Settings schema 3: a tab order saved by an earlier build, and those in saved
   layouts, get the Quick tab at the front
 - Tabs now share the tab bar by label width, so nine fit without colliding
@@ -99,6 +110,15 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   size or tracking
 
 ### Changed
+- **Null** links: with layers selected (any kind: text, shapes, footage,
+  precomps, cameras, lights) it lands at them, directly above the topmost,
+  over the time they span, 3D when they all are, and parents them to it,
+  keeping every layer where it is on screen. A layer already parented to
+  another selected layer keeps that parent; locked layers are skipped with a
+  reason; with nothing selected it is a plain null as before. **Null Parent**
+  does the same, and used to drop the null at the comp centre and re-parent
+  every selected layer, children of other selected layers included. Host:
+  `layer.addNull`
 - **Colour** (Fill and Gradient Lock) is now the first section of the Tools
   tab; a section order saved by an earlier build is updated to match
 - **From Screen**, picking a colour from anywhere on screen, is taken out

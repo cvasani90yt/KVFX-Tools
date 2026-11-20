@@ -3,7 +3,7 @@ import { effectOperations } from "./effect.js";
 import { fontOperations } from "./fonts.js";
 import { fxOperations } from "./fx.js";
 import { keyframeOperations } from "./keys.js";
-import { createLayerOperation } from "./layer/create.js";
+import { addNullOperation, createLayerOperation } from "./layer/create.js";
 import { layerEditOperations } from "./layer/edit.js";
 import { setFlagOperation } from "./layer/flags.js";
 import { measureOperation, setTransformOperation } from "./layer/geometry.js";
@@ -35,6 +35,7 @@ export function createProductionRegistry(): OperationRegistry {
     setFlagOperation,
     reorderOperation,
     createLayerOperation,
+    addNullOperation,
     measureOperation,
     setTransformOperation,
     offsetPositionOperation,

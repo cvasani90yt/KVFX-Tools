@@ -134,14 +134,19 @@ few tiles (Precomp, Shadow, Null). Click **Speed Ramp** (it has a small arrow
 in its corner): the panel switches to Generate with Speed Ramp's presets and
 preview in view and highlighted. Back on Quick, put the playhead on a cut and
 **Alt-click** **Transition**: it adds your last transition without leaving
-Quick. Click **From Comp** and click a spot on the frame: the **Colour** tile
-turns that colour. Click **Customize**, drag a
-tile somewhere else, remove one, add one from the list, then **Done**. Close
-and reopen the panel: it opens on Quick again, with your arrangement.
+Quick. Click **From Comp** and click a spot on the frame: the colour strip at
+the top turns that colour and glows in it. The anchor grid sits above the tabs
+and the align bar along the bottom. Click **Customize**: star **Shadow** (it
+becomes a large tile under Dup Comp and Precomp), try **Spectrum** and **Soft
+fill** under Look, drag a tile somewhere else, remove one, add one from the
+list, then **Done**. Close and reopen the panel: it opens on Quick again, with
+your arrangement and colours.
 
 **1. Basics.** Select two layers, click the panel: the header shows
-`<comp> · 2 layers`. Click **Null**, pick a colour in the swatch and click
-**Solid**. Select a layer and click the bottom-right arrow of the grid: its
+`<comp> · 2 layers`. Click **Null**: it appears at the two layers, just above
+the top one, and both are parented to it without moving (move the null and
+they follow). Deselect everything and click **Null** again: a plain null on
+top. Pick a colour in the swatch and click **Solid**. Select a layer and click the bottom-right arrow of the grid: its
 anchor moves to the corner and the layer stays put.
 
 **2. Align.** Select three layers, click **Align left**, then **Distribute

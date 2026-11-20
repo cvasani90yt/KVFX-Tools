@@ -33,6 +33,8 @@ Commands always act on what is selected *at the moment you click*.
   guessing.
 * **Null · Adjust · Solid ▪ · Text · Shape · Camera** — created at the top of the
   composition. The swatch beside Solid sets its colour and is remembered.
+  **Null** with layers selected lands at them instead, and links them to it
+  (see Quick).
 
 ### Align bar
 
@@ -52,42 +54,72 @@ whose parent is also selected travels with the parent rather than twice.
 ## Quick
 
 The first tab, and the one the panel opens on: the everyday tools from every
-other tab as one grid of tiles, one click each. A tile runs its tool with the
-settings you last used in that tool's own tab — the transition you last picked,
-the Ease tab's curve, the Sequence step — and greys out, with the reason in its
-tooltip, when the selection doesn't suit it.
+other tab, laid out so the essentials lead and every tool stays one click away
+(the **Spotlight** layout). A tool runs with the settings you last used in its
+own tab — the transition you last picked, the Ease tab's curve, the Sequence
+step — and greys out, with the reason in its tooltip, when the selection
+doesn't suit it. The anchor grid, the create buttons and the align bar stay
+around it.
 
-Tools with choices of their own are shortcuts instead, marked by a small arrow
-in the tile's corner: **Transition**, **Speed Ramp**, **Counter**,
-**Carousel** and **Extrude** open their screen in Generate (with the right
-filter on), **Animate**, **Explode**, **Style Text** and **Kinetic** theirs in
-Text, **Sequence**, **Follow** and **Grad Lock** theirs in Tools, and
-**Wiggle** its own in Ease. The panel switches tab, unfolds the section if it
-was folded, scrolls it into view and briefly highlights it, so the presets and
-preview are right there. **Alt-click** a shortcut tile to run its tool at once
-with its last settings instead.
+From the top:
 
-It ships with: **Colour** (the panel's colour, marked with an eyedropper —
-click for the picker),
-**From Comp** (the eyedropper), **Fill**, **Dup Comp**
-(Duplicate Comp + Nested Comps — with a precomp layer selected, the copy goes
-directly above it), **Precomp**, **Null Parent**, **Split**,
-**Sequence**, **Trim to WA**, **Same Label**, **Unlock All**, **Apply Ease**,
-**Wiggle**, **Shadow**, **Glow**, **Transition**, **Speed Ramp**, **Animate**
-(text) and **Null**.
+* **The colour strip** — the panel's colour, glowing in itself, with its hex
+  code; click the swatch for the picker. Beside it sit the colour tools on the
+  tab: **From Comp**, **Fill** and **Text Colour** as it ships (up to three;
+  any more go to the grid).
+* **Pinned tools** — up to four large tiles, each with a line on what it does:
+  **Dup Comp** and **Precomp** as it ships. An odd last one spans the row.
+* **Cards** — **Transition** and **Speed Ramp** show the preset a click will
+  use: the transition's name over a short wipe, the ramp's name over its speed
+  curve. They open their screen.
+* **The grid** — everything else as compact tiles: **Split**, **Sequence**,
+  **Trim to WA**, **Same Label**, **Unlock All**, **Apply Ease**, **Wiggle**,
+  **Shadow**, **Glow**, **Blur**, **Animate** and **Null** as it ships. Twelve
+  tiles fill rows of two, three, four or six, whatever the panel's width.
 
-**Customize** arranges it: drag a tile onto another to put it there (the view
-scrolls when you drag near its edge), or focus a tile and use the arrow keys —
-up and down move a whole row; **×** or Delete removes a tile; the catalog below
-the grid adds any of 68 tools, grouped Colour, Comp & layers, Organize,
-Switches, Keyframes, Text, Effects, Generate and Create. **Labels under icons**
-off gives small icon-only tiles. **Reset** puts back the shipped tools, after
-asking. Resize Comps is left out on purpose: it needs its own screen to set the
-sizes safely.
+Each icon takes its section's colour. **Colours** chooses the scheme:
+**Sections** (a colour for each section, the default), **Ember** (every icon in
+KVFX orange), **Spectrum** (warm steps from gold to violet) or **Your colour**
+(the panel colour, lightened when needed so it reads on the dark tiles).
+**Tiles** chooses how a tile carries it: **Icon well** (in a small square behind
+the icon, the default), **Icon**, or **Soft fill** (a tint on the whole tile).
+After a command runs, a check flashes over its tile in its section colour.
+Hover lifts the icon and colours the border. The previews and the check follow
+the system's Reduce Motion setting.
+
+Tools with choices of their own are shortcuts, marked by a small arrow in the
+corner: **Transition**, **Speed Ramp**, **Counter**, **Carousel** and
+**Extrude** open their screen in Generate (with the right filter on),
+**Animate**, **Explode**, **Style Text** and **Kinetic** theirs in Text,
+**Sequence**, **Follow** and **Grad Lock** theirs in Tools, and **Wiggle** its
+own in Ease. The panel switches tab, unfolds the section if it was folded,
+scrolls it into view and briefly highlights it, so the presets and preview are
+right there. **Alt-click** a shortcut to run its tool at once with its last
+settings instead.
+
+**Null** links: with layers selected — text, shapes, footage, precomps,
+solids, cameras, lights, anything — the null lands at them (their average
+position, directly above the topmost in the stack, over the time they span,
+centred on its own box, 3D when they all are) and they are parented to it,
+staying exactly where they are on screen. A layer already parented to another
+selected layer keeps that parent, so a rig keeps its shape; locked layers are
+left alone, with a reason. With nothing selected it is a plain null on top.
+The header's **Null** does the same.
+
+**Customize** arranges it all: drag a tile onto another to put it there (the
+view scrolls when you drag near its edge), or focus a tile and use the arrow
+keys — up and down move a whole row; the **star** in a tile's corner pins it as
+a large tile (up to four; a fifth replaces the oldest); **×** or Delete removes
+a tile; **Look** picks the colours and tiles; the catalog adds any of 68 tools,
+grouped Colour, Comp & layers, Organize, Switches, Keyframes, Text, Effects,
+Generate and Create. **Labels under icons** off gives small icon-only grid
+tiles. **Reset** puts back the shipped tools and pins, after asking. Resize
+Comps is left out on purpose: it needs its own screen to set the sizes safely.
 
 Settings ▸ Layout ▸ **Opens on** chooses Quick (the default) or the last tab
-you used, and the **Quick** layout preset turns the panel into just this tab —
-compact, no anchor grid, creators or align bar — for a pure quick-tool panel.
+you used, and the **Quick** layout preset turns the panel into just this tab,
+compact, with the anchor grid, the create buttons and the align bar still on
+screen.
 
 ## Tools
 
@@ -103,7 +135,7 @@ compact, no anchor grid, creators or align bar — for a pure quick-tool panel.
 | **Duplicate Comp + Nested Comps** | Duplicates a composition **and every composition nested inside it, at any depth**, so editing the copy never changes the original. Acts on what you are pointing at: the **precomp layers selected in the timeline** first — each gets a copy directly above it, pointing at its own new comp — otherwise the comps selected in the **Project panel**, otherwise the **open comp**, whose copies go in the Project panel. The panel shows which before you click, and the result message says where the copy went. Copies are named `Name 2`, `Name 3`… and sit in the same folder as the originals. A comp used twice inside the original is copied once and used twice inside the copy. Footage and solids are shared, not copied. Expressions that name a copied comp with a literal `comp("Name")` are pointed at the copy. | Expressions that build a comp name at runtime are left alone; the result message says how many. |
 | **Duplicate Precomp Layer + Nested** | The same for precomp *layers* only: the copy sits directly above each selected precomp layer and uses its own copies of the comps, and it is unavailable without one. In search and in the Quick catalog as **Dup Precomp**; the Tools tab's one button covers both. | As above. |
 | **Trim to WA** | Sets in and out points to the work area. | |
-| **Null Parent** | Creates a null and parents the selection to it, keeping every layer where it is on screen. | |
+| **Null Parent** | The same as **Null** with layers selected: a null at the selection, which every selected layer is parented to, staying where it is on screen. Unavailable with nothing selected. | Locked layers are skipped. A layer parented to another selected layer keeps its parent. |
 | **Same Label** | Selects every layer sharing the first selected layer's label. | |
 | **Even Gaps** ↔ ↕ (Arrange) | Equal space between the selected layers' **edges**. With **Gap** empty, the outer two stay put and the space between them is shared out (three or more layers); with a value, the first layer stays and the others stack that many pixels apart (two or more). Keyframed layers move with their animation. | 3D layers are skipped, as for alignment. |
 | **Sequence** | Staggers the selection in time. **Offset** spaces in-points by the step; **Chain** starts each layer where the previous one ends, the step being the gap (negative overlaps). **Order**: first → last, last → first, centre → out, edges → in, or random (a new shuffle each click). Layers of equal rank — the two middle ones of an even row, say — start together. Layers move by start time, so trims are kept. | |
@@ -360,7 +392,8 @@ with a pointer to File ▸ Import, because they would be held in memory.
 ## Settings
 
 * **Layout** — how the panel is arranged, with seven presets drawn as pictures
-  of the panel: **Quick** (the Quick tab alone), **Full** (as it ships),
+  of the panel: **Quick** (the Quick tab alone, with the anchor grid and align
+  bar), **Full** (as it ships),
   **Compact** (tight spacing, icon-only tabs), **Minimal** (no anchor grid,
   creators or align bar), **Motion** (Ease, Text and Generate next to Quick),
   **Editor** (Generate and Media next to Quick, tabs along the bottom) and

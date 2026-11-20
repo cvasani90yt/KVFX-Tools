@@ -1,33 +1,51 @@
 import {
+  DEFAULT_QUICK_PINS,
   DEFAULT_QUICK_TOOLS,
+  QUICK_COLOUR_SCHEMES,
   QUICK_GROUPS,
   QUICK_TOOLS,
+  type QuickColours,
   type QuickScreen,
+  type QuickTiles,
   type QuickTool,
+  SPEED_RAMPS,
+  type SpeedPoint,
+  TRANSITIONS,
   addQuickTool,
   moveQuickTool,
+  quickColours,
+  quickHint,
   quickToolsOf,
   removeQuickTool,
+  rgbaOf,
+  speedAt,
+  speedRampById,
+  spotlightZones,
+  togglePin,
+  transitionById,
 } from "@kvfx/core";
 import type { Availability, Panel, View } from "../app/panel.js";
 import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
 import { type ColorInput, colorInput } from "../ui/color-picker.js";
-import { CommandButtons } from "../ui/controls.js";
-import { clear, h, toggleClass } from "../ui/dom.js";
+import { CommandButtons, segmented } from "../ui/controls.js";
+import { clear, h, setText, toggleClass } from "../ui/dom.js";
 import { Eyedroppers } from "../ui/eyedroppers.js";
 
 /**
- * QUICK: the everyday tools from every tab, as one grid of tiles.
+ * QUICK: the everyday tools from every tab, in the Spotlight layout.
  *
- * Minimal on purpose — no sections, no settings in the way. An action tile is
- * one click, run with the tool's last-used settings from its own tab; a tile
- * for a feature with choices of its own (Speed Ramp, Transition, Animate…) is
- * a shortcut that opens that feature's screen, and Alt-click runs it. Customize
- * arranges the grid: drag a tile onto another to move it there (or focus it
- * and use the arrow keys), × or Delete removes it, and the catalog under the
- * grid adds any of the others. The panel opens on this tab unless Settings ▸
- * Layout says to return to the last one.
+ * Every tool is one click; the layout only decides how much room each gets.
+ * The panel colour leads as a strip that glows in it, with the colour tools
+ * beside it; up to four pinned tools get large tiles; Transition and Speed
+ * Ramp are cards that show the preset they'll use; everything else is a
+ * compact grid. Icons take their section's colour in the chosen scheme.
+ *
+ * An action is run with the tool's last-used settings from its own tab. A
+ * tool with choices of its own (Speed Ramp, Transition, Animate…) opens its
+ * screen instead, and Alt-click runs it. Customize arranges everything: drag
+ * a tile onto another (or focus it and use the arrow keys), the star pins
+ * it, × or Delete removes it, and the catalog adds the others.
  */
 
 /** How far the pointer moves before a press becomes a drag. */
@@ -36,6 +54,50 @@ const DRAG_START_PX = 4;
 const EDGE_PX = 36;
 const SCROLL_STEP = 8;
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/* eslint-disable no-magic-numbers -- the speed card's drawing */
+/** A speed curve as a path in a 120 × 34 box: speed on a log scale, so slow-motion reads as clearly as fast. */
+function speedPath(points: readonly SpeedPoint[]): { path: string; baseline: number } {
+  const steps = 48;
+  const scale = (v: number): number => Math.sign(v) * Math.log2(1 + Math.abs(v));
+  const values = Array.from({ length: steps + 1 }, (_, i) => scale(speedAt(points, i / steps)));
+  const base = scale(1);
+  const lo = Math.min(base, ...values);
+  const hi = Math.max(base, ...values);
+  const y = (v: number): number => 31 - ((v - lo) / (hi - lo || 1)) * 28;
+  const path = values.map((v, i) => `${i === 0 ? "M" : "L"}${((i / steps) * 120).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+  return { path, baseline: y(base) };
+}
+/* eslint-enable no-magic-numbers */
+
+/** Each section colour's tints, by the percentage the CSS variable is named after. */
+// eslint-disable-next-line no-magic-numbers -- the tints themselves, matched by name in base.css
+const TINTS: readonly number[] = [8, 16, 22, 32];
+/** The colour strip's glow and edge, in percent of the panel colour. */
+const GLOW = 20;
+const EDGE = 34;
+const PERCENT = 100;
+
+/** The CSS colour variables for a scheme: each section's colour and its tints, and the panel colour's glow. */
+function colourVars(scheme: QuickColours, panelColour: string): [string, string][] {
+  const out: [string, string][] = [];
+  const colours = quickColours(scheme, panelColour);
+  for (const group of QUICK_GROUPS) {
+    const c = colours[group.id];
+    out.push([`--kq-${group.id}`, c]);
+    for (const tint of TINTS) out.push([`--kq-${group.id}-${String(tint)}`, rgbaOf(c, tint / PERCENT)]);
+  }
+  out.push(["--kq-pc", panelColour], [`--kq-pc-${String(GLOW)}`, rgbaOf(panelColour, GLOW / PERCENT)], [`--kq-pc-${String(EDGE)}`, rgbaOf(panelColour, EDGE / PERCENT)]);
+  return out;
+}
+
+const TILE_STYLES: readonly { value: QuickTiles; label: string; title: string }[] = [
+  { value: "well", label: "Icon well", title: "The section colour in a small square behind each icon" },
+  { value: "icon", label: "Icon", title: "The section colour on the icon only" },
+  { value: "soft", label: "Soft fill", title: "A soft tint of the section colour on each tile" },
+];
+
 export class QuickView implements View {
   readonly id = "quick";
   readonly label = "Quick";
@@ -43,16 +105,23 @@ export class QuickView implements View {
   readonly root: HTMLElement;
   readonly #panel: Panel;
   readonly #hint: HTMLElement;
+  /** The Spotlight layout, when not customizing. */
+  readonly #spot: HTMLElement;
+  /** Every tool in order, while customizing. */
   readonly #grid: HTMLElement;
   readonly #editor: HTMLElement;
   readonly #catalog: HTMLElement;
   readonly #labels: HTMLInputElement;
+  readonly #scheme: { root: HTMLElement; set: (value: QuickColours) => void };
+  readonly #tiles: { root: HTMLElement; set: (value: QuickTiles) => void };
   readonly #customize: HTMLButtonElement;
   #buttons: CommandButtons;
   #eyedroppers: Eyedroppers;
   #colour: ColorInput | undefined;
+  #hex: HTMLElement | undefined;
   #editing = false;
   #key = "";
+  #painted = "";
   #last: { state: SessionState; availability: Availability } | undefined;
   /** A tile to focus once the grid is redrawn, after a keyboard move. */
   #focusAfter: string | undefined;
@@ -62,47 +131,71 @@ export class QuickView implements View {
     this.#buttons = new CommandButtons(panel);
     this.#eyedroppers = new Eyedroppers(panel);
     const session = panel.session;
+    const ui = session.state.settings.ui;
 
-    this.#hint = h("p", { class: "kvfx-hint kvfx-qhint", text: "Drag a tile onto another to move it there, or focus it and use the arrow keys. × or Delete removes it." });
+    this.#hint = h("p", { class: "kvfx-hint kvfx-qhint", text: "Drag a tile onto another to move it there, or focus it and use the arrow keys. The star pins a tool as a large tile; × or Delete removes it." });
+    this.#spot = h("div", { class: "kvfx-qspot" });
     this.#grid = h("div", { class: "kvfx-qgrid", attrs: { role: "group", "aria-label": "Quick tools" } });
     this.#catalog = h("div", { class: "kvfx-qcatalog" });
     this.#labels = h("input", { type: "checkbox", on: { change: () => session.setUi("quickLabels", this.#labels.checked) } });
+    this.#scheme = segmented(
+      QUICK_COLOUR_SCHEMES.map((s) => ({ value: s.id, label: s.label, title: s.about })),
+      ui.quickColours,
+      (value) => session.setUi("quickColours", value),
+    );
+    this.#tiles = segmented(TILE_STYLES, ui.quickTiles, (value) => session.setUi("quickTiles", value));
     const reset = h("button", {
       class: "kvfx-ghost",
       type: "button",
       text: "Reset",
-      title: "Put back the tools the Quick tab ships with",
+      title: "Put back the tools and pins the Quick tab ships with",
       on: { click: () => void this.#reset() },
     });
     const done = h("button", { class: "kvfx-pill kvfx-primary", type: "button", text: "Done", on: { click: () => this.#toggleEditing() } });
     this.#editor = h(
       "div",
       { class: "kvfx-qeditor" },
+      h("div", { class: "kvfx-presets__group", text: "Look" }),
+      h("div", { class: "kvfx-qlook" }, h("span", { class: "kvfx-field__label", text: "Colours" }), this.#scheme.root, h("span", { class: "kvfx-field__label", text: "Tiles" }), this.#tiles.root),
       h("div", { class: "kvfx-presets__group", text: "Add or remove tools" }),
       this.#catalog,
       h("div", { class: "kvfx-qoptions" }, h("label", { class: "kvfx-check" }, this.#labels, h("span", { text: "Labels under icons" })), reset, done),
     );
     this.#customize = h(
       "button",
-      { class: "kvfx-ghost kvfx-qcustomize", type: "button", title: "Choose and arrange the Quick tab's tools", on: { click: () => this.#toggleEditing() } },
+      { class: "kvfx-ghost kvfx-qcustomize", type: "button", title: "Choose, pin and arrange the Quick tab's tools", on: { click: () => this.#toggleEditing() } },
       createIcon("edit", IconSize.small),
       h("span", { text: "Customize" }),
     );
-    this.root = h("div", { class: "kvfx-tab kvfx-quicktab" }, this.#hint, this.#grid, h("div", { class: "kvfx-qfoot" }, this.#customize), this.#editor);
+    this.root = h("div", { class: "kvfx-tab kvfx-quicktab" }, this.#hint, this.#spot, this.#grid, h("div", { class: "kvfx-qfoot" }, this.#customize), this.#editor);
   }
 
   update(state: SessionState, availability: Availability): void {
     this.#last = { state, availability };
     const ui = state.settings.ui;
-    const key = `${ui.quickTools.join(",")}|${String(ui.quickLabels)}|${String(this.#editing)}`;
+    const presets = JSON.stringify([ui.toolParams["transition"]?.["preset"] ?? null, ui.toolParams["speedRamp"]?.["preset"] ?? null]);
+    const key = `${ui.quickTools.join(",")}|${String(ui.quickLabels)}|${String(this.#editing)}|${ui.quickPins.join(",")}|${presets}`;
     if (key !== this.#key) {
       this.#key = key;
       this.#render(state);
     }
+    this.#paint(ui.quickColours, ui.quickTiles, ui.solidColor);
+    this.#scheme.set(ui.quickColours);
+    this.#tiles.set(ui.quickTiles);
     this.#buttons.update(state, availability);
     this.#eyedroppers.update(state);
     // The panel's colour can change elsewhere: the header's Solid swatch, Tools ▸ Colour.
     if (this.#colour !== undefined && this.#colour.input.value !== ui.solidColor && !this.#colour.isOpen()) this.#colour.set(ui.solidColor);
+    if (this.#hex !== undefined) setText(this.#hex, ui.solidColor.toUpperCase());
+  }
+
+  /** Section colours as CSS variables, tints made here: the panel's engine can't mix colours in CSS. */
+  #paint(scheme: QuickColours, tiles: QuickTiles, panelColour: string): void {
+    this.root.dataset["tiles"] = tiles;
+    const key = `${scheme}|${panelColour}`;
+    if (key === this.#painted) return;
+    this.#painted = key;
+    for (const [name, value] of colourVars(scheme, panelColour)) this.root.style.setProperty(name, value);
   }
 
   #ids(): string[] {
@@ -126,42 +219,147 @@ export class QuickView implements View {
     this.#buttons = new CommandButtons(this.#panel);
     this.#eyedroppers = new Eyedroppers(this.#panel);
     this.#colour = undefined;
+    this.#hex = undefined;
+    clear(this.#spot);
     clear(this.#grid);
     toggleClass(this.root, "kvfx-quicktab--nolabels", !ui.quickLabels);
     toggleClass(this.root, "kvfx-quicktab--editing", this.#editing);
     this.#hint.hidden = !this.#editing;
     this.#editor.hidden = !this.#editing;
     this.#customize.hidden = this.#editing;
+    this.#spot.hidden = this.#editing;
+    this.#grid.hidden = !this.#editing;
     this.#labels.checked = ui.quickLabels;
     if (tools.length === 0) {
-      this.#grid.append(h("p", { class: "kvfx-empty kvfx-qempty", text: "No tools yet. Pick the ones you use most below." }));
+      (this.#editing ? this.#grid : this.#spot).append(h("p", { class: "kvfx-empty kvfx-qempty", text: "No tools yet. Pick the ones you use most in Customize." }));
     }
-    for (const tool of tools) this.#grid.append(this.#editing ? this.#editTile(tool) : this.#tile(tool));
-    if (this.#editing) this.#renderCatalog(tools.map((t) => t.id));
-    if (this.#focusAfter !== undefined) {
-      const id = this.#focusAfter;
-      this.#focusAfter = undefined;
-      Array.from(this.#grid.querySelectorAll<HTMLElement>("[data-tool]"))
-        .find((t) => t.dataset["tool"] === id)
-        ?.focus();
+    if (this.#editing) {
+      for (const tool of tools) this.#grid.append(this.#editTile(tool, ui.quickPins));
+      this.#renderCatalog(tools.map((t) => t.id));
+      if (this.#focusAfter !== undefined) {
+        const id = this.#focusAfter;
+        this.#focusAfter = undefined;
+        Array.from(this.#grid.querySelectorAll<HTMLElement>("[data-tool]"))
+          .find((t) => t.dataset["tool"] === id)
+          ?.focus();
+      }
+      return;
+    }
+
+    const zones = spotlightZones(ui.quickTools, ui.quickPins);
+    if (zones.hero) this.#spot.append(this.#hero(zones.heroTools, ui.solidColor));
+    if (zones.pinned.length > 0) {
+      this.#spot.append(h("div", { class: `kvfx-qpins${zones.pinned.length % 2 === 1 ? " kvfx-qpins--odd" : ""}` }, ...zones.pinned.map((t) => this.#big(t))));
+    }
+    if (zones.cards.length > 0) {
+      this.#spot.append(h("div", { class: `kvfx-qcards${zones.cards.length % 2 === 1 ? " kvfx-qcards--odd" : ""}` }, ...zones.cards.map((t) => this.#card(t, state))));
+    }
+    if (zones.grid.length > 0) {
+      this.#spot.append(h("div", { class: "kvfx-qgrid", attrs: { role: "group", "aria-label": "More quick tools" } }, ...zones.grid.map((t) => this.#tile(t))));
     }
   }
 
-  /** A working tile: the colour, an eyedropper, or a command. */
-  #tile(tool: QuickTool): HTMLElement {
-    if (tool.widget === "colour") {
-      const session = this.#panel.session;
-      this.#colour = colorInput("Colour picker", session.state.settings.ui.solidColor, (hex) => session.setUi("solidColor", hex), "kvfx-qtile kvfx-qtile--colour", {
-        icon: "eyedropper",
-        showHex: true,
-      });
-      // The hidden input travels inside the tile, so the grid sees one item.
-      this.#colour.swatch.append(this.#colour.input);
-      return this.#colour.swatch;
+  /** The panel colour, glowing, with the colour tools beside it. */
+  #hero(tools: readonly QuickTool[], colour: string): HTMLElement {
+    const session = this.#panel.session;
+    this.#colour = colorInput("Colour picker", colour, (hex) => session.setUi("solidColor", hex), "kvfx-qhero__swatch");
+    const badge = createIcon("eyedropper", IconSize.tiny);
+    badge.classList.add("kvfx-qhero__badge");
+    // The hidden input travels inside the swatch, so the strip sees one item.
+    this.#colour.swatch.append(this.#colour.input, badge);
+    this.#hex = h("b", { text: colour.toUpperCase() });
+    return h(
+      "div",
+      { class: "kvfx-qhero kvfx-g-colour" },
+      this.#colour.swatch,
+      h("div", { class: "kvfx-qhero__text" }, this.#hex, h("small", { text: "Panel colour" })),
+      h("div", { class: "kvfx-qhero__tools" }, ...tools.map((t) => this.#mini(t))),
+    );
+  }
+
+  /** A small icon button in the hero strip. */
+  #mini(tool: QuickTool): HTMLButtonElement {
+    const className = `kvfx-qmini kvfx-g-${tool.group}`;
+    if (tool.widget === "pickComp") {
+      return this.#eyedroppers.comp(h("button", { class: className, type: "button", attrs: { "aria-label": tool.label } }, createIcon(tool.icon)));
     }
-    if (tool.widget === "pickComp") return this.#eyedroppers.comp(this.#plainTile(tool, "Pick a colour from the comp's frame at the playhead"));
-    if (tool.screen !== undefined) return this.#screenTile(tool, tool.screen);
-    return this.#buttons.button(tool.command ?? tool.id, { label: tool.label, icon: tool.icon, variant: "qtile" });
+    if (tool.screen !== undefined) {
+      const screen = tool.screen;
+      const button = h("button", { class: className, type: "button", title: `${tool.label} — opens its options. Alt-click runs it with your last settings.`, attrs: { "aria-label": `${tool.label}: opens its options` } }, createIcon(tool.icon));
+      button.addEventListener("click", (event) => this.#open(event, tool, screen));
+      return button;
+    }
+    return this.#buttons.button(tool.command ?? tool.id, { label: tool.label, icon: tool.icon, variant: "tool", className, flash: true });
+  }
+
+  /** A pinned tool: a large tile with one line on what it does. */
+  #big(tool: QuickTool): HTMLElement {
+    const hint = h("small", { class: "kvfx-qbig__hint", text: quickHint(tool) });
+    let tile: HTMLButtonElement;
+    if (tool.widget === "pickComp") tile = this.#eyedroppers.comp(this.#plainTile(tool, "Pick a colour from the comp's frame at the playhead"));
+    else if (tool.screen !== undefined) tile = this.#screenTile(tool, tool.screen);
+    else tile = this.#buttons.button(tool.command ?? tool.id, { label: tool.label, icon: tool.icon, variant: "qtile", flash: true });
+    tile.classList.add("kvfx-qbig", `kvfx-g-${tool.group}`);
+    tile.querySelector(":scope > span")?.after(hint);
+    return tile;
+  }
+
+  /** Transition or Speed Ramp: a card that shows the preset a click will use. */
+  #card(tool: QuickTool, state: SessionState): HTMLElement {
+    const params = state.settings.ui.toolParams;
+    const ramp = tool.id === "kvfx.rig.speedRamp";
+    const rampPreset = speedRampById(params["speedRamp"]?.["preset"]) ?? speedRampById("velocity") ?? SPEED_RAMPS[0];
+    const transition = transitionById(params["transition"]?.["preset"]) ?? transitionById("whipLeft") ?? TRANSITIONS[0];
+    const name = (ramp ? rampPreset?.name : transition?.name) ?? "";
+    const preview = ramp && rampPreset !== undefined ? this.#speedPreview(rampPreset.points) : h("span", { class: "kvfx-qpv kvfx-qpv--wipe", attrs: { "aria-hidden": "true" } }, h("i"), h("i"));
+    const mark = createIcon("chevron-right", IconSize.tiny);
+    mark.classList.add("kvfx-qtile__opens");
+    const card = h(
+      "button",
+      {
+        class: `kvfx-qcard kvfx-g-${tool.group}`,
+        type: "button",
+        title: `${tool.label}: ${name} — opens its options. Alt-click adds it with your last settings.`,
+        attrs: { "aria-label": `${tool.label}, ${name}: opens its options` },
+      },
+      preview,
+      h("span", { class: "kvfx-qcard__text" }, h("b", { text: tool.label }), h("small", { text: name })),
+      mark,
+    );
+    const screen = tool.screen;
+    if (screen !== undefined) card.addEventListener("click", (event) => this.#open(event, tool, screen));
+    return card;
+  }
+
+  #speedPreview(points: readonly SpeedPoint[]): HTMLElement {
+    const { path, baseline } = speedPath(points);
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 120 34");
+    svg.setAttribute("preserveAspectRatio", "none");
+    const base = document.createElementNS(SVG_NS, "line");
+    for (const [k, v] of [["x1", "0"], ["x2", "120"], ["y1", baseline.toFixed(1)], ["y2", baseline.toFixed(1)], ["class", "kvfx-qpv__base"]]) base.setAttribute(k as string, v as string);
+    const curve = document.createElementNS(SVG_NS, "path");
+    curve.setAttribute("d", path);
+    curve.setAttribute("class", "kvfx-qpv__curve");
+    svg.append(base, curve);
+    return h("span", { class: "kvfx-qpv", attrs: { "aria-hidden": "true" } }, svg, h("i", { class: "kvfx-qpv__scan" }));
+  }
+
+  /** Click opens a feature's screen; Alt-click runs it with its last settings. */
+  #open(event: MouseEvent, tool: QuickTool, screen: QuickScreen): void {
+    if (event.altKey && tool.command !== undefined) void this.#panel.session.run(tool.command);
+    else this.#panel.openFeature(screen);
+  }
+
+  /** A compact tile: an eyedropper, a shortcut or a command. */
+  #tile(tool: QuickTool): HTMLElement {
+    let tile: HTMLElement;
+    if (tool.widget === "colour") tile = this.#hero([], this.#panel.session.state.settings.ui.solidColor);
+    else if (tool.widget === "pickComp") tile = this.#eyedroppers.comp(this.#plainTile(tool, "Pick a colour from the comp's frame at the playhead"));
+    else if (tool.screen !== undefined) tile = this.#screenTile(tool, tool.screen);
+    else tile = this.#buttons.button(tool.command ?? tool.id, { label: tool.label, icon: tool.icon, variant: "qtile", flash: true });
+    tile.classList.add(`kvfx-g-${tool.group}`);
+    return tile;
   }
 
   /** A shortcut to a feature's own screen, marked with a corner arrow. Alt-click runs it with its last settings instead. */
@@ -180,10 +378,7 @@ export class QuickView implements View {
       h("span", { text: tool.label }),
       mark,
     );
-    tile.addEventListener("click", (event) => {
-      if (event.altKey && tool.command !== undefined) void this.#panel.session.run(tool.command);
-      else this.#panel.openFeature(screen);
-    });
+    tile.addEventListener("click", (event) => this.#open(event, tool, screen));
     return tile;
   }
 
@@ -191,8 +386,8 @@ export class QuickView implements View {
     return h("button", { class: "kvfx-qtile", type: "button", title, attrs: { "aria-label": tool.label } }, createIcon(tool.icon), h("span", { text: tool.label }));
   }
 
-  /** A tile being arranged: drag it, arrow-key it, or remove it. It runs nothing. */
-  #editTile(tool: QuickTool): HTMLElement {
+  /** A tile being arranged: drag it, arrow-key it, pin it or remove it. It runs nothing. */
+  #editTile(tool: QuickTool, pins: readonly string[]): HTMLElement {
     const face =
       tool.widget === "colour"
         ? h("span", { class: "kvfx-swatch__chip", style: { "background-color": this.#panel.session.state.settings.ui.solidColor } })
@@ -213,14 +408,36 @@ export class QuickView implements View {
       },
       createIcon("close", IconSize.tiny),
     );
+    const pinned = pins.includes(tool.id);
+    const pin =
+      tool.widget === "colour"
+        ? null
+        : h(
+            "button",
+            {
+              class: `kvfx-qtile__pin${pinned ? " kvfx-qtile__pin--on" : ""}`,
+              type: "button",
+              title: pinned ? `Unpin ${tool.label}` : `Pin ${tool.label} as a large tile`,
+              attrs: { "aria-label": pinned ? `Unpin ${tool.label}` : `Pin ${tool.label}`, "aria-pressed": pinned ? "true" : "false" },
+              on: {
+                click: (event) => {
+                  event.stopPropagation();
+                  const session = this.#panel.session;
+                  session.setUi("quickPins", togglePin(session.state.settings.ui.quickPins, tool.id));
+                },
+              },
+            },
+            createIcon("star", IconSize.tiny),
+          );
     const tile = h(
       "div",
       {
-        class: `kvfx-qtile kvfx-qtile--edit${tool.widget === "colour" ? " kvfx-qtile--colour" : ""}`,
+        class: `kvfx-qtile kvfx-qtile--edit kvfx-g-${tool.group}${tool.widget === "colour" ? " kvfx-qtile--colour" : ""}${pinned ? " kvfx-qtile--pinned" : ""}`,
         attrs: { tabindex: "0", role: "button", "data-tool": tool.id, "aria-label": `${tool.label}: drag or use the arrow keys to move it, Delete to remove it` },
       },
       face,
       h("span", { text: tool.label }),
+      pin,
       remove,
     );
     tile.addEventListener("pointerdown", (event) => this.#drag(event, tile, tool.id));
@@ -234,7 +451,7 @@ export class QuickView implements View {
    * tile can travel the whole grid.
    */
   #drag(event: PointerEvent, tile: HTMLElement, id: string): void {
-    if (event.button !== 0 || (event.target as HTMLElement).closest(".kvfx-qtile__remove") !== null) return;
+    if (event.button !== 0 || (event.target as HTMLElement).closest(".kvfx-qtile__remove, .kvfx-qtile__pin") !== null) return;
     event.preventDefault();
     tile.focus({ preventScroll: true });
     tile.setPointerCapture(event.pointerId);
@@ -365,9 +582,11 @@ export class QuickView implements View {
   async #reset(): Promise<void> {
     const ok = await this.#panel.confirm({
       title: "Reset the Quick tab?",
-      body: "Its tools go back to the ones it ships with, in their original order.",
+      body: "Its tools and pins go back to the ones it ships with, in their original order.",
       confirmLabel: "Reset tools",
     });
-    if (ok) this.#set(DEFAULT_QUICK_TOOLS);
+    if (!ok) return;
+    this.#set(DEFAULT_QUICK_TOOLS);
+    this.#panel.session.setUi("quickPins", [...DEFAULT_QUICK_PINS]);
   }
 }

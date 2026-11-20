@@ -45,7 +45,8 @@ describe("panel layout presets", () => {
   it("has a Quick preset that is the Quick tab alone, compact, with no bars", () => {
     const quick = panelLayoutById("quick")!.layout;
     expect(visibleTabs(quick, TABS)).toEqual(["quick"]);
-    expect([quick.quickBar, quick.alignBar, quick.compact]).toEqual([false, false, true]);
+    // The anchor grid and the align bar stay on screen with the Quick tab.
+    expect([quick.quickBar, quick.alignBar, quick.compact]).toEqual([true, true, true]);
   });
 });
 
