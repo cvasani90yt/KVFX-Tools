@@ -30,6 +30,7 @@ import { IconSize, createIcon } from "../components/icons.js";
 import { type ColorInput, colorInput } from "../ui/color-picker.js";
 import { CommandButtons, segmented } from "../ui/controls.js";
 import { clear, h, setText, toggleClass } from "../ui/dom.js";
+import { type DragPoint, followDrag, onPress } from "../ui/drag.js";
 import { Eyedroppers } from "../ui/eyedroppers.js";
 
 /**
@@ -440,7 +441,7 @@ export class QuickView implements View {
       pin,
       remove,
     );
-    tile.addEventListener("pointerdown", (event) => this.#drag(event, tile, tool.id));
+    onPress(tile, (event) => this.#drag(event, tile, tool.id));
     tile.addEventListener("keydown", (event) => this.#keyMove(event, tool.id));
     return tile;
   }
@@ -450,11 +451,10 @@ export class QuickView implements View {
    * shift over. Near the top or bottom of the panel the view scrolls, so a
    * tile can travel the whole grid.
    */
-  #drag(event: PointerEvent, tile: HTMLElement, id: string): void {
-    if (event.button !== 0 || (event.target as HTMLElement).closest(".kvfx-qtile__remove, .kvfx-qtile__pin") !== null) return;
+  #drag(event: PointerEvent | MouseEvent, tile: HTMLElement, id: string): void {
+    if ((event.target as HTMLElement).closest(".kvfx-qtile__remove, .kvfx-qtile__pin") !== null) return;
     event.preventDefault();
     tile.focus({ preventScroll: true });
-    tile.setPointerCapture(event.pointerId);
     const scroller = tile.closest<HTMLElement>(".kvfx-view");
     const startX = event.clientX;
     const startY = event.clientY;
@@ -489,7 +489,7 @@ export class QuickView implements View {
       }
       frame = requestAnimationFrame(autoscroll);
     };
-    const move = (e: PointerEvent): void => {
+    const move = (e: DragPoint): void => {
       pointer.x = e.clientX;
       pointer.y = e.clientY;
       if (!dragging && Math.hypot(pointer.x - startX, pointer.y - startY) < DRAG_START_PX) return;
@@ -501,9 +501,6 @@ export class QuickView implements View {
       place();
     };
     const end = (): void => {
-      tile.removeEventListener("pointermove", move);
-      tile.removeEventListener("pointerup", end);
-      tile.removeEventListener("pointercancel", end);
       if (frame !== 0) cancelAnimationFrame(frame);
       dragging = dragging && target !== undefined;
       tile.style.transform = "";
@@ -516,9 +513,8 @@ export class QuickView implements View {
         this.#set(moveQuickTool(ids, id, ids.indexOf(into)));
       }
     };
-    tile.addEventListener("pointermove", move);
-    tile.addEventListener("pointerup", end);
-    tile.addEventListener("pointercancel", end);
+    // Heard on the whole window: After Effects on macOS doesn't reliably honour pointer capture.
+    followDrag(event, tile, move, end);
   }
 
   /** Arrow keys move the focused tile — up and down by a row — Delete removes it. */

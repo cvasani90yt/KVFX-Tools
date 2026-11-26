@@ -228,6 +228,9 @@ real thing. Please look closely at these, which the model cannot settle
   dragging or stretching the ramp marker move or retime it, and does the clip
   still end on its last frame with **Keep the ending** on?
 * **Clock** transition: does the sweep start at twelve o'clock?
+* **Ease curve on macOS**: drag each handle of the curve quickly, out past
+  the box and back: does it follow all the way, and keep following when the
+  pointer leaves the panel? Same for the colour picker's square.
 * **From comp**: does the frame match the viewer, including in a 32-bit
   project?
 

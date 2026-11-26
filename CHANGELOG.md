@@ -127,6 +127,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on Windows. **From comp** stays. A Quick tab that had the tile simply drops it
 
 ### Fixed
+- The Ease tab's curve couldn't be tweaked on macOS: its handles were dragged
+  through pointer capture, which After Effects' panel engine on macOS doesn't
+  reliably honour, so a handle stopped (or never started) as the pointer
+  slipped off it. Drags are now followed on the whole window, with or without
+  capture, and a press within reach of a handle grabs it without making it
+  jump. The colour picker's square and hue bar and dragging tiles in the Quick
+  tab's Customize use the same fix
 - **Dup Comp** (Quick) and **Duplicate Comp + Nested Comps** (Tools) only
   ever added the copy to the Project panel, even with a precomp layer selected
   in the timeline. Now each selected precomp layer gets a copy directly above

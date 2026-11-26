@@ -1,6 +1,7 @@
 import { hexToRgb, rgbToHex } from "@kvfx/core";
 import { IconSize, createIcon } from "../components/icons.js";
 import { h, setText, toggleClass } from "./dom.js";
+import { type DragPoint, followDrag, onPress } from "./drag.js";
 
 /**
  * Colour fields with a picker drawn inside the panel.
@@ -234,21 +235,23 @@ class ColorPopover {
     }
   }
 
-  /** Pointer dragging across `area`, reported as 0–1 fractions of its width and height. */
+  /**
+   * Dragging across `area`, reported as 0–1 fractions of its width and height.
+   * The drag is followed on the whole window, so it keeps going past the
+   * square's edge and doesn't depend on pointer capture, which After Effects
+   * on macOS doesn't reliably honour.
+   */
   #drag(area: HTMLElement, onMove: (x: number, y: number) => void): void {
-    const at = (event: PointerEvent): void => {
+    const at = (point: DragPoint): void => {
       const box = area.getBoundingClientRect();
-      const x = Math.min(1, Math.max(0, (event.clientX - box.left) / Math.max(1, box.width)));
-      const y = Math.min(1, Math.max(0, (event.clientY - box.top) / Math.max(1, box.height)));
+      const x = Math.min(1, Math.max(0, (point.clientX - box.left) / Math.max(1, box.width)));
+      const y = Math.min(1, Math.max(0, (point.clientY - box.top) / Math.max(1, box.height)));
       onMove(x, y);
     };
-    area.addEventListener("pointerdown", (event) => {
+    onPress(area, (event) => {
       event.preventDefault();
-      area.setPointerCapture(event.pointerId);
       at(event);
-    });
-    area.addEventListener("pointermove", (event) => {
-      if (area.hasPointerCapture(event.pointerId)) at(event);
+      followDrag(event, area, at);
     });
   }
 }

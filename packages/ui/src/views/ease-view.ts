@@ -18,6 +18,7 @@ import type { SessionState } from "../app/session.js";
 import { IconSize, createIcon } from "../components/icons.js";
 import { CommandButtons, Section, actionButton, numberField, pillGrid, row } from "../ui/controls.js";
 import { clear, h, setText, toggleClass } from "../ui/dom.js";
+import { type DragPoint, followDrag, onPress } from "../ui/drag.js";
 
 /**
  * EASE: a curve editor that writes real After Effects easing, plus keyframe
@@ -38,6 +39,8 @@ const PLOT_X = 30;
 const PLOT_SIZE = 140;
 const PLOT_BOTTOM = 185;
 const HANDLE_R = 7;
+/** How near a press must be to a handle to grab it: more than the drawn handle, which is a small target. */
+const GRAB_R = 18;
 const PREVIEW_MS = 1400;
 const PAUSE_MS = 350;
 const THUMB = 34;
@@ -87,6 +90,8 @@ export class EaseView implements View {
   readonly #saveName: HTMLInputElement;
   #bezier: Bezier;
   #dragging: 0 | 1 | undefined;
+  /** Where in the handle it was grabbed, so it doesn't jump to the pointer. */
+  #grab = { x: 0, y: 0 };
   #animating = false;
   #customKey = "";
 
@@ -116,17 +121,17 @@ export class EaseView implements View {
     ];
     const ends = [svg("circle", { cx: String(toX(0)), cy: String(toY(0)), r: "3.5", class: "kvfx-curve__end" }), svg("circle", { cx: String(toX(1)), cy: String(toY(1)), r: "3.5", class: "kvfx-curve__end" })];
     this.#editor.append(grid, linear, ...this.#arms, this.#curve, ...ends, ...this.#handles);
-    this.#handles.forEach((handle, index) => {
-      handle.addEventListener("pointerdown", (event) => {
-        event.preventDefault();
-        this.#dragging = index as 0 | 1;
-        handle.setPointerCapture(event.pointerId);
-      });
-      handle.addEventListener("pointermove", (event) => {
-        if (this.#dragging === index) this.#dragTo(event);
-      });
-      handle.addEventListener("pointerup", () => this.#endDrag());
-      handle.addEventListener("pointercancel", () => this.#endDrag());
+    // A press near a handle grabs it, and the drag is followed on the whole
+    // window: on macOS After Effects doesn't reliably honour pointer capture,
+    // so a drag heard only on the small handle stopped as soon as it slipped off.
+    onPress(this.#editor, (event) => {
+      const grabbed = this.#nearestHandle(event);
+      if (grabbed === undefined) return;
+      event.preventDefault();
+      this.#dragging = grabbed.index;
+      this.#grab = { x: grabbed.dx, y: grabbed.dy };
+      this.#editor.classList.add("kvfx-curve--dragging");
+      followDrag(event, this.#editor, (point) => this.#dragTo(point), () => this.#endDrag());
     });
 
     this.#values = h("input", {
@@ -307,13 +312,32 @@ export class EaseView implements View {
     return h("div", { class: "kvfx-preset-wrap" }, tile, remove);
   }
 
-  #dragTo(event: PointerEvent): void {
+  /** A point on screen in the editor's viewBox units. */
+  #toView(point: DragPoint): { x: number; y: number } {
+    const rect = this.#editor.getBoundingClientRect();
+    const scale = VIEW_W / Math.max(1, rect.width);
+    return { x: (point.clientX - rect.left) * scale, y: (point.clientY - rect.top) * scale };
+  }
+
+  /** The handle within reach of a press, nearest first, and where on it the press landed. */
+  #nearestHandle(point: DragPoint): { index: 0 | 1; dx: number; dy: number } | undefined {
+    const at = this.#toView(point);
+    let best: { index: 0 | 1; dx: number; dy: number; d: number } | undefined;
+    for (const index of [0, 1] as const) {
+      const dx = at.x - toX(this.#bezier[index * 2] ?? 0);
+      const dy = at.y - toY(this.#bezier[index * 2 + 1] ?? 0);
+      const d = Math.hypot(dx, dy);
+      if (d <= GRAB_R && (best === undefined || d < best.d)) best = { index, dx, dy, d };
+    }
+    return best;
+  }
+
+  #dragTo(point: DragPoint): void {
     const index = this.#dragging;
     if (index === undefined) return;
-    const rect = this.#editor.getBoundingClientRect();
-    const scale = VIEW_W / rect.width;
-    const vx = (event.clientX - rect.left) * scale;
-    const vy = (event.clientY - rect.top) * scale;
+    const at = this.#toView(point);
+    const vx = at.x - this.#grab.x;
+    const vy = at.y - this.#grab.y;
     const x = Math.min(1, Math.max(0, (vx - PLOT_X) / PLOT_SIZE));
     const y = Math.min(BEZIER_Y_MAX, Math.max(BEZIER_Y_MIN, (PLOT_BOTTOM - vy) / PLOT_SIZE));
     const next = [...this.#bezier];
@@ -325,6 +349,7 @@ export class EaseView implements View {
   #endDrag(): void {
     if (this.#dragging === undefined) return;
     this.#dragging = undefined;
+    this.#editor.classList.remove("kvfx-curve--dragging");
     this.#panel.session.setUi("ease", [...this.#bezier] as unknown as [number, number, number, number]);
   }
 

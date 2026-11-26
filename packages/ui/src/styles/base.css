@@ -1183,6 +1183,11 @@ select:focus-visible,
   fill: var(--kvfx-accent);
 }
 
+.kvfx-curve--dragging,
+.kvfx-curve--dragging .kvfx-curve__handle {
+  cursor: grabbing;
+}
+
 .kvfx-curve__end {
   fill: var(--kvfx-text-secondary);
 }
